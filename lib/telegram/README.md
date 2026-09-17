@@ -56,3 +56,5 @@ Igual que el cron `GET /api/cron/streak-nudge`:
 - El mismo día Córdoba no reenvía (idempotente). `/recordatorio` explica esta regla on-demand.
 
 Outbound HTTP a `api.telegram.org` se saltea si no hay `TELEGRAM_BOT_TOKEN` (CI). En tests unitarios se inyecta `setTelegramSender`.
+
+Bot real (BotFather + túnel + `setWebhook`): `docs/engineering/local-dev.md` → Integraciones reales. El default sigue siendo stub local sin red.

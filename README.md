@@ -26,7 +26,7 @@ Asistente de fitness personal para registrar entrenamientos, pesos, consejos, me
 
 ## Desarrollo Local
 
-Guía completa (file DB, seed, smoke UI/API, Box vs localhost, curl de cron/webhook): **[`docs/engineering/local-dev.md`](./docs/engineering/local-dev.md)**.
+Guía completa (smoke sin red: file DB, seed, curl de cron/webhook stub; **integraciones reales opcionales**: Turso cloud, bot Telegram, IA no cableada): **[`docs/engineering/local-dev.md`](./docs/engineering/local-dev.md)**.
 
 ### Pre-requisitos
 
