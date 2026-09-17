@@ -41,7 +41,7 @@ TELEGRAM_BOT_TOKEN=
 
 describe('applyEnvDefaults', () => {
   it('fills missing keys and does not override existing env', () => {
-    const env: NodeJS.ProcessEnv = {
+    const env: Record<string, string | undefined> = {
       CRON_SECRET: 'from-ci',
     };
 
@@ -76,22 +76,24 @@ describe('loadLocalEnv', () => {
   });
 
   it('loads .env from cwd without overriding process.env', () => {
-    tempDir = mkdtempSync(join(tmpdir(), 'atlas-env-'));
+    const dir = mkdtempSync(join(tmpdir(), 'atlas-env-'));
+    tempDir = dir;
     writeFileSync(
-      join(tempDir, '.env'),
+      join(dir, '.env'),
       'ATLAS_LOAD_ENV_TEST_KEY=from-file\nCRON_SECRET=from-file\n',
       'utf8',
     );
 
     process.env.CRON_SECRET = 'already-set';
-    loadLocalEnv(tempDir);
+    loadLocalEnv(dir);
 
     expect(process.env.ATLAS_LOAD_ENV_TEST_KEY).toBe('from-file');
     expect(process.env.CRON_SECRET).toBe('already-set');
   });
 
   it('is a no-op when .env is missing', () => {
-    tempDir = mkdtempSync(join(tmpdir(), 'atlas-env-missing-'));
-    expect(() => loadLocalEnv(tempDir)).not.toThrow();
+    const dir = mkdtempSync(join(tmpdir(), 'atlas-env-missing-'));
+    tempDir = dir;
+    expect(() => loadLocalEnv(dir)).not.toThrow();
   });
 });

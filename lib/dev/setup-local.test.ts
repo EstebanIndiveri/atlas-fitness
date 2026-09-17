@@ -31,26 +31,29 @@ describe('copyEnvExampleIfMissing', () => {
   });
 
   it('copies .env.example to .env when .env is missing', () => {
-    cwd = makeTempCwd();
-    writeFileSync(join(cwd, '.env.example'), 'CRON_SECRET=example\n', 'utf8');
+    const dir = makeTempCwd();
+    cwd = dir;
+    writeFileSync(join(dir, '.env.example'), 'CRON_SECRET=example\n', 'utf8');
 
-    expect(copyEnvExampleIfMissing(cwd)).toBe('copied');
-    expect(readFileSync(join(cwd, '.env'), 'utf8')).toBe('CRON_SECRET=example\n');
+    expect(copyEnvExampleIfMissing(dir)).toBe('copied');
+    expect(readFileSync(join(dir, '.env'), 'utf8')).toBe('CRON_SECRET=example\n');
   });
 
   it('does not overwrite an existing .env', () => {
-    cwd = makeTempCwd();
-    writeFileSync(join(cwd, '.env.example'), 'CRON_SECRET=example\n', 'utf8');
-    writeFileSync(join(cwd, '.env'), 'CRON_SECRET=mine\n', 'utf8');
+    const dir = makeTempCwd();
+    cwd = dir;
+    writeFileSync(join(dir, '.env.example'), 'CRON_SECRET=example\n', 'utf8');
+    writeFileSync(join(dir, '.env'), 'CRON_SECRET=mine\n', 'utf8');
 
-    expect(copyEnvExampleIfMissing(cwd)).toBe('skipped');
-    expect(readFileSync(join(cwd, '.env'), 'utf8')).toBe('CRON_SECRET=mine\n');
+    expect(copyEnvExampleIfMissing(dir)).toBe('skipped');
+    expect(readFileSync(join(dir, '.env'), 'utf8')).toBe('CRON_SECRET=mine\n');
   });
 
   it('throws when .env.example is missing', () => {
-    cwd = makeTempCwd();
-    expect(() => copyEnvExampleIfMissing(cwd)).toThrow(/\.env\.example/);
-    expect(existsSync(join(cwd, '.env'))).toBe(false);
+    const dir = makeTempCwd();
+    cwd = dir;
+    expect(() => copyEnvExampleIfMissing(dir)).toThrow(/\.env\.example/);
+    expect(existsSync(join(dir, '.env'))).toBe(false);
   });
 });
 
@@ -65,15 +68,16 @@ describe('setupLocal', () => {
   });
 
   it('copies env if missing then runs migrate and seed in order', async () => {
-    cwd = makeTempCwd();
-    writeFileSync(join(cwd, '.env.example'), 'CRON_SECRET=example\n', 'utf8');
+    const dir = makeTempCwd();
+    cwd = dir;
+    writeFileSync(join(dir, '.env.example'), 'CRON_SECRET=example\n', 'utf8');
 
     const calls: string[] = [];
-    await setupLocal(cwd, async (script) => {
+    await setupLocal(dir, async (script) => {
       calls.push(script);
     });
 
-    expect(existsSync(join(cwd, '.env'))).toBe(true);
+    expect(existsSync(join(dir, '.env'))).toBe(true);
     expect(calls).toEqual(['db:migrate', 'db:seed']);
   });
 });

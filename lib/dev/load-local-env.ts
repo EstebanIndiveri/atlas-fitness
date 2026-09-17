@@ -56,7 +56,7 @@ export function parseEnvFile(contents: string): Record<string, string> {
 
 export function applyEnvDefaults(
   parsed: Record<string, string>,
-  env: NodeJS.ProcessEnv = process.env,
+  env: Record<string, string | undefined> = process.env,
 ): void {
   for (const [key, value] of Object.entries(parsed)) {
     if (env[key] === undefined) {
