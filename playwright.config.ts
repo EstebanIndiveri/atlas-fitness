@@ -31,6 +31,8 @@ export default defineConfig({
       TURSO_DATABASE_URL: process.env.TURSO_DATABASE_URL || 'file:./local.db',
       SESSION_SECRET: process.env.SESSION_SECRET || 'test-secret-for-ci-only-not-production',
       CRON_SECRET: process.env.CRON_SECRET || 'test-secret-for-e2e',
+      TELEGRAM_BOT_TOKEN: '',
+      TELEGRAM_WEBHOOK_SECRET: '',
     },
   },
 });

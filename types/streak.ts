@@ -24,4 +24,5 @@ export interface StreakNudgeRunResult {
   considered: number;
   recorded: number;
   skipped: number;
+  recordedUserIds: number[];
 }
