@@ -11,10 +11,12 @@ test.describe('PWA installability', () => {
   test('links the web manifest and exposes installability fields', async ({ page, request }) => {
     await page.goto('/');
 
-    const manifestHref = await page.locator('link[rel="manifest"]').getAttribute('href');
-    expect(manifestHref).toBe('/manifest.webmanifest');
+    // Next metadata.manifest plus the explicit <link> in layout (Must: both).
+    const manifestLinks = page.locator('link[rel="manifest"]');
+    await expect(manifestLinks.first()).toHaveAttribute('href', '/manifest.webmanifest');
+    expect(await manifestLinks.count()).toBeGreaterThanOrEqual(1);
 
-    const themeColor = page.locator('meta[name="theme-color"]');
+    const themeColor = page.locator('meta[name="theme-color"]').first();
     await expect(themeColor).toHaveAttribute('content', PWA_THEME.themeColor);
 
     const manifestResponse = await request.get('/manifest.webmanifest');
