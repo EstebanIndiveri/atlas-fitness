@@ -26,15 +26,32 @@ export function isValidWeightKg(weight: string): boolean {
  * Parses and normalizes a weight string, removing trailing zeros.
  * Returns a normalized decimal string representation.
  * Throws if the weight is invalid.
+ * Uses string manipulation to avoid float precision issues.
  */
 export function parseWeightKg(weight: string): WeightKg {
   if (!isValidWeightKg(weight)) {
     throw new Error(`Invalid weight: ${weight}`);
   }
 
-  const num = parseFloat(weight);
-  // Convert to string and remove unnecessary trailing zeros
-  return num.toString();
+  // Normalize by removing trailing zeros after decimal point
+  let normalized = weight.trim();
+
+  if (normalized.includes('.')) {
+    // Remove trailing zeros
+    normalized = normalized.replace(/\.?0+$/, '');
+    // If we removed all decimals, ensure we don't end with a dot
+    if (normalized.endsWith('.')) {
+      normalized = normalized.slice(0, -1);
+    }
+  }
+
+  // If empty or only had zeros, return the integer part
+  if (!normalized || normalized === '0') {
+    const num = parseFloat(weight);
+    return num.toString();
+  }
+
+  return normalized;
 }
 
 /**
