@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { TipCard } from '@/components/TipCard';
+import { StreakChip } from '@/components/StreakChip';
 import type { AuthUser } from '@/types/auth';
 import type { Workout } from '@/lib/db/schema';
 
@@ -102,6 +103,8 @@ export default function DashboardPage() {
             Cerrar sesión
           </button>
         </div>
+
+        <StreakChip />
 
         <TipCard activeWorkout={activeWorkout} onStartWorkout={handleNewWorkout} />
 

@@ -8,12 +8,14 @@ import {
   workouts,
   workoutSets,
   dailyCheckins,
+  streakNudges,
 } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 
 describe('Auth Service', () => {
   beforeEach(async () => {
     // Clean up test data - delete in order respecting foreign keys
+    await db.delete(streakNudges);
     await db.delete(dailyCheckins);
     await db.delete(workoutSets);
     await db.delete(workouts);

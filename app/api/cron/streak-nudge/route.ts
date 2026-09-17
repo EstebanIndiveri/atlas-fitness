@@ -1,18 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ensureTodayTip } from '@/lib/services/tips';
-import { cordobaLocalDate } from '@/lib/time/cordoba';
+import { runStreakNudges } from '@/lib/services/streaks';
 
 /**
- * GET /api/cron/daily-tip
- * Cron job to create/ensure today's daily tip
- * Protected by Bearer token (CRON_SECRET)
- * 
- * Tries AI generation if configured (future enhancement)
- * Always falls back to system tip if AI missing/fails
+ * GET /api/cron/streak-nudge
+ *
+ * Nudge rule: users who were active yesterday (Córdoba) but not yet today.
+ * Stores an idempotent intent row in `streak_nudges` (kind = streak_at_risk).
+ * Telegram send is out of scope; re-runs the same day do not duplicate.
+ * Protected by Authorization: Bearer ${CRON_SECRET}.
  */
 export async function GET(request: NextRequest) {
   try {
-    // Check authorization
     const authHeader = request.headers.get('authorization');
     const expectedAuth = `Bearer ${process.env.CRON_SECRET}`;
 
@@ -23,22 +21,14 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const today = cordobaLocalDate();
-
-    // TODO: Future enhancement - try AI generation here
-    // For now, we always use null which falls back to system tips
-    const aiContent: string | null = null;
-
-    // Ensure today's tip exists (idempotent)
-    const tip = await ensureTodayTip(today, aiContent);
+    const result = await runStreakNudges();
 
     return NextResponse.json({
       success: true,
-      tip,
-      date: today,
+      ...result,
     });
   } catch (error) {
-    console.error('Error in daily tip cron:', error);
+    console.error('Error in streak nudge cron:', error);
 
     if (error && typeof error === 'object' && 'code' in error && 'message' in error) {
       const appError = error as { code: string; message: string };
@@ -49,7 +39,7 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { code: 'INTERNAL_ERROR', message: 'Error al procesar el cron de tips' },
+      { code: 'INTERNAL_ERROR', message: 'Error al procesar el cron de racha' },
       { status: 500 }
     );
   }

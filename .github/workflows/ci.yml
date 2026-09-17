@@ -84,6 +84,7 @@ jobs:
         env:
           TURSO_DATABASE_URL: file:./local.db
           SESSION_SECRET: test-secret-for-ci-only-not-production
+          CRON_SECRET: test-secret-for-e2e
 
       - name: Upload Playwright Report
         uses: actions/upload-artifact@v4

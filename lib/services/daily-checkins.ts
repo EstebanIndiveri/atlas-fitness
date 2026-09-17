@@ -1,6 +1,7 @@
 import { eq, and } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { dailyCheckins } from '@/lib/db/schema';
+import { updateStreakFromActivity } from '@/lib/services/streaks';
 import { AppError } from '@/types/errors';
 import type { DailyCheckin } from '@/lib/db/schema';
 
@@ -40,6 +41,7 @@ export async function upsertDailyCheckin(
       .where(eq(dailyCheckins.id, existing.id))
       .returning();
 
+    await updateStreakFromActivity(userId);
     return updated;
   }
 
@@ -54,6 +56,7 @@ export async function upsertDailyCheckin(
       })
       .returning();
 
+    await updateStreakFromActivity(userId);
     return checkin;
   } catch (error) {
     // Handle race condition: another request inserted between our check and insert
@@ -73,6 +76,7 @@ export async function upsertDailyCheckin(
           .where(and(eq(dailyCheckins.userId, userId), eq(dailyCheckins.localDate, localDate)))
           .returning();
 
+        await updateStreakFromActivity(userId);
         return updated;
       }
     }
