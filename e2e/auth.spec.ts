@@ -115,10 +115,10 @@ test.describe('Authentication Flow', () => {
     
     await page.click('button[type="submit"]');
     
-    // Wait for either success or error
-    const response = await Promise.race([
+    // Wait for either success (navigation to dashboard) or error
+    await Promise.race([
       page.waitForURL('/dashboard', { timeout: 15000 }),
-      page.waitForSelector('.bg-red-50', { timeout: 15000 }).then(() => null),
+      page.waitForSelector('.bg-red-50', { timeout: 15000 }),
     ]);
 
     // If we're on dashboard, check welcome message
