@@ -30,4 +30,11 @@ Orientativo, alineado a Hermes: Next.js + TypeScript + DB edge + Telegram webhoo
 - UX/UI outline
 - Plan QA determinista (Playwright + regresivos)
 
+## Documentación y harness
+
+- [`AGENTS.md`](./AGENTS.md) — reglas de agentes, TDD, branching, PR review, worktrees
+- [`docs/`](./docs/) — ADRs, backlog MoSCoW, convenciones FE/BE
+
+Stack y alcance: ver ADR-001 / ADR-002. Implementación solo tras brief PO + respeto al harness.
+
 Hecho para [Esteban Indiveri](https://github.com/EstebanIndiveri).
