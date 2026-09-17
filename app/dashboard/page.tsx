@@ -43,7 +43,9 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <main className="flex min-h-screen items-center justify-center">
-        <p>Cargando...</p>
+        <div className="text-center">
+          <p className="text-lg">Cargando...</p>
+        </div>
       </main>
     );
   }
@@ -58,7 +60,9 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold">Atlas Fitness</h1>
-            <p className="text-gray-600 mt-1">Bienvenido, {user.name}</p>
+            <p className="text-gray-600 mt-1" data-testid="welcome-message">
+              Bienvenido, {user.name}
+            </p>
           </div>
           <button
             onClick={handleLogout}

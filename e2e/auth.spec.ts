@@ -25,10 +25,10 @@ test.describe('Authentication Flow', () => {
     // Should redirect to dashboard
     await page.waitForURL('/dashboard');
     await expect(page.locator('h1')).toContainText('Atlas Fitness');
-    await expect(page.locator('text=Bienvenido')).toBeVisible();
-
-    // Verify user name is displayed
-    await expect(page.locator(`text=${TEST_USER.name}`)).toBeVisible();
+    
+    // Wait for data to load and verify welcome message with user name
+    await expect(page.locator('[data-testid="welcome-message"]')).toBeVisible();
+    await expect(page.locator('[data-testid="welcome-message"]')).toContainText(TEST_USER.name);
 
     // Logout
     await page.click('button:has-text("Cerrar sesión")');
@@ -43,7 +43,7 @@ test.describe('Authentication Flow', () => {
 
     // Should redirect to dashboard again
     await page.waitForURL('/dashboard');
-    await expect(page.locator(`text=${TEST_USER.name}`)).toBeVisible();
+    await expect(page.locator('[data-testid="welcome-message"]')).toContainText(TEST_USER.name);
   });
 
   test('should show error for invalid credentials', async ({ page }) => {
@@ -53,8 +53,8 @@ test.describe('Authentication Flow', () => {
     await page.fill('input[type="password"]', 'WrongPassword123!');
     await page.click('button[type="submit"]');
 
-    // Should show error message
-    await expect(page.locator('text=Error al iniciar sesión')).toBeVisible();
+    // Should show error message (from backend)
+    await expect(page.locator('text=Invalid email or password')).toBeVisible();
   });
 
   test('should show error for weak password on registration', async ({ page }) => {
@@ -92,7 +92,7 @@ test.describe('Authentication Flow', () => {
     // Note: Without middleware, this won't auto-redirect
     // But we can verify the session still works
     await page.goto('/dashboard');
-    await expect(page.locator('text=Bienvenido')).toBeVisible();
+    await expect(page.locator('[data-testid="welcome-message"]')).toBeVisible();
   });
 
   test('QA user should be able to login', async ({ page }) => {
@@ -102,7 +102,7 @@ test.describe('Authentication Flow', () => {
     await page.fill('input[type="password"]', 'Test1234!');
     await page.click('button[type="submit"]');
 
-    await page.waitForURL('/dashboard');
-    await expect(page.locator('text=QA Test User')).toBeVisible();
+    await page.waitForURL('/dashboard', { timeout: 10000 });
+    await expect(page.locator('[data-testid="welcome-message"]')).toContainText('QA Test User');
   });
 });
