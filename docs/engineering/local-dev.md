@@ -5,7 +5,7 @@ Dos caminos. El default **no** pide red ni cuentas externas.
 | Camino | Cuándo | Red / secretos |
 |--------|--------|----------------|
 | **Smoke local (sin red)** | Laptop, Box de agente, CI | File SQLite `file:./local.db`. Telegram stub (curl). Sin Turso cloud, sin BotFather, sin túnel. |
-| **Integraciones reales (opcionales)** | Cuando Esteban quiera pegar a Turso / un bot de verdad | `libsql://…` + token; BotFather + túnel HTTPS + `setWebhook`. IA **no está cableada** (tip system). |
+| **Integraciones reales (opcionales)** | Cuando quieras pegar a Turso / un bot de verdad | `libsql://…` + token; BotFather + túnel HTTPS + `setWebhook`. IA **no está cableada** (tip system). |
 
 Zona horaria canónica: `America/Argentina/Cordoba`. Copy de producto: `es-AR`.
 
