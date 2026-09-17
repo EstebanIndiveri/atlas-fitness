@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 /**
  * Users table — authentication and profile
@@ -50,20 +50,28 @@ export const workouts = sqliteTable('workouts', {
  * Workout sets table — individual sets within workouts
  * weight_kg stored as text to preserve decimal precision
  */
-export const workoutSets = sqliteTable('workout_sets', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  workoutId: integer('workout_id')
-    .notNull()
-    .references(() => workouts.id),
-  exerciseId: integer('exercise_id')
-    .notNull()
-    .references(() => exercises.id),
-  setIndex: integer('set_index').notNull(),
-  reps: integer('reps').notNull(),
-  weightKg: text('weight_kg').notNull(),
-  completed: integer('completed', { mode: 'boolean' }).notNull().default(true),
-  deletedAt: integer('deleted_at', { mode: 'timestamp' }),
-});
+export const workoutSets = sqliteTable(
+  'workout_sets',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    workoutId: integer('workout_id')
+      .notNull()
+      .references(() => workouts.id),
+    exerciseId: integer('exercise_id')
+      .notNull()
+      .references(() => exercises.id),
+    setIndex: integer('set_index').notNull(),
+    reps: integer('reps').notNull(),
+    weightKg: text('weight_kg').notNull(),
+    completed: integer('completed', { mode: 'boolean' }).notNull().default(true),
+    deletedAt: integer('deleted_at', { mode: 'timestamp' }),
+  },
+  (table) => ({
+    uniqueWorkoutSet: uniqueIndex('workout_sets_workout_id_set_index_unique')
+      .on(table.workoutId, table.setIndex)
+      .where(sql`${table.deletedAt} IS NULL`),
+  })
+);
 
 /**
  * Daily tips table — motivational tips for users

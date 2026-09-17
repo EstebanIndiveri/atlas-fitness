@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import { db } from './client';
-import { users, exercises, userStreaks } from './schema';
+import { users, exercises, userStreaks, dailyTips } from './schema';
 import { eq } from 'drizzle-orm';
 
 const QA_USER_EMAIL = 'qa@atlas.test';
@@ -127,6 +127,34 @@ async function seed() {
       lastWorkoutDate: null,
     });
     console.log('\nInitialized user streak record');
+  }
+
+  // Seed a few sample daily tips for testing
+  console.log('\nSeeding sample daily tips...');
+  const sampleTips = [
+    {
+      date: '2026-09-16',
+      body: 'La constancia es la clave. Cada entrenamiento cuenta, no importa cuán pequeño sea.',
+      source: 'system',
+    },
+    {
+      date: '2026-09-15',
+      body: 'Recordá: el dolor que sentís hoy será la fuerza que sentirás mañana.',
+      source: 'system',
+    },
+  ];
+
+  for (const tip of sampleTips) {
+    const existing = await db.query.dailyTips.findFirst({
+      where: eq(dailyTips.date, tip.date),
+    });
+
+    if (!existing) {
+      await db.insert(dailyTips).values(tip);
+      console.log(`  Created tip for ${tip.date}`);
+    } else {
+      console.log(`  Tip for ${tip.date} already exists`);
+    }
   }
 
   console.log('\n✅ Seed completed successfully!');

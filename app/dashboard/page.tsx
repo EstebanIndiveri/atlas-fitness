@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { TipCard } from '@/components/TipCard';
 import type { AuthUser } from '@/types/auth';
 import type { Workout } from '@/lib/db/schema';
 
@@ -102,36 +103,7 @@ export default function DashboardPage() {
           </button>
         </div>
 
-        {activeWorkout ? (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-            <h2 className="text-lg font-semibold text-green-900 mb-2">
-              Entrenamiento Activo
-            </h2>
-            <p className="text-sm text-green-800 mb-3">
-              Iniciado: {new Date(activeWorkout.startedAt).toLocaleString('es-AR')}
-            </p>
-            <Link
-              href={`/dashboard/workout/${activeWorkout.id}`}
-              className="inline-block px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-medium"
-            >
-              Continuar Entrenamiento
-            </Link>
-          </div>
-        ) : (
-          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-            <h2 className="text-xl font-semibold mb-3">Nuevo Entrenamiento</h2>
-            <p className="text-gray-600 mb-4 text-sm">
-              Comienza una nueva sesión de entrenamiento
-            </p>
-            <button
-              onClick={handleNewWorkout}
-              className="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium"
-              data-testid="new-workout-button"
-            >
-              Iniciar Entrenamiento
-            </button>
-          </div>
-        )}
+        <TipCard activeWorkout={activeWorkout} onStartWorkout={handleNewWorkout} />
 
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex items-center justify-between mb-4">
