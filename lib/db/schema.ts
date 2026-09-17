@@ -125,6 +125,34 @@ export const userStreaks = sqliteTable('user_streaks', {
     .default(sql`(unixepoch())`),
 });
 
+/**
+ * Daily checkins table — mood tracking separate from tips
+ * One checkin per user per local date (America/Argentina/Cordoba)
+ */
+export const dailyCheckins = sqliteTable(
+  'daily_checkins',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id),
+    localDate: text('local_date').notNull(),
+    mood: integer('mood').notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .default(sql`(unixepoch())`),
+    updatedAt: integer('updated_at', { mode: 'timestamp' })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (table) => ({
+    uniqueUserDate: uniqueIndex('daily_checkins_user_id_local_date_unique').on(
+      table.userId,
+      table.localDate
+    ),
+  })
+);
+
 // Type exports
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -149,3 +177,6 @@ export type NewBotMessage = typeof botMessages.$inferInsert;
 
 export type UserStreak = typeof userStreaks.$inferSelect;
 export type NewUserStreak = typeof userStreaks.$inferInsert;
+
+export type DailyCheckin = typeof dailyCheckins.$inferSelect;
+export type NewDailyCheckin = typeof dailyCheckins.$inferInsert;

@@ -43,11 +43,20 @@ export function TipCard({ activeWorkout, onStartWorkout }: TipCardProps) {
     setSavingMood(true);
 
     try {
-      // TODO: Save mood to API when backend endpoint is ready
-      // For now, just store it in state
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      const response = await fetch('/api/mood', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ mood: selectedMood }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save mood');
+      }
     } catch (err) {
-      console.error('Error saving mood:', err);
+      console.error('Error al guardar el estado de ánimo:', err);
+      // Keep the mood selected in UI even if save fails
     } finally {
       setSavingMood(false);
     }
