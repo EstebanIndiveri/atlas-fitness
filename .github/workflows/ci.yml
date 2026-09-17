@@ -30,8 +30,15 @@ jobs:
       - name: Run TypeScript typecheck
         run: npm run typecheck
 
+      - name: Run database migrations
+        run: npm run db:migrate
+        env:
+          TURSO_DATABASE_URL: file:./test.db
+
       - name: Run Jest unit tests
         run: npm test
+        env:
+          TURSO_DATABASE_URL: file:./test.db
 
       - name: Build Next.js app
         run: npm run build
