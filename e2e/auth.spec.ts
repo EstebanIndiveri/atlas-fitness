@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { TW_SMOKE } from './tailwind-smoke';
 
 const TEST_USER = {
   name: 'E2E Test User',
@@ -32,6 +33,11 @@ test.describe('Authentication Flow', () => {
     await page.waitForResponse((resp) => resp.url().includes('/api/auth/me'));
     await expect(page.locator('[data-testid="welcome-message"]')).toBeVisible({ timeout: 10000 });
     await expect(page.locator('[data-testid="welcome-message"]')).toContainText(TEST_USER.name);
+    await expect(page.locator('main').first()).toHaveCSS('background-color', TW_SMOKE.gray50);
+    await expect(page.getByRole('button', { name: 'Cerrar sesión' })).toHaveCSS(
+      'border-radius',
+      TW_SMOKE.roundedMd,
+    );
 
     // Logout
     await page.click('button:has-text("Cerrar sesión")');
