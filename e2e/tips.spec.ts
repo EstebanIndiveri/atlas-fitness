@@ -124,21 +124,20 @@ test.describe('Daily Tips', () => {
     const mood3Button = page.getByTestId('mood-3');
     await expect(mood3Button).toBeVisible();
 
-    // Click and wait for UI update
-    await mood3Button.click();
-    
-    // Give some time for state update
-    await page.waitForTimeout(500);
+    const [moodResponse] = await Promise.all([
+      page.waitForResponse(
+        (resp) =>
+          resp.url().includes('/api/mood') &&
+          resp.request().method() === 'POST' &&
+          resp.status() === 200,
+        { timeout: 10000 },
+      ),
+      mood3Button.click(),
+    ]);
 
-    // Button should have active styling (bg-blue-200)
+    const body = await moodResponse.json();
+    expect(body.mood).toBe(3);
     await expect(mood3Button).toHaveClass(/bg-blue-200/);
-    
-    // Verify persistence by reloading page
-    await page.reload();
-    await page.waitForSelector('[data-testid="tip-card"]', { state: 'visible', timeout: 10000 });
-    
-    // Note: We're not asserting persistence across reload because the component doesn't fetch mood on load yet
-    // The mood was persisted to the API, which is what we're testing here
   });
 
   test('should allow selecting different moods', async ({ page }) => {
