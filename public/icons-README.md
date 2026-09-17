@@ -1,18 +1,9 @@
-# PWA Icons Placeholder
+# PWA icons
 
-This directory should contain:
+Real launcher icons (not placeholders):
 
-- `icon-192.png` — 192x192px app icon
-- `icon-512.png` — 512x512px app icon
-- `favicon.ico` — Browser favicon
-- `apple-touch-icon.png` — iOS home screen icon (180x180px)
+- `icon-192.png` / `icon-512.png` — purpose `any`
+- `icon-192-maskable.png` / `icon-512-maskable.png` — purpose `maskable` (safe-zone padding)
+- `apple-touch-icon.png` — 180×180 iOS Home Screen
 
-For Phase 1, these are placeholders. Generate actual icons before production.
-
-## Generating Icons
-
-Use a tool like:
-- https://realfavicongenerator.net/
-- https://www.pwabuilder.com/imageGenerator
-
-Upload a source logo and generate all required sizes.
+The web app manifest is generated from `app/manifest.ts` (`/manifest.webmanifest`).
