@@ -43,4 +43,22 @@ describe('.env.example (local / Box defaults)', () => {
     expect(parsed.TURSO_AUTH_TOKEN ?? '').toBe('');
     expect(parsed.TELEGRAM_BOT_TOKEN).toBe('');
   });
+
+  it('documents optional Turso cloud without changing the file-DB default', () => {
+    expect(contents).toMatch(/libsql:\/\/your-database\.turso\.io/);
+    expect(contents).toMatch(/Switch back to smoke/i);
+    expect(parsed.TURSO_DATABASE_URL).toBe(LOCAL_FILE_DB_URL);
+  });
+
+  it('documents real Telegram setWebhook (header secret) as optional', () => {
+    expect(contents).toMatch(/setWebhook/);
+    expect(contents).toMatch(/X-Telegram-Bot-Api-Secret-Token/);
+    expect(contents).toMatch(/ngrok|cloudflared/i);
+  });
+
+  it('documents AI as not wired yet with a commented env stub', () => {
+    expect(contents).toMatch(/# GEMINI_API_KEY=/);
+    expect(contents).toMatch(/not wired yet|Won't this PR/i);
+    expect(parsed.GEMINI_API_KEY).toBeUndefined();
+  });
 });

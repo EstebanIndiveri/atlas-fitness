@@ -6,6 +6,6 @@
 | `backlog/` | MoSCoW Must v2 y orden de entrega |
 | `engineering/` | Convenciones FE/BE/QA + **local-dev** (localhost y Box) |
 
-- Arranque local/Box: [`engineering/local-dev.md`](./engineering/local-dev.md)
+- Arranque local/Box (smoke sin red + integraciones reales opcionales): [`engineering/local-dev.md`](./engineering/local-dev.md)
 
 Harness de agentes y branching: **`/AGENTS.md`** (raíz del repo).
