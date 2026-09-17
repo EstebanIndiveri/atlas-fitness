@@ -162,3 +162,53 @@ test.describe('Daily Tips', () => {
     expect(text!.length).toBeGreaterThan(10);
   });
 });
+
+test.describe('TipCard mood hydration', () => {
+  test('should keep selected mood highlighted after reload', async ({ page }) => {
+    const user = {
+      name: 'Mood Hydration',
+      email: `mood-e2e-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@test.com`,
+      password: 'Test1234!',
+    };
+
+    await page.goto('/register');
+    await page.fill('input[type="text"]', user.name);
+    await page.fill('input[type="email"]', user.email);
+    const passwordInputs = await page.locator('input[type="password"]').all();
+    await passwordInputs[0].fill(user.password);
+    await passwordInputs[1].fill(user.password);
+    await page.click('button[type="submit"]');
+    await page.waitForResponse(
+      (resp) => resp.url().includes('/api/auth/register') && resp.status() === 201,
+    );
+    await page.waitForURL('/dashboard', { timeout: 20000 });
+    await page.waitForSelector('[data-testid="tip-card"]', { state: 'visible', timeout: 10000 });
+
+    const mood4Button = page.getByTestId('mood-4');
+    await expect(mood4Button).toBeVisible();
+
+    await Promise.all([
+      page.waitForResponse(
+        (resp) =>
+          resp.url().includes('/api/mood') &&
+          resp.request().method() === 'POST' &&
+          resp.status() === 200,
+        { timeout: 10000 },
+      ),
+      mood4Button.click(),
+    ]);
+    await expect(mood4Button).toHaveClass(/bg-blue-200/);
+
+    const moodGet = page.waitForResponse(
+      (resp) =>
+        resp.url().includes('/api/mood') &&
+        resp.request().method() === 'GET' &&
+        resp.ok(),
+      { timeout: 10000 },
+    );
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await moodGet;
+    await page.waitForSelector('[data-testid="tip-card"]', { state: 'visible', timeout: 10000 });
+    await expect(page.getByTestId('mood-4')).toHaveClass(/bg-blue-200/);
+  });
+});

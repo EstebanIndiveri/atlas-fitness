@@ -21,8 +21,8 @@ Reglas de testing, seed data, y criterios de aceptación para Must v2.
 ### Usuario QA
 
 - Email: `qa@atlas.test`
-- Password: `Test1234!` (si se implementa password; sino link Telegram)
-- Telegram: Usuario mock para tests e2e
+- Password: `Test1234!` (seed en `lib/db/seed.ts`)
+- Telegram: Usuario mock / webhook stub para tests e2e (sin red a Telegram)
 
 ### Ejercicios Seed
 
@@ -55,11 +55,14 @@ Reglas de testing, seed data, y criterios de aceptación para Must v2.
 
 ## Playwright Must Scenarios
 
-1. **Home / Landing** — Carga 200, título visible
-2. **Auth Flow** (cuando se implemente) — Login → Dashboard
-3. **Log Workout** (cuando se implemente) — Crear sesión → ver en historial
-4. **Tip Card** (cuando se implemente) — Ver tip → CTA funciona
-5. **Streaks** (cuando se implemente) — Racha visible, actualizada
+Flujos **ya shipped** (no “cuando se implemente”). Detalle de cómo correrlos en laptop/Box: `docs/engineering/local-dev.md`.
+
+1. **Home / Landing** — Carga 200, título visible; copy PWA iOS “Agregar a Inicio”
+2. **Auth Flow** — Login → Dashboard (`qa@atlas.test` / `Test1234!`)
+3. **Log Workout** — Crear sesión → sets → finalizar → ver en historial
+4. **Tip Card** — Tip diario visible, mood 1–5 (hidrata tras reload), CTA log
+5. **Streaks** — Chip de racha visible, TZ `America/Argentina/Cordoba`
+6. **Telegram** — link-code + webhook stub; `update_id` duplicado → `duplicate: true` (sin red a Telegram)
 
 ## Tests Unitarios Must
 

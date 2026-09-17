@@ -26,6 +26,8 @@ Asistente de fitness personal para registrar entrenamientos, pesos, consejos, me
 
 ## Desarrollo Local
 
+Guía completa (file DB, seed, smoke UI/API, Box vs localhost, curl de cron/webhook): **[`docs/engineering/local-dev.md`](./docs/engineering/local-dev.md)**.
+
 ### Pre-requisitos
 
 - Node.js 20+
@@ -38,8 +40,9 @@ Asistente de fitness personal para registrar entrenamientos, pesos, consejos, me
 git clone https://github.com/EstebanIndiveri/atlas-fitness.git
 cd atlas-fitness
 
-# Instalar dependencias
+# Instalar dependencias, .env, migraciones y seed (usuario qa@atlas.test)
 npm install
+npm run setup:local
 
 # Ejecutar en desarrollo
 npm run dev
@@ -70,6 +73,9 @@ npm start
 ```bash
 # Desarrollo
 npm run dev          # Iniciar servidor de desarrollo (con Turbopack)
+npm run setup:local  # Copiar .env si falta + migrate + seed (file DB)
+npm run db:migrate   # Aplicar migraciones Drizzle
+npm run db:seed      # Seed QA user + ejercicios
 npm run build        # Build de producción
 npm start            # Iniciar servidor de producción
 
