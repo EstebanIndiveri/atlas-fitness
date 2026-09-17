@@ -66,23 +66,23 @@ jobs:
       - name: Run database migrations
         run: npm run db:migrate
         env:
-          TURSO_DATABASE_URL: file:./test.db
+          TURSO_DATABASE_URL: file:./local.db
 
       - name: Seed database with QA user
         run: npm run db:seed
         env:
-          TURSO_DATABASE_URL: file:./test.db
+          TURSO_DATABASE_URL: file:./local.db
 
       - name: Build Next.js app
         run: npm run build
         env:
-          TURSO_DATABASE_URL: file:./test.db
+          TURSO_DATABASE_URL: file:./local.db
           SESSION_SECRET: test-secret-for-ci-only-not-production
 
       - name: Run Playwright tests
         run: npm run test:e2e
         env:
-          TURSO_DATABASE_URL: file:./test.db
+          TURSO_DATABASE_URL: file:./local.db
           SESSION_SECRET: test-secret-for-ci-only-not-production
 
       - name: Upload Playwright Report
