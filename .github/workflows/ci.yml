@@ -73,6 +73,12 @@ jobs:
         env:
           TURSO_DATABASE_URL: file:./test.db
 
+      - name: Build Next.js app
+        run: npm run build
+        env:
+          TURSO_DATABASE_URL: file:./test.db
+          SESSION_SECRET: test-secret-for-ci-only-not-production
+
       - name: Run Playwright tests
         run: npm run test:e2e
         env:
