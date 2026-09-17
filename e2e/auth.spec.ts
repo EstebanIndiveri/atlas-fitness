@@ -62,8 +62,8 @@ test.describe('Authentication Flow', () => {
     await page.fill('input[type="password"]', 'WrongPassword123!');
     await page.click('button[type="submit"]');
 
-    // Should show error message (from backend)
-    await expect(page.locator('text=Invalid email or password')).toBeVisible();
+    // Should show error message (from backend in es-AR)
+    await expect(page.locator('text=Email o contraseña inválidos')).toBeVisible();
   });
 
   test('should show error for weak password on registration', async ({ page }) => {
@@ -117,7 +117,7 @@ test.describe('Authentication Flow', () => {
     await page.waitForResponse((resp) => resp.url().includes('/api/auth/login') && resp.status() === 200);
     
     await page.waitForURL('/dashboard', { timeout: 15000 });
-    await page.waitForResponse((resp) => resp.url().includes('/api/auth/me'));
+    // Wait for welcome message to appear (implies /api/auth/me completed)
     await expect(page.locator('[data-testid="welcome-message"]')).toBeVisible({ timeout: 10000 });
     await expect(page.locator('[data-testid="welcome-message"]')).toContainText('QA Test User');
   });

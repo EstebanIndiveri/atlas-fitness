@@ -1,20 +1,21 @@
 import { test, expect } from '@playwright/test';
 
-const TEST_USER = {
-  name: 'Workout E2E Test',
-  email: `workout-e2e-${Date.now()}@test.com`,
-  password: 'Test1234!',
-};
-
 test.describe('Workout Flow', () => {
   test.beforeEach(async ({ page }) => {
+    // Generate unique email for each test run
+    const testUser = {
+      name: 'Workout E2E Test',
+      email: `workout-e2e-${Date.now()}-${Math.random().toString(36).substr(2, 9)}@test.com`,
+      password: 'Test1234!',
+    };
+
     // Register and login
     await page.goto('/register');
-    await page.fill('input[type="text"]', TEST_USER.name);
-    await page.fill('input[type="email"]', TEST_USER.email);
+    await page.fill('input[type="text"]', testUser.name);
+    await page.fill('input[type="email"]', testUser.email);
     const passwordInputs = await page.locator('input[type="password"]').all();
-    await passwordInputs[0].fill(TEST_USER.password);
-    await passwordInputs[1].fill(TEST_USER.password);
+    await passwordInputs[0].fill(testUser.password);
+    await passwordInputs[1].fill(testUser.password);
     await page.click('button[type="submit"]');
     await page.waitForResponse((resp) => resp.url().includes('/api/auth/register') && resp.status() === 201);
     await page.waitForURL('/dashboard', { timeout: 15000 });
@@ -68,10 +69,11 @@ test.describe('Workout Flow', () => {
     await expect(page.locator('[data-testid="pr-badge"]').first()).toBeVisible({ timeout: 5000 });
 
     // Delete the first set
+    // Set up dialog handler BEFORE clicking
+    page.once('dialog', dialog => dialog.accept());
     const firstSetDeleteButton = await page.locator('[data-testid="workout-set"] button:has-text("Eliminar")').first();
     await firstSetDeleteButton.click();
-    page.on('dialog', dialog => dialog.accept());
-    await page.waitForResponse((resp) => resp.url().includes('/sets/') && resp.status() === 200);
+    await page.waitForResponse((resp) => resp.url().includes('/sets/') && (resp.status() === 200 || resp.status() === 204));
 
     // Should only have one set now
     await expect(page.locator('[data-testid="workout-set"]')).toHaveCount(1);
