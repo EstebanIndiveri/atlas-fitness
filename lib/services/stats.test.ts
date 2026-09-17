@@ -12,6 +12,7 @@ import {
   telegramLinkCodes,
   dailyCheckins,
   streakNudges,
+  botMessages,
 } from '@/lib/db/schema';
 
 describe('Stats Service', () => {
@@ -27,6 +28,7 @@ describe('Stats Service', () => {
     await db.delete(workouts);
     await db.delete(exercises);
     await db.delete(userStreaks);
+    await db.delete(botMessages);
     await db.delete(telegramLinkCodes);
     await db.delete(users);
 

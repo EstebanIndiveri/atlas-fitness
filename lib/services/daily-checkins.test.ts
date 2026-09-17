@@ -8,6 +8,7 @@ import {
   telegramLinkCodes,
   userStreaks,
   streakNudges,
+  botMessages,
 } from '@/lib/db/schema';
 import { upsertDailyCheckin, getDailyCheckin } from './daily-checkins';
 import { AppError } from '@/types/errors';
@@ -23,6 +24,7 @@ describe('Daily Checkins Service', () => {
     await db.delete(dailyCheckins);
     await db.delete(workoutSets);
     await db.delete(workouts);
+    await db.delete(botMessages);
     await db.delete(telegramLinkCodes);
     await db.delete(userStreaks);
     await db.delete(users);

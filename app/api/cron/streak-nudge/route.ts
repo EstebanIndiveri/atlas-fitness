@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { runStreakNudges } from '@/lib/services/streaks';
+import { TELEGRAM_COPY } from '@/lib/telegram/copy';
+import { notifyLinkedTelegramUsers } from '@/lib/telegram/notify-linked';
 
 /**
  * GET /api/cron/streak-nudge
  *
  * Nudge rule: users who were active yesterday (Córdoba) but not yet today.
  * Stores an idempotent intent row in `streak_nudges` (kind = streak_at_risk).
- * Telegram send is out of scope; re-runs the same day do not duplicate.
+ * Newly recorded rows are sent to Telegram when the user is linked.
+ * Re-runs the same day do not duplicate DB rows or resend.
  * Protected by Authorization: Bearer ${CRON_SECRET}.
  */
 export async function GET(request: NextRequest) {
@@ -22,10 +25,15 @@ export async function GET(request: NextRequest) {
     }
 
     const result = await runStreakNudges();
+    const notified = await notifyLinkedTelegramUsers(
+      result.recordedUserIds,
+      TELEGRAM_COPY.reminderAtRisk
+    );
 
     return NextResponse.json({
       success: true,
       ...result,
+      notified,
     });
   } catch (error) {
     console.error('Error in streak nudge cron:', error);

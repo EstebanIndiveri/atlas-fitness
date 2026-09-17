@@ -9,6 +9,7 @@ import {
   users,
   workouts,
   workoutSets,
+  botMessages,
 } from '@/lib/db/schema';
 import { addLocalDateDays, cordobaLocalDate } from '@/lib/time/cordoba';
 import { STREAK_NUDGE_KIND, STREAK_NUDGE_RULE } from '@/types/streak';
@@ -127,6 +128,7 @@ describe('Streaks service', () => {
     await db.delete(dailyCheckins);
     await db.delete(workoutSets);
     await db.delete(workouts);
+    await db.delete(botMessages);
     await db.delete(telegramLinkCodes);
     await db.delete(userStreaks);
     await db.delete(users);

@@ -221,7 +221,8 @@ async function recordNudgeIfAbsent(
 
 /**
  * Nudge rule: users whose last Córdoba active day is yesterday and who are not
- * yet active today. Stores intent in `streak_nudges` (no Telegram in Phase 5).
+ * yet active today. Stores intent in `streak_nudges`. Telegram delivery is done
+ * by the cron (only for newly recorded rows, and only if telegram_user_id is set).
  * Re-running the same Córdoba day is a no-op for already recorded rows.
  */
 export async function runStreakNudges(now: Date = new Date()): Promise<StreakNudgeRunResult> {
@@ -232,6 +233,7 @@ export async function runStreakNudges(now: Date = new Date()): Promise<StreakNud
 
   let recorded = 0;
   let skipped = 0;
+  const recordedUserIds: number[] = [];
   for (const userId of yesterdayUsers) {
     if (todayUsers.has(userId)) {
       continue;
@@ -239,6 +241,7 @@ export async function runStreakNudges(now: Date = new Date()): Promise<StreakNud
     const created = await recordNudgeIfAbsent(userId, today, STREAK_NUDGE_KIND);
     if (created) {
       recorded += 1;
+      recordedUserIds.push(userId);
     } else {
       skipped += 1;
     }
@@ -250,5 +253,6 @@ export async function runStreakNudges(now: Date = new Date()): Promise<StreakNud
     considered: recorded + skipped,
     recorded,
     skipped,
+    recordedUserIds,
   };
 }

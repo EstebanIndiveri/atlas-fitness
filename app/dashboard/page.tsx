@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { TipCard } from '@/components/TipCard';
 import { StreakChip } from '@/components/StreakChip';
+import { TelegramLinkBanner } from '@/components/TelegramLinkBanner';
 import type { AuthUser } from '@/types/auth';
 import type { Workout } from '@/lib/db/schema';
 
@@ -96,13 +97,24 @@ export default function DashboardPage() {
               Bienvenido, {user.name}
             </p>
           </div>
-          <button
-            onClick={handleLogout}
-            className="px-3 py-2 text-xs sm:text-sm bg-gray-200 hover:bg-gray-300 rounded-md"
-          >
-            Cerrar sesión
-          </button>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/dashboard/settings"
+              className="px-3 py-2 text-xs sm:text-sm bg-gray-100 hover:bg-gray-200 rounded-md"
+              data-testid="settings-link"
+            >
+              Ajustes
+            </Link>
+            <button
+              onClick={handleLogout}
+              className="px-3 py-2 text-xs sm:text-sm bg-gray-200 hover:bg-gray-300 rounded-md"
+            >
+              Cerrar sesión
+            </button>
+          </div>
         </div>
+
+        {!user.telegramUserId && <TelegramLinkBanner />}
 
         <StreakChip />
 
