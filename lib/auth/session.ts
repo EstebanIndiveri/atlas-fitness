@@ -71,6 +71,7 @@ export function clearSessionCookie(): string {
 
 /**
  * Parses cookies from request headers
+ * Uses indexOf to split on first '=' only, preserving base64 padding in values
  */
 export function parseCookies(cookieHeader: string | null): Record<string, string> {
   if (!cookieHeader) {
@@ -79,8 +80,11 @@ export function parseCookies(cookieHeader: string | null): Record<string, string
 
   return cookieHeader.split(';').reduce(
     (acc, cookie) => {
-      const [key, value] = cookie.trim().split('=');
-      if (key && value) {
+      const part = cookie.trim();
+      const i = part.indexOf('=');
+      if (i > 0) {
+        const key = part.slice(0, i);
+        const value = part.slice(i + 1);
         acc[key] = value;
       }
       return acc;

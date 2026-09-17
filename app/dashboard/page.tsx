@@ -1,14 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import type { AuthUser } from '@/types/auth';
 
-// Force dynamic rendering to ensure cookies are available
-export const dynamic = 'force-dynamic';
-
 export default function DashboardPage() {
-  const router = useRouter();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -18,7 +13,7 @@ export default function DashboardPage() {
         const response = await fetch('/api/auth/me');
 
         if (!response.ok) {
-          // Middleware should have caught this, but handle edge case
+          // Proxy should have caught this, but handle edge case
           setLoading(false);
           return;
         }
@@ -27,6 +22,8 @@ export default function DashboardPage() {
         setUser(userData);
       } catch {
         // Network error or other issue
+        setLoading(false);
+      } finally {
         setLoading(false);
       }
     };
@@ -37,7 +34,7 @@ export default function DashboardPage() {
   const handleLogout = async () => {
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
-      router.push('/login');
+      window.location.href = '/login';
     } catch (error) {
       console.error('Logout error:', error);
     }

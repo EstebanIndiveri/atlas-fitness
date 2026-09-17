@@ -16,19 +16,13 @@ export function proxy(request: NextRequest) {
 
   // Protected routes - require authentication
   if (pathname.startsWith('/dashboard')) {
-    // TEMPORARY: Log cookie info for debugging
-    console.log('[Proxy] Dashboard request - Cookie:', cookieHeader);
-    console.log('[Proxy] Session:', JSON.stringify(session));
-    
     if (!session || !session.userId) {
       // Not authenticated, redirect to login
-      console.log('[Proxy] No valid session, redirecting to login');
       const loginUrl = new URL('/login', request.url);
       return NextResponse.redirect(loginUrl);
     }
 
     // Authenticated - set x-user-id header and allow
-    console.log('[Proxy] Valid session, allowing access');
     const response = NextResponse.next();
     response.headers.set('x-user-id', session.userId.toString());
     return response;

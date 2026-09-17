@@ -53,28 +53,25 @@ export async function decodeSessionEdge(cookieValue: string): Promise<SessionDat
   try {
     const [payload, signature] = cookieValue.split('.');
     if (!payload || !signature) {
-      console.log('[Session] Invalid cookie format - missing payload or signature');
       return null;
     }
 
     const isValid = await verifySignature(payload, signature);
     if (!isValid) {
-      console.log('[Session] Invalid signature');
       return null;
     }
 
     const decoded = base64Decode(payload);
     const data = JSON.parse(decoded);
-    console.log('[Session] Successfully decoded session:', data);
     return data;
-  } catch (error) {
-    console.log('[Session] Error decoding:', error);
+  } catch {
     return null;
   }
 }
 
 /**
  * Parses cookies from request headers
+ * Uses indexOf to split on first '=' only, preserving base64 padding in values
  */
 export function parseCookies(cookieHeader: string | null): Record<string, string> {
   if (!cookieHeader) {
@@ -83,8 +80,11 @@ export function parseCookies(cookieHeader: string | null): Record<string, string
 
   return cookieHeader.split(';').reduce(
     (acc, cookie) => {
-      const [key, value] = cookie.trim().split('=');
-      if (key && value) {
+      const part = cookie.trim();
+      const i = part.indexOf('=');
+      if (i > 0) {
+        const key = part.slice(0, i);
+        const value = part.slice(i + 1);
         acc[key] = value;
       }
       return acc;
