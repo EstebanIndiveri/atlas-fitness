@@ -96,7 +96,16 @@ export async function ensureTodayTip(
   const body = aiContent && aiContent.trim().length > 0 ? aiContent : getRandomSystemTip();
   const source = aiContent && aiContent.trim().length > 0 ? 'ai' : 'system';
 
-  return createTip(date, body, source);
+  try {
+    return await createTip(date, body, source);
+  } catch (error) {
+    // Concurrent cron: UNIQUE race → return the tip created by the other writer
+    if (error instanceof AppError && error.code === 'CONFLICT') {
+      const tip = await getTodayTip(date);
+      if (tip) return tip;
+    }
+    throw error;
+  }
 }
 
 /**
