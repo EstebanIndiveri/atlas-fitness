@@ -16,13 +16,14 @@ const updateSetSchema = z.object({
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string; setId: string } }
+  { params }: { params: Promise<{ id: string; setId: string }> }
 ) {
   try {
     const session = requireAuth(request);
-    const setId = parseInt(params.setId);
+    const { setId } = await params;
+    const setIdNum = parseInt(setId);
 
-    if (isNaN(setId)) {
+    if (isNaN(setIdNum)) {
       throw new AppError('VALIDATION', 'ID de serie inválido');
     }
 
@@ -30,7 +31,7 @@ export async function PATCH(
     const validated = updateSetSchema.parse(body);
 
     const workoutSet = await workoutSetsService.updateWorkoutSet({
-      setId,
+      setId: setIdNum,
       userId: session.userId,
       ...validated,
     });
@@ -52,17 +53,18 @@ export async function PATCH(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string; setId: string } }
+  { params }: { params: Promise<{ id: string; setId: string }> }
 ) {
   try {
     const session = requireAuth(request);
-    const setId = parseInt(params.setId);
+    const { setId } = await params;
+    const setIdNum = parseInt(setId);
 
-    if (isNaN(setId)) {
+    if (isNaN(setIdNum)) {
       throw new AppError('VALIDATION', 'ID de serie inválido');
     }
 
-    await workoutSetsService.deleteWorkoutSet(setId, session.userId);
+    await workoutSetsService.deleteWorkoutSet(setIdNum, session.userId);
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {

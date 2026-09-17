@@ -24,32 +24,7 @@ export interface UpdateWorkoutSetInput {
 }
 
 /**
- * Validates and verifies workout ownership
- */
-async function verifyWorkoutOwnership(
-  workoutId: number,
-  userId: number,
-  allowEnded = false
-): Promise<void> {
-  const workout = await db.query.workouts.findFirst({
-    where: eq(workouts.id, workoutId),
-  });
-
-  if (!workout || workout.deletedAt) {
-    throw new AppError('NOT_FOUND', 'Entrenamiento no encontrado');
-  }
-
-  if (workout.userId !== userId) {
-    throw new AppError('FORBIDDEN', 'No tienes permiso para modificar este entrenamiento');
-  }
-
-  if (!allowEnded && workout.endedAt) {
-    throw new AppError('VALIDATION', 'No puedes agregar series a un entrenamiento finalizado');
-  }
-}
-
-/**
- * Creates a new workout set (atomic operation)
+ * Creates a new workout set (atomic operation with transaction)
  */
 export async function createWorkoutSet(input: CreateWorkoutSetInput): Promise<WorkoutSet> {
   // Validate input
@@ -61,25 +36,63 @@ export async function createWorkoutSet(input: CreateWorkoutSetInput): Promise<Wo
     throw new AppError('VALIDATION', 'Peso inválido');
   }
 
-  // Verify ownership before insertion (prevents TOCTOU)
-  await verifyWorkoutOwnership(input.workoutId, input.userId, false);
-
   const normalizedWeight = parseWeightKg(input.weightKg);
 
-  // Atomic insert
-  const [workoutSet] = await db
-    .insert(workoutSets)
-    .values({
-      workoutId: input.workoutId,
-      exerciseId: input.exerciseId,
-      setIndex: input.setIndex,
-      reps: input.reps,
-      weightKg: normalizedWeight,
-      completed: true,
-    })
-    .returning();
+  try {
+    // Use transaction to atomically verify and insert
+    const [workoutSet] = await db.transaction(async (tx) => {
+      // Verify ownership and workout state within transaction
+      const workout = await tx.query.workouts.findFirst({
+        where: eq(workouts.id, input.workoutId),
+      });
 
-  return workoutSet;
+      if (!workout || workout.deletedAt) {
+        throw new AppError('NOT_FOUND', 'Entrenamiento no encontrado');
+      }
+
+      if (workout.userId !== input.userId) {
+        throw new AppError('FORBIDDEN', 'No tienes permiso para modificar este entrenamiento');
+      }
+
+      if (workout.endedAt) {
+        throw new AppError('VALIDATION', 'No puedes agregar series a un entrenamiento finalizado');
+      }
+
+      // Atomic insert - unique constraint will prevent duplicates
+      return tx
+        .insert(workoutSets)
+        .values({
+          workoutId: input.workoutId,
+          exerciseId: input.exerciseId,
+          setIndex: input.setIndex,
+          reps: input.reps,
+          weightKg: normalizedWeight,
+          completed: true,
+        })
+        .returning();
+    });
+
+    return workoutSet;
+  } catch (error) {
+    // Handle unique constraint violation
+    // LibSQL/Drizzle may wrap constraint errors in cause
+    if (error instanceof Error) {
+      const message = error.message;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const causeMessage = (error as any).cause?.message || '';
+      
+      // Check for UNIQUE constraint failure
+      if (
+        message.includes('UNIQUE') ||
+        message.includes('unique') ||
+        causeMessage.includes('UNIQUE') ||
+        causeMessage.includes('unique')
+      ) {
+        throw new AppError('CONFLICT', 'Ya existe una serie con este índice en el entrenamiento');
+      }
+    }
+    throw error;
+  }
 }
 
 /**
@@ -105,7 +118,17 @@ export async function updateWorkoutSet(input: UpdateWorkoutSetInput): Promise<Wo
   }
 
   // Verify workout ownership
-  await verifyWorkoutOwnership(set.workoutId, input.userId, true);
+  const workout = await db.query.workouts.findFirst({
+    where: eq(workouts.id, set.workoutId),
+  });
+
+  if (!workout || workout.deletedAt) {
+    throw new AppError('NOT_FOUND', 'Entrenamiento no encontrado');
+  }
+
+  if (workout.userId !== input.userId) {
+    throw new AppError('FORBIDDEN', 'No tienes permiso para modificar esta serie');
+  }
 
   const updateData: Partial<typeof workoutSets.$inferInsert> = {};
   if (input.exerciseId !== undefined) updateData.exerciseId = input.exerciseId;
@@ -135,7 +158,17 @@ export async function deleteWorkoutSet(setId: number, userId: number): Promise<v
   }
 
   // Verify workout ownership
-  await verifyWorkoutOwnership(set.workoutId, userId, true);
+  const workout = await db.query.workouts.findFirst({
+    where: eq(workouts.id, set.workoutId),
+  });
+
+  if (!workout || workout.deletedAt) {
+    throw new AppError('NOT_FOUND', 'Entrenamiento no encontrado');
+  }
+
+  if (workout.userId !== userId) {
+    throw new AppError('FORBIDDEN', 'No tienes permiso para eliminar esta serie');
+  }
 
   await db.update(workoutSets).set({ deletedAt: new Date() }).where(eq(workoutSets.id, setId));
 }
@@ -145,7 +178,17 @@ export async function deleteWorkoutSet(setId: number, userId: number): Promise<v
  */
 export async function listWorkoutSets(workoutId: number, userId: number): Promise<WorkoutSet[]> {
   // Verify ownership
-  await verifyWorkoutOwnership(workoutId, userId, true);
+  const workout = await db.query.workouts.findFirst({
+    where: eq(workouts.id, workoutId),
+  });
+
+  if (!workout || workout.deletedAt) {
+    throw new AppError('NOT_FOUND', 'Entrenamiento no encontrado');
+  }
+
+  if (workout.userId !== userId) {
+    throw new AppError('FORBIDDEN', 'No tienes permiso para acceder a este entrenamiento');
+  }
 
   return db.query.workoutSets.findMany({
     where: and(eq(workoutSets.workoutId, workoutId), isNull(workoutSets.deletedAt)),

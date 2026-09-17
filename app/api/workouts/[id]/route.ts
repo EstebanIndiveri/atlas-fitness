@@ -15,11 +15,12 @@ const updateWorkoutSchema = z.object({
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = requireAuth(request);
-    const workoutId = parseInt(params.id);
+    const { id } = await params;
+    const workoutId = parseInt(id);
 
     if (isNaN(workoutId)) {
       throw new AppError('VALIDATION', 'ID de entrenamiento inválido');
@@ -38,11 +39,12 @@ export async function GET(
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = requireAuth(request);
-    const workoutId = parseInt(params.id);
+    const { id } = await params;
+    const workoutId = parseInt(id);
 
     if (isNaN(workoutId)) {
       throw new AppError('VALIDATION', 'ID de entrenamiento inválido');
@@ -85,11 +87,12 @@ export async function PATCH(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = requireAuth(request);
-    const workoutId = parseInt(params.id);
+    const { id } = await params;
+    const workoutId = parseInt(id);
 
     if (isNaN(workoutId)) {
       throw new AppError('VALIDATION', 'ID de entrenamiento inválido');

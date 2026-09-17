@@ -1,4 +1,4 @@
-import { eq, and, isNull, desc, sql } from 'drizzle-orm';
+import { eq, and, isNull, desc } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { workouts, workoutSets, exercises } from '@/lib/db/schema';
 import { AppError } from '@/types/errors';
@@ -30,17 +30,17 @@ export interface ExerciseHistory {
 /**
  * Gets personal records (PRs) for all exercises for a user
  * PR = max weight_kg per exercise; tie → most recent
+ * Note: Must calculate max in application code because MAX(text) in SQLite is lexicographic
  */
 export async function getPersonalRecords(userId: number): Promise<PersonalRecord[]> {
-  // Query to get max weight per exercise with most recent date on tie
-  const prQuery = db
+  // Get all sets for the user with exercise info and workout date
+  const allSets = await db
     .select({
       exerciseId: workoutSets.exerciseId,
       exerciseName: exercises.name,
-      maxWeightKg: sql<string>`MAX(${workoutSets.weightKg})`.as('maxWeightKg'),
-      // We'll get the most recent workout date for the max weight
-      recordDate: sql<Date>`MAX(${workouts.startedAt})`.as('recordDate'),
-      workoutId: sql<number>`MAX(${workouts.id})`.as('workoutId'),
+      weightKg: workoutSets.weightKg,
+      workoutDate: workouts.startedAt,
+      workoutId: workouts.id,
     })
     .from(workoutSets)
     .innerJoin(workouts, eq(workoutSets.workoutId, workouts.id))
@@ -54,45 +54,47 @@ export async function getPersonalRecords(userId: number): Promise<PersonalRecord
       )
     );
 
-  // Group by exercise
-  const rawResults = await prQuery;
-
-  // Process results to ensure tie-breaking by most recent
-  // Group by exerciseId and find max weight, then most recent on tie
+  // Group by exercise and calculate PR in application code
   const prMap = new Map<number, PersonalRecord>();
 
-  for (const row of rawResults) {
-    const existing = prMap.get(row.exerciseId);
+  for (const set of allSets) {
+    const existing = prMap.get(set.exerciseId);
 
     if (!existing) {
-      prMap.set(row.exerciseId, {
-        exerciseId: row.exerciseId,
-        exerciseName: row.exerciseName,
-        maxWeightKg: row.maxWeightKg,
-        recordDate: row.recordDate,
-        workoutId: row.workoutId,
+      prMap.set(set.exerciseId, {
+        exerciseId: set.exerciseId,
+        exerciseName: set.exerciseName,
+        maxWeightKg: set.weightKg,
+        recordDate: set.workoutDate,
+        workoutId: set.workoutId,
       });
     } else {
-      const comparison = compareDecimal(row.maxWeightKg, existing.maxWeightKg);
+      const comparison = compareDecimal(set.weightKg, existing.maxWeightKg);
 
       if (comparison > 0) {
-        // New max
-        prMap.set(row.exerciseId, {
-          exerciseId: row.exerciseId,
-          exerciseName: row.exerciseName,
-          maxWeightKg: row.maxWeightKg,
-          recordDate: row.recordDate,
-          workoutId: row.workoutId,
+        // New max weight
+        prMap.set(set.exerciseId, {
+          exerciseId: set.exerciseId,
+          exerciseName: set.exerciseName,
+          maxWeightKg: set.weightKg,
+          recordDate: set.workoutDate,
+          workoutId: set.workoutId,
         });
-      } else if (comparison === 0 && row.recordDate > existing.recordDate) {
-        // Tie, but more recent
-        prMap.set(row.exerciseId, {
-          exerciseId: row.exerciseId,
-          exerciseName: row.exerciseName,
-          maxWeightKg: row.maxWeightKg,
-          recordDate: row.recordDate,
-          workoutId: row.workoutId,
-        });
+      } else if (comparison === 0) {
+        // Tie on weight - use most recent workout (or higher workout ID if dates equal)
+        if (
+          set.workoutDate > existing.recordDate ||
+          (set.workoutDate.getTime() === existing.recordDate.getTime() &&
+            set.workoutId > existing.workoutId)
+        ) {
+          prMap.set(set.exerciseId, {
+            exerciseId: set.exerciseId,
+            exerciseName: set.exerciseName,
+            maxWeightKg: set.weightKg,
+            recordDate: set.workoutDate,
+            workoutId: set.workoutId,
+          });
+        }
       }
     }
   }

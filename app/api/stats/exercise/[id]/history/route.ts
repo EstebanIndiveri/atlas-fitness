@@ -8,11 +8,12 @@ import { AppError } from '@/types/errors';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = requireAuth(request);
-    const exerciseId = parseInt(params.id);
+    const { id } = await params;
+    const exerciseId = parseInt(id);
 
     if (isNaN(exerciseId)) {
       throw new AppError('VALIDATION', 'ID de ejercicio inválido');
