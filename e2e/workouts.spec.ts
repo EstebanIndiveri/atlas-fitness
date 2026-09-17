@@ -94,7 +94,8 @@ test.describe('Workout Flow', () => {
 
     // Verify workout appears in history
     await expect(page.locator('text=Buen entrenamiento inicial')).toBeVisible({ timeout: 5000 });
-    await expect(page.locator('text=😊')).toBeVisible();
+    // Mood emoji should be visible in history (not strict mode to allow for multiple occurrences)
+    await expect(page.locator('text=😊').first()).toBeVisible();
   });
 
   test('should show PR badge when matching or exceeding previous record', async ({ page }) => {
@@ -181,9 +182,9 @@ test.describe('Workout Flow', () => {
     await page.click('a:has-text("Volver")');
     await page.waitForURL('/dashboard', { timeout: 5000 });
 
-    // Should see active workout banner
-    await expect(page.locator('text=Entrenamiento Activo')).toBeVisible({ timeout: 5000 });
-    await expect(page.locator('a:has-text("Continuar Entrenamiento")')).toBeVisible();
+    // Should see continue workout button in TipCard
+    await expect(page.locator('[data-testid="continue-workout-cta"]')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('[data-testid="continue-workout-cta"]')).toHaveText('Continuar Entrenamiento');
 
     // Should NOT see new workout button
     await expect(page.locator('[data-testid="new-workout-button"]')).not.toBeVisible();

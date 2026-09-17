@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
+import { compareDecimal } from '@/lib/format/decimal';
 import type { WorkoutSet, Exercise } from '@/lib/db/schema';
 import { formatWeightKg } from '@/lib/format/weight';
 
@@ -206,7 +207,7 @@ export default function WorkoutSessionPage() {
   const isPR = (exerciseId: number, weightKg: string): boolean => {
     const pr = prs.find((p) => p.exerciseId === exerciseId);
     if (!pr) return true;
-    return parseFloat(weightKg) >= parseFloat(pr.maxWeightKg);
+    return compareDecimal(weightKg, pr.maxWeightKg) >= 0;
   };
 
   if (loading) {
@@ -313,6 +314,7 @@ export default function WorkoutSessionPage() {
                   <label className="block text-sm font-medium mb-1">Peso (kg)</label>
                   <input
                     type="text"
+                    inputMode="decimal"
                     value={weight}
                     onChange={(e) => setWeight(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md"

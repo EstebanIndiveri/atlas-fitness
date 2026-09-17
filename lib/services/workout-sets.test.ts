@@ -2,7 +2,15 @@ import { describe, it, expect, beforeEach } from '@jest/globals';
 import * as workoutSetsService from './workout-sets';
 import * as workoutsService from './workouts';
 import { db } from '@/lib/db/client';
-import { users, workouts, workoutSets, exercises, userStreaks, telegramLinkCodes } from '@/lib/db/schema';
+import {
+  users,
+  workouts,
+  workoutSets,
+  exercises,
+  userStreaks,
+  telegramLinkCodes,
+  dailyCheckins,
+} from '@/lib/db/schema';
 
 describe('Workout Sets Service', () => {
   let testUserId: number;
@@ -10,6 +18,7 @@ describe('Workout Sets Service', () => {
 
   beforeEach(async () => {
     // Clean up test data - delete in order respecting foreign keys
+    await db.delete(dailyCheckins);
     await db.delete(workoutSets);
     await db.delete(workouts);
     await db.delete(exercises);

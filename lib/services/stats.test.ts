@@ -3,7 +3,15 @@ import * as statsService from './stats';
 import * as workoutsService from './workouts';
 import * as workoutSetsService from './workout-sets';
 import { db } from '@/lib/db/client';
-import { users, workouts, workoutSets, exercises, userStreaks, telegramLinkCodes } from '@/lib/db/schema';
+import {
+  users,
+  workouts,
+  workoutSets,
+  exercises,
+  userStreaks,
+  telegramLinkCodes,
+  dailyCheckins,
+} from '@/lib/db/schema';
 
 describe('Stats Service', () => {
   let testUserId: number;
@@ -12,6 +20,7 @@ describe('Stats Service', () => {
 
   beforeEach(async () => {
     // Clean up test data - delete in order respecting foreign keys
+    await db.delete(dailyCheckins);
     await db.delete(workoutSets);
     await db.delete(workouts);
     await db.delete(exercises);
