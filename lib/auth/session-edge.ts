@@ -53,18 +53,22 @@ export async function decodeSessionEdge(cookieValue: string): Promise<SessionDat
   try {
     const [payload, signature] = cookieValue.split('.');
     if (!payload || !signature) {
+      console.log('[Session] Invalid cookie format - missing payload or signature');
       return null;
     }
 
     const isValid = await verifySignature(payload, signature);
     if (!isValid) {
+      console.log('[Session] Invalid signature');
       return null;
     }
 
     const decoded = base64Decode(payload);
     const data = JSON.parse(decoded);
+    console.log('[Session] Successfully decoded session:', data);
     return data;
-  } catch {
+  } catch (error) {
+    console.log('[Session] Error decoding:', error);
     return null;
   }
 }

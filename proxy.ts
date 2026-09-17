@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSessionFromCookiesEdge } from '@/lib/auth/session-edge';
+import { getSessionFromCookies } from '@/lib/auth/session';
 
 /**
  * Next.js proxy for server-side authentication and routing
@@ -7,22 +7,28 @@ import { getSessionFromCookiesEdge } from '@/lib/auth/session-edge';
  * Protected routes: /dashboard
  * Auth-only routes: /login, /register (redirect to /dashboard if authenticated)
  */
-export async function proxy(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
-  // Get session from cookies (async for Edge compatibility)
+  // Get session from cookies
   const cookieHeader = request.headers.get('cookie');
-  const session = await getSessionFromCookiesEdge(cookieHeader);
+  const session = getSessionFromCookies(cookieHeader);
 
   // Protected routes - require authentication
   if (pathname.startsWith('/dashboard')) {
+    // TEMPORARY: Log cookie info for debugging
+    console.log('[Proxy] Dashboard request - Cookie:', cookieHeader);
+    console.log('[Proxy] Session:', JSON.stringify(session));
+    
     if (!session || !session.userId) {
       // Not authenticated, redirect to login
+      console.log('[Proxy] No valid session, redirecting to login');
       const loginUrl = new URL('/login', request.url);
       return NextResponse.redirect(loginUrl);
     }
 
     // Authenticated - set x-user-id header and allow
+    console.log('[Proxy] Valid session, allowing access');
     const response = NextResponse.next();
     response.headers.set('x-user-id', session.userId.toString());
     return response;

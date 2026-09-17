@@ -19,13 +19,14 @@ test.describe('Authentication Flow', () => {
     await passwordInputs[0].fill(TEST_USER.password);
     await passwordInputs[1].fill(TEST_USER.password);
 
-    // Submit registration and wait for API response
-    const registerPromise = page.waitForResponse((resp) => resp.url().includes('/api/auth/register'));
+    // Submit registration and wait for navigation
     await page.click('button[type="submit"]');
-    await registerPromise;
-
-    // Should redirect to dashboard via middleware
-    await page.waitForURL('/dashboard', { timeout: 10000 });
+    
+    // Wait for the API call to complete AND the redirect to happen
+    await page.waitForResponse((resp) => resp.url().includes('/api/auth/register') && resp.status() === 201);
+    
+    // Should redirect to dashboard (client-side then proxy allows)
+    await page.waitForURL('/dashboard', { timeout: 15000 });
     
     // Wait for /api/auth/me to complete and welcome message to appear
     await page.waitForResponse((resp) => resp.url().includes('/api/auth/me'));
@@ -42,12 +43,13 @@ test.describe('Authentication Flow', () => {
     await page.fill('input[type="email"]', TEST_USER.email);
     await page.fill('input[type="password"]', TEST_USER.password);
     
-    const loginPromise = page.waitForResponse((resp) => resp.url().includes('/api/auth/login'));
     await page.click('button[type="submit"]');
-    await loginPromise;
-
+    
+    // Wait for the API call to complete AND the redirect to happen
+    await page.waitForResponse((resp) => resp.url().includes('/api/auth/login') && resp.status() === 200);
+    
     // Should redirect to dashboard again
-    await page.waitForURL('/dashboard', { timeout: 10000 });
+    await page.waitForURL('/dashboard', { timeout: 15000 });
     await page.waitForResponse((resp) => resp.url().includes('/api/auth/me'));
     await expect(page.locator('[data-testid="welcome-message"]')).toBeVisible({ timeout: 10000 });
     await expect(page.locator('[data-testid="welcome-message"]')).toContainText(TEST_USER.name);
@@ -90,11 +92,10 @@ test.describe('Authentication Flow', () => {
     await passwordInputs[0].fill(TEST_USER.password);
     await passwordInputs[1].fill(TEST_USER.password);
 
-    const registerPromise = page.waitForResponse((resp) => resp.url().includes('/api/auth/register'));
     await page.click('button[type="submit"]');
-    await registerPromise;
-
-    await page.waitForURL('/dashboard', { timeout: 10000 });
+    await page.waitForResponse((resp) => resp.url().includes('/api/auth/register') && resp.status() === 201);
+    
+    await page.waitForURL('/dashboard', { timeout: 15000 });
     await page.waitForResponse((resp) => resp.url().includes('/api/auth/me'));
     await expect(page.locator('[data-testid="welcome-message"]')).toBeVisible({ timeout: 10000 });
 
@@ -112,11 +113,10 @@ test.describe('Authentication Flow', () => {
     await page.fill('input[type="email"]', 'qa@atlas.test');
     await page.fill('input[type="password"]', 'Test1234!');
     
-    const loginPromise = page.waitForResponse((resp) => resp.url().includes('/api/auth/login'));
     await page.click('button[type="submit"]');
-    await loginPromise;
-
-    await page.waitForURL('/dashboard', { timeout: 10000 });
+    await page.waitForResponse((resp) => resp.url().includes('/api/auth/login') && resp.status() === 200);
+    
+    await page.waitForURL('/dashboard', { timeout: 15000 });
     await page.waitForResponse((resp) => resp.url().includes('/api/auth/me'));
     await expect(page.locator('[data-testid="welcome-message"]')).toBeVisible({ timeout: 10000 });
     await expect(page.locator('[data-testid="welcome-message"]')).toContainText('QA Test User');

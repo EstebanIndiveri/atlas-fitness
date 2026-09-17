@@ -35,8 +35,7 @@ export default function RegisterPage() {
         return;
       }
 
-      // Wait a tick for cookie to be set, then navigate
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      // Force full page reload to ensure cookie is processed
       window.location.href = '/dashboard';
     } catch {
       setError('Error de conexión. Intenta nuevamente.');
