@@ -22,6 +22,25 @@ test.describe('Workout Flow', () => {
     await page.waitForResponse((resp) => resp.url().includes('/api/auth/me'));
   });
 
+  test('GET /api/workouts/active returns 200 with null when none is active', async ({ page }) => {
+    const response = await page.request.get('/api/workouts/active');
+    expect(response.status()).toBe(200);
+    expect(await response.json()).toBeNull();
+  });
+
+  test('GET /api/workouts/active returns 200 with workout JSON when one exists', async ({ page }) => {
+    const createRes = await page.request.post('/api/workouts');
+    expect(createRes.status()).toBe(201);
+    const created = (await createRes.json()) as { id: number };
+
+    const response = await page.request.get('/api/workouts/active');
+    expect(response.status()).toBe(200);
+    const active = (await response.json()) as { id: number; endedAt: string | null };
+    expect(active).not.toBeNull();
+    expect(active.id).toBe(created.id);
+    expect(active.endedAt).toBeNull();
+  });
+
   test('should create workout → add set → edit set → delete set → close workout', async ({ page }) => {
     // Start new workout
     await page.click('[data-testid="new-workout-button"]');

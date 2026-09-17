@@ -7,6 +7,7 @@ import { TipCard } from '@/components/TipCard';
 import { StreakChip } from '@/components/StreakChip';
 import { TelegramLinkBanner } from '@/components/TelegramLinkBanner';
 import { InstallBanner } from '@/components/pwa/InstallBanner';
+import { parseActiveWorkoutResponse } from '@/lib/workouts/parse-active-workout-response';
 import type { AuthUser } from '@/types/auth';
 import type { Workout } from '@/lib/db/schema';
 
@@ -34,10 +35,8 @@ export default function DashboardPage() {
         const userData = await userRes.json();
         setUser(userData);
 
-        if (activeRes.ok) {
-          const activeData = await activeRes.json();
-          setActiveWorkout(activeData);
-        }
+        const activeBody: unknown = activeRes.ok ? await activeRes.json() : null;
+        setActiveWorkout(parseActiveWorkoutResponse(activeRes.ok, activeBody));
 
         if (historyRes.ok) {
           const historyData = await historyRes.json();
