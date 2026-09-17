@@ -1,12 +1,14 @@
 import { describe, it, expect, beforeEach } from '@jest/globals';
 import * as authService from './auth';
 import { db } from '@/lib/db/client';
-import { users, telegramLinkCodes, userStreaks } from '@/lib/db/schema';
+import { users, telegramLinkCodes, userStreaks, workouts, workoutSets } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 
 describe('Auth Service', () => {
   beforeEach(async () => {
     // Clean up test data - delete in order respecting foreign keys
+    await db.delete(workoutSets);
+    await db.delete(workouts);
     await db.delete(telegramLinkCodes);
     await db.delete(userStreaks);
     await db.delete(users);
@@ -51,7 +53,7 @@ describe('Auth Service', () => {
       } catch (error: unknown) {
         const appError = error as { code: string; message: string };
         expect(appError.code).toBe('CONFLICT');
-        expect(appError.message).toContain('already exists');
+        expect(appError.message).toContain('Ya existe un usuario');
       }
     });
 

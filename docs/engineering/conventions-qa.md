@@ -7,11 +7,13 @@ Reglas de testing, seed data, y criterios de aceptación para Must v2.
 | Feature | Alcance Must | QA Clave |
 |---------|--------------|----------|
 | **Auth** | Login + link Telegram | Session activa, cookie HMAC, códigos únicos |
+| **Sesión Viva** | Workout activo (endedAt null) + agregar/editar/eliminar sets | Atómico, ownership checks, no modificar workout finalizado |
+| **Notas/Mood** | Nota opcional + mood 1-5 al finalizar workout | Validación mood 1-5, campos opcionales, visible en historial |
 | **Log Session** | Registrar entreno (ejercicio/sets/reps/peso) | Atómico, soft delete, no TOCTOU |
 | **Tip Card** | Tip diario + Stories → CTA log | Fallback IA, visible, navegable |
 | **Streaks** | Racha días consecutivos (TZ Cordoba) | TZ `America/Argentina/Cordoba`, conteo correcto, nudge |
 | **Soft Delete** | Workouts, sets, exercises custom | Listados filtran `deleted_at IS NULL` |
-| **PR (max weight_kg)** | Peso récord por ejercicio | Decimal string en asserts, empate → más reciente |
+| **PR (max weight_kg)** | Peso récord por ejercicio | Decimal string en asserts, empate → más reciente, badge visible en UI |
 | **Telegram Idempotency** | Webhook sin duplicados | `update_id` en `bot_messages`, rollback/retry seguro |
 
 ## Seed Data

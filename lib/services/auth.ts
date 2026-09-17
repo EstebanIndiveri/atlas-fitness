@@ -14,19 +14,19 @@ const LINK_CODE_EXPIRY_MINUTES = 10;
  */
 function validatePassword(password: string): void {
   if (password.length < 8) {
-    throw new AppError('VALIDATION', 'Password must be at least 8 characters long');
+    throw new AppError('VALIDATION', 'La contraseña debe tener al menos 8 caracteres');
   }
 
   if (!/[A-Z]/.test(password)) {
-    throw new AppError('VALIDATION', 'Password must contain at least one uppercase letter');
+    throw new AppError('VALIDATION', 'La contraseña debe contener al menos una mayúscula');
   }
 
   if (!/[a-z]/.test(password)) {
-    throw new AppError('VALIDATION', 'Password must contain at least one lowercase letter');
+    throw new AppError('VALIDATION', 'La contraseña debe contener al menos una minúscula');
   }
 
   if (!/[0-9]/.test(password)) {
-    throw new AppError('VALIDATION', 'Password must contain at least one number');
+    throw new AppError('VALIDATION', 'La contraseña debe contener al menos un número');
   }
 }
 
@@ -36,7 +36,7 @@ function validatePassword(password: string): void {
 function validateEmail(email: string): void {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) {
-    throw new AppError('VALIDATION', 'Invalid email format');
+    throw new AppError('VALIDATION', 'Formato de email inválido');
   }
 }
 
@@ -60,7 +60,7 @@ export async function register(input: RegisterInput): Promise<AuthUser> {
   validatePassword(input.password);
 
   if (!input.name || input.name.trim().length < 2) {
-    throw new AppError('VALIDATION', 'Name must be at least 2 characters long');
+    throw new AppError('VALIDATION', 'El nombre debe tener al menos 2 caracteres');
   }
 
   const existingUser = await db.query.users.findFirst({
@@ -68,7 +68,7 @@ export async function register(input: RegisterInput): Promise<AuthUser> {
   });
 
   if (existingUser) {
-    throw new AppError('CONFLICT', 'User with this email already exists');
+    throw new AppError('CONFLICT', 'Ya existe un usuario con este email');
   }
 
   const passwordHash = await bcrypt.hash(input.password, SALT_ROUNDS);
@@ -94,13 +94,13 @@ export async function login(input: LoginInput): Promise<AuthUser> {
   });
 
   if (!user) {
-    throw new AppError('UNAUTHORIZED', 'Invalid email or password');
+    throw new AppError('UNAUTHORIZED', 'Email o contraseña inválidos');
   }
 
   const isValidPassword = await bcrypt.compare(input.password, user.passwordHash);
 
   if (!isValidPassword) {
-    throw new AppError('UNAUTHORIZED', 'Invalid email or password');
+    throw new AppError('UNAUTHORIZED', 'Email o contraseña inválidos');
   }
 
   return toAuthUser(user);
