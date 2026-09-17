@@ -1,6 +1,7 @@
 import { eq, and, isNull, desc } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { workouts, workoutSets } from '@/lib/db/schema';
+import { updateStreakFromActivity } from '@/lib/services/streaks';
 import { AppError } from '@/types/errors';
 import type { Workout, WorkoutSet } from '@/lib/db/schema';
 
@@ -101,6 +102,10 @@ export async function updateWorkout(
     .set(data)
     .where(eq(workouts.id, workoutId))
     .returning();
+
+  if (data.endedAt !== undefined) {
+    await updateStreakFromActivity(userId);
+  }
 
   return updated;
 }

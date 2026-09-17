@@ -111,7 +111,11 @@ export const botMessages = sqliteTable('bot_messages', {
 });
 
 /**
- * User streaks table — workout streak tracking
+ * User streaks table — consecutive active-day tracking (TZ Córdoba).
+ *
+ * `last_workout_date` is reused as the last **active** day (YYYY-MM-DD in
+ * America/Argentina/Cordoba), even when that day was mood-only (no workout).
+ * Renaming the column is avoided to prevent migration churn.
  */
 export const userStreaks = sqliteTable('user_streaks', {
   userId: integer('user_id')
@@ -153,6 +157,33 @@ export const dailyCheckins = sqliteTable(
   })
 );
 
+/**
+ * Streak nudges table — idempotent log of "streak at risk" intents.
+ * Unique (user_id, local_date, kind) so the same-day cron cannot duplicate.
+ * Telegram delivery is out of scope; this stores intent / audit only.
+ */
+export const streakNudges = sqliteTable(
+  'streak_nudges',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id),
+    localDate: text('local_date').notNull(),
+    kind: text('kind').notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (table) => ({
+    uniqueUserDateKind: uniqueIndex('streak_nudges_user_id_local_date_kind_unique').on(
+      table.userId,
+      table.localDate,
+      table.kind
+    ),
+  })
+);
+
 // Type exports
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -180,3 +211,6 @@ export type NewUserStreak = typeof userStreaks.$inferInsert;
 
 export type DailyCheckin = typeof dailyCheckins.$inferSelect;
 export type NewDailyCheckin = typeof dailyCheckins.$inferInsert;
+
+export type StreakNudge = typeof streakNudges.$inferSelect;
+export type NewStreakNudge = typeof streakNudges.$inferInsert;

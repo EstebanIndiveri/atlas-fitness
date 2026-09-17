@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getOrCreateTodayTip } from '@/lib/services/tips';
+import { cordobaLocalDate } from '@/lib/time/cordoba';
 
 /**
  * GET /api/tips/today
@@ -7,15 +8,7 @@ import { getOrCreateTodayTip } from '@/lib/services/tips';
  */
 export async function GET() {
   try {
-    const now = new Date();
-    const cordobaDate = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'America/Argentina/Cordoba',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    }).format(now);
-
-    const tip = await getOrCreateTodayTip(cordobaDate);
+    const tip = await getOrCreateTodayTip(cordobaLocalDate());
 
     return NextResponse.json(tip);
   } catch (error) {

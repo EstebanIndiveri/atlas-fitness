@@ -11,6 +11,7 @@ import {
   userStreaks,
   telegramLinkCodes,
   dailyCheckins,
+  streakNudges,
 } from '@/lib/db/schema';
 
 describe('Stats Service', () => {
@@ -20,6 +21,7 @@ describe('Stats Service', () => {
 
   beforeEach(async () => {
     // Clean up test data - delete in order respecting foreign keys
+    await db.delete(streakNudges);
     await db.delete(dailyCheckins);
     await db.delete(workoutSets);
     await db.delete(workouts);
