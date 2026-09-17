@@ -72,7 +72,7 @@ test.describe('Authentication Flow', () => {
     await expect(page.locator('.bg-red-50')).toBeVisible();
   });
 
-  test('should redirect logged-in user from login to dashboard', async ({ page, context }) => {
+  test('should redirect logged-in user from login to dashboard', async ({ page }) => {
     // First register a user
     await page.goto('/register');
     const email = `redirect-${Date.now()}@test.com`;

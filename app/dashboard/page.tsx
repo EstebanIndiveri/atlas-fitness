@@ -21,7 +21,7 @@ export default function DashboardPage() {
 
         const userData = await response.json();
         setUser(userData);
-      } catch (error) {
+      } catch {
         router.push('/login');
       } finally {
         setLoading(false);

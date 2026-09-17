@@ -1,4 +1,4 @@
-import { createHmac, randomBytes } from 'crypto';
+import { createHmac } from 'crypto';
 import type { SessionData } from '@/types/auth';
 
 const SESSION_SECRET = process.env.SESSION_SECRET || 'dev-secret-change-in-production';

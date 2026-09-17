@@ -1,13 +1,14 @@
 import { describe, it, expect, beforeEach } from '@jest/globals';
 import * as authService from './auth';
 import { db } from '@/lib/db/client';
-import { users, telegramLinkCodes } from '@/lib/db/schema';
+import { users, telegramLinkCodes, userStreaks } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 
 describe('Auth Service', () => {
   beforeEach(async () => {
-    // Clean up test data
+    // Clean up test data - delete in order respecting foreign keys
     await db.delete(telegramLinkCodes);
+    await db.delete(userStreaks);
     await db.delete(users);
   });
 
@@ -47,9 +48,10 @@ describe('Auth Service', () => {
       await expect(authService.register(input)).rejects.toThrow();
       try {
         await authService.register(input);
-      } catch (error: any) {
-        expect(error.code).toBe('CONFLICT');
-        expect(error.message).toContain('already exists');
+      } catch (error: unknown) {
+        const appError = error as { code: string; message: string };
+        expect(appError.code).toBe('CONFLICT');
+        expect(appError.message).toContain('already exists');
       }
     });
 
@@ -63,8 +65,9 @@ describe('Auth Service', () => {
       await expect(authService.register(input)).rejects.toThrow();
       try {
         await authService.register(input);
-      } catch (error: any) {
-        expect(error.code).toBe('VALIDATION');
+      } catch (error: unknown) {
+        const appError = error as { code: string };
+        expect(appError.code).toBe('VALIDATION');
       }
     });
 
@@ -78,8 +81,9 @@ describe('Auth Service', () => {
       await expect(authService.register(input)).rejects.toThrow();
       try {
         await authService.register(input);
-      } catch (error: any) {
-        expect(error.code).toBe('VALIDATION');
+      } catch (error: unknown) {
+        const appError = error as { code: string };
+        expect(appError.code).toBe('VALIDATION');
       }
     });
   });
@@ -106,38 +110,28 @@ describe('Auth Service', () => {
     });
 
     it('should throw UNAUTHORIZED for wrong password', async () => {
-      await expect(
-        authService.login({
-          email: testUser.email,
-          password: 'WrongPassword123!',
-        }),
-      ).rejects.toThrow();
-
       try {
         await authService.login({
           email: testUser.email,
           password: 'WrongPassword123!',
         });
-      } catch (error: any) {
-        expect(error.code).toBe('UNAUTHORIZED');
+        throw new Error('Should have thrown');
+      } catch (error: unknown) {
+        const appError = error as { code: string };
+        expect(appError.code).toBe('UNAUTHORIZED');
       }
     });
 
     it('should throw UNAUTHORIZED for non-existent email', async () => {
-      await expect(
-        authService.login({
-          email: 'nonexistent@example.com',
-          password: testUser.password,
-        }),
-      ).rejects.toThrow();
-
       try {
         await authService.login({
           email: 'nonexistent@example.com',
           password: testUser.password,
         });
-      } catch (error: any) {
-        expect(error.code).toBe('UNAUTHORIZED');
+        throw new Error('Should have thrown');
+      } catch (error: unknown) {
+        const appError = error as { code: string };
+        expect(appError.code).toBe('UNAUTHORIZED');
       }
     });
   });
