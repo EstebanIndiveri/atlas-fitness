@@ -158,6 +158,7 @@ Sin imports circulares. Sin dead imports.
 - `docs/backlog/README.md`
 - `docs/engineering/conventions-fe.md`
 - `docs/engineering/conventions-be.md`
+- `docs/engineering/local-dev.md`
 
 <!-- BEGIN:nextjs-agent-rules -->
 
