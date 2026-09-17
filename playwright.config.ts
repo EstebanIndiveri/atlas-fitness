@@ -27,5 +27,10 @@ export default defineConfig({
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
+    env: {
+      TURSO_DATABASE_URL: process.env.TURSO_DATABASE_URL || 'file:./local.db',
+      SESSION_SECRET: process.env.SESSION_SECRET || 'test-secret-for-ci-only-not-production',
+      CRON_SECRET: process.env.CRON_SECRET || 'test-secret-for-e2e',
+    },
   },
 });
