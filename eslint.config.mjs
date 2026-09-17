@@ -53,6 +53,7 @@ export default [
       'dist/**',
       'playwright-report/**',
       'test-results/**',
+      'public/sw.js',
     ],
   },
 ];

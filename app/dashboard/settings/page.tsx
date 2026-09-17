@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { IosInstallHint } from '@/components/pwa/IosInstallHint';
+import { PWA_COPY } from '@/lib/pwa/copy';
 import { TELEGRAM_FE_COPY } from '@/lib/telegram/copy';
 import { useLinkCode } from '@/hooks/useLinkCode';
 import type { AuthUser } from '@/types/auth';
@@ -57,6 +59,11 @@ export default function SettingsPage() {
           {TELEGRAM_FE_COPY.settingsBack}
         </Link>
         <h1 className="mt-4 text-2xl font-bold">{TELEGRAM_FE_COPY.settingsTitle}</h1>
+
+        <section className="mt-6 space-y-3" data-testid="pwa-install-settings">
+          <h2 className="text-lg font-semibold">{PWA_COPY.settingsInstallHeading}</h2>
+          <IosInstallHint forceVisible />
+        </section>
 
         <section className="mt-6 rounded-lg bg-white p-6 shadow-md" data-testid="telegram-settings">
           <h2 className="text-lg font-semibold">Telegram</h2>

@@ -20,7 +20,7 @@ Asistente de fitness personal para registrar entrenamientos, pesos, consejos, me
 - **Styling:** Tailwind CSS
 - **Testing:** Jest (unit) + Playwright (e2e)
 - **CI/CD:** GitHub Actions
-- **PWA:** Manifest + installable (icons placeholder)
+- **PWA:** Manifest + iconos PNG 192/512 (any + maskable), service worker de shell estático, prompt de instalación
 - **Database:** Turso/libSQL + Drizzle (pendiente)
 - **Channels:** Web App + Telegram Bot (pendiente)
 
@@ -46,6 +46,24 @@ npm run dev
 ```
 
 La aplicación estará disponible en [http://localhost:3000](http://localhost:3000)
+
+### PWA (instalable)
+
+Atlas es una PWA Must: manifest, iconos reales, service worker de **shell estático** (no sync offline de entrenos).
+
+```bash
+npm run build
+npm start
+```
+
+- Chrome (escritorio o Android, HTTPS o localhost): si el navegador dispara `beforeinstallprompt`, aparece el banner **Instalar**.
+- iOS Safari: no hay prompt nativo. En Home y en **Ajustes** está el copy **Agregar a Inicio** (Home Screen).
+- El service worker precachea `/`, iconos, manifest y `offline.html`. **No** intercepta `/api/*` (cookies de sesión y workouts siguen yendo a la red).
+
+#### Playwright / CI
+
+`beforeinstallprompt` **no se dispara en Chromium headless**. El e2e `e2e/pwa.spec.ts` omite ese flujo a propósito (`test.skip`) y documenta la verificación manual. CI sí cubre: link del manifest, campos clave, iconos PNG, copy iOS en Home y Ajustes, y que `sw.js` no cachea la API.
+
 
 ### Scripts Disponibles
 
@@ -159,7 +177,7 @@ Ver [`AGENTS.md`](./AGENTS.md) §3–5 para el branching model completo.
 - Jest configurado con tests TDD (weight formatter)
 - Playwright smoke test (home page)
 - GitHub Actions CI (lint + typecheck + test + e2e)
-- PWA manifest + placeholders de íconos
+- PWA manifest + iconos PNG reales + service worker de shell
 - Documentación completa (ADRs, convenciones)
 
 🔜 **Próximo (Must v2):**

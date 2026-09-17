@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { TipCard } from '@/components/TipCard';
 import { StreakChip } from '@/components/StreakChip';
 import { TelegramLinkBanner } from '@/components/TelegramLinkBanner';
+import { InstallBanner } from '@/components/pwa/InstallBanner';
 import type { AuthUser } from '@/types/auth';
 import type { Workout } from '@/lib/db/schema';
 
@@ -113,6 +114,8 @@ export default function DashboardPage() {
             </button>
           </div>
         </div>
+
+        <InstallBanner />
 
         {!user.telegramUserId && <TelegramLinkBanner />}
 

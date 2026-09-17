@@ -1,10 +1,29 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
+import { ServiceWorkerRegister } from '@/components/pwa/ServiceWorkerRegister';
+import { PWA_THEME } from '@/lib/pwa/theme';
 import './globals.css';
 
 export const metadata: Metadata = {
   title: 'Atlas Fitness',
   description: 'Asistente de fitness personal para registrar entrenamientos',
   manifest: '/manifest.webmanifest',
+  applicationName: 'Atlas Fitness',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Atlas',
+  },
+  icons: {
+    icon: [
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: PWA_THEME.themeColor,
 };
 
 export default function RootLayout({
@@ -16,9 +35,12 @@ export default function RootLayout({
     <html lang="es-AR">
       <head>
         <link rel="manifest" href="/manifest.webmanifest" />
-        <meta name="theme-color" content="#000000" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </head>
-      <body>{children}</body>
+      <body>
+        {children}
+        <ServiceWorkerRegister />
+      </body>
     </html>
   );
 }
