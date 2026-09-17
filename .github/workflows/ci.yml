@@ -56,8 +56,21 @@ jobs:
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps chromium
 
+      - name: Run database migrations
+        run: npm run db:migrate
+        env:
+          TURSO_DATABASE_URL: file:./test.db
+
+      - name: Seed database with QA user
+        run: npm run db:seed
+        env:
+          TURSO_DATABASE_URL: file:./test.db
+
       - name: Run Playwright tests
         run: npm run test:e2e
+        env:
+          TURSO_DATABASE_URL: file:./test.db
+          SESSION_SECRET: test-secret-for-ci-only-not-production
 
       - name: Upload Playwright Report
         uses: actions/upload-artifact@v4

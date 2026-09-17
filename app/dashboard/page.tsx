@@ -18,21 +18,21 @@ export default function DashboardPage() {
         const response = await fetch('/api/auth/me');
 
         if (!response.ok) {
-          router.push('/login');
+          // Middleware should have caught this, but handle edge case
+          setLoading(false);
           return;
         }
 
         const userData = await response.json();
         setUser(userData);
       } catch {
-        router.push('/login');
-      } finally {
+        // Network error or other issue
         setLoading(false);
       }
     };
 
     fetchUser();
-  }, [router]);
+  }, []);
 
   const handleLogout = async () => {
     try {
