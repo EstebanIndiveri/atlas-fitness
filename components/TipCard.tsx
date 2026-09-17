@@ -18,14 +18,24 @@ export function TipCard({ activeWorkout, onStartWorkout }: TipCardProps) {
   const [savingMood, setSavingMood] = useState(false);
 
   useEffect(() => {
-    const fetchTip = async () => {
+    const fetchTipAndMood = async () => {
       try {
-        const response = await fetch('/api/tips/today');
-        if (!response.ok) {
+        const [tipResponse, moodResponse] = await Promise.all([
+          fetch('/api/tips/today'),
+          fetch('/api/mood'),
+        ]);
+        if (!tipResponse.ok) {
           throw new Error('Error al cargar el tip del día');
         }
-        const data = await response.json();
+        const data = await tipResponse.json();
         setTip(data);
+
+        if (moodResponse.ok) {
+          const checkin = await moodResponse.json();
+          if (checkin && typeof checkin.mood === 'number') {
+            setMood(checkin.mood);
+          }
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Error desconocido');
       } finally {
@@ -33,7 +43,7 @@ export function TipCard({ activeWorkout, onStartWorkout }: TipCardProps) {
       }
     };
 
-    fetchTip();
+    fetchTipAndMood();
   }, []);
 
   const handleMoodSelect = async (selectedMood: number) => {
@@ -52,7 +62,7 @@ export function TipCard({ activeWorkout, onStartWorkout }: TipCardProps) {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to save mood');
+        throw new Error('Error al guardar el estado de ánimo');
       }
     } catch (err) {
       console.error('Error al guardar el estado de ánimo:', err);
