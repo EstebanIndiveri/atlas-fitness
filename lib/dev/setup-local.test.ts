@@ -137,4 +137,23 @@ describe('setupLocal', () => {
 
     expect(calls).toEqual(['db:migrate', 'db:seed:qa']);
   });
+
+  it('accepts file URL schemes case-insensitively', async () => {
+    const dir = makeTempCwd();
+    cwd = dir;
+    delete process.env.TURSO_DATABASE_URL;
+    writeFileSync(
+      join(dir, '.env'),
+      'TURSO_DATABASE_URL=FILE:./custom-local.db\nCRON_SECRET=example\n',
+      'utf8',
+    );
+    writeFileSync(join(dir, '.env.example'), `TURSO_DATABASE_URL=${LOCAL_FILE_DB_URL}\nCRON_SECRET=example\n`, 'utf8');
+
+    const calls: string[] = [];
+    await setupLocal(dir, async (script) => {
+      calls.push(script);
+    });
+
+    expect(calls).toEqual(['db:migrate', 'db:seed:qa']);
+  });
 });

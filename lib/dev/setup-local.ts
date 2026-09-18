@@ -49,7 +49,7 @@ function assertSetupLocalDatabaseUrl(
 ): void {
   const databaseUrl = env.TURSO_DATABASE_URL?.trim() ?? '';
 
-  if (databaseUrl.startsWith('file:')) {
+  if (databaseUrl.toLowerCase().startsWith('file:')) {
     return;
   }
 
