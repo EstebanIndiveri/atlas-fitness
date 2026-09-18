@@ -99,6 +99,23 @@ describe('Session utilities', () => {
   });
 
   describe('encodeSession and decodeSession', () => {
+    it('should reject the legacy public HMAC fallback when SESSION_SECRET is missing', () => {
+      const previous = process.env.SESSION_SECRET;
+      delete process.env.SESSION_SECRET;
+
+      try {
+        expect(() => encodeSession({ userId: 1 })).toThrow(
+          'SESSION_SECRET es obligatorio',
+        );
+      } finally {
+        if (previous === undefined) {
+          delete process.env.SESSION_SECRET;
+        } else {
+          process.env.SESSION_SECRET = previous;
+        }
+      }
+    });
+
     it('should encode and decode session correctly', () => {
       const sessionData: SessionData = { userId: 42 };
 
@@ -107,6 +124,23 @@ describe('Session utilities', () => {
 
       expect(decoded).not.toBeNull();
       expect(decoded?.userId).toBe(42);
+    });
+
+    it('rejects a cookie forged with the legacy public fallback secret', () => {
+      const previous = process.env.SESSION_SECRET;
+      process.env.SESSION_SECRET = 'dev-secret-change-in-production';
+      const forged = encodeSession({ userId: 999 });
+      process.env.SESSION_SECRET = previous ?? 'a-different-explicit-dev-session-secret-value';
+
+      try {
+        expect(decodeSession(forged)).toBeNull();
+      } finally {
+        if (previous === undefined) {
+          delete process.env.SESSION_SECRET;
+        } else {
+          process.env.SESSION_SECRET = previous;
+        }
+      }
     });
 
     it('should return null for invalid session string', () => {

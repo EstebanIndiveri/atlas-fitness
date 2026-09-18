@@ -74,18 +74,26 @@ export const routineExercises = sqliteTable(
 /**
  * Workouts table — training sessions
  */
-export const workouts = sqliteTable('workouts', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  userId: integer('user_id')
-    .notNull()
-    .references(() => users.id),
-  routineId: integer('routine_id').references(() => routines.id),
-  startedAt: integer('started_at', { mode: 'timestamp' }).notNull(),
-  endedAt: integer('ended_at', { mode: 'timestamp' }),
-  note: text('note'),
-  mood: integer('mood'),
-  deletedAt: integer('deleted_at', { mode: 'timestamp' }),
-});
+export const workouts = sqliteTable(
+  'workouts',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id),
+    routineId: integer('routine_id').references(() => routines.id),
+    startedAt: integer('started_at', { mode: 'timestamp' }).notNull(),
+    endedAt: integer('ended_at', { mode: 'timestamp' }),
+    note: text('note'),
+    mood: integer('mood'),
+    deletedAt: integer('deleted_at', { mode: 'timestamp' }),
+  },
+  (table) => ({
+    uniqueActiveWorkout: uniqueIndex('workouts_user_id_active_unique')
+      .on(table.userId)
+      .where(sql`${table.endedAt} IS NULL AND ${table.deletedAt} IS NULL`),
+  }),
+);
 
 /**
  * Workout sets table — individual sets within workouts

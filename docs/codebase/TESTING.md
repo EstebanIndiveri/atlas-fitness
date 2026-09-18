@@ -18,7 +18,7 @@ El repositorio contiene 58 archivos de test: 48 Jest y 10 specs Playwright.
 ## Jest
 
 `jest.config.ts` usa `next/jest`, proveedor V8, `jsdom`, alias `@/*` y excluye
-E2E. `setupFilesAfterEnv` está comentado y no existe `jest.setup.ts`.
+E2E. `setupFiles`/`setupFilesAfterEnv` apuntan a `jest.setup-env.ts` y `jest.setup.ts`.
 `ts-jest` está instalado, pero la configuración activa usa el transform de
 Next/SWC.
 
@@ -26,9 +26,9 @@ No hay:
 
 - script de coverage;
 - `collectCoverageFrom`;
-- thresholds;
-- DB temporal obligatoria;
-- guard contra `local.db`.
+- thresholds.
+
+Jest usa `jest.setup-env.ts` + `jest.setup.ts`: DB temporal bajo `/tmp`, guard contra `local.db` / Turso, y migrate por proceso. `npm test` no toca `./local.db`.
 
 Por eso el porcentaje cubre archivos importados por las suites, no
 necesariamente toda la superficie de producción.
@@ -56,14 +56,15 @@ dispara `beforeinstallprompt`.
 - pruebas de idempotencia Telegram;
 - pruebas de PWA, contraste y tokens;
 - E2E de flujos Must;
-- CI separa `test.db` para Jest y `local.db` para E2E.
+- CI: Jest aísla su DB en `/tmp`. Playwright usa `file:./local.db` en un checkout fresco (E2E, no `npm test`).
 
 ## Riesgos del harness
 
 ### Tests destructivos
 
-El cliente cae en `file:./local.db`, y tests de services borran tablas. Ejecutar
-`npm test` localmente sin una URL segura puede eliminar datos de desarrollo.
+Mitigado (P0.3): bajo Jest el cliente rechaza `file:./local.db` y URLs remotas.
+`npm test` crea un archivo único en `/tmp` y migra ahí. Los `DELETE` de suites
+siguen existiendo, pero sobre esa DB aislada.
 
 ### Contaminación entre suites
 
@@ -88,15 +89,12 @@ Debe registrar la espera antes de disparar la acción, por ejemplo con
 
 ### Regresiones sin test
 
-Faltan casos para:
+Faltan casos P1 para:
 
-- múltiples workouts activos;
-- update/delete de sets finalizados;
-- body con `routineId` inválido;
-- secret de sesión fallback;
-- webhook fail-open en producción;
 - ownership de ejercicios/rutinas personalizados;
 - expiración/revocación de sesión.
+
+P0 cubiertos: múltiples workouts activos; update/delete de sets finalizados; `routineId` inválido; secret de sesión fallback; webhook fail-open en producción.
 
 ## Warnings
 
@@ -106,10 +104,10 @@ inferir workspace y por el módulo de `tailwind.config.ts`. ESLint no ignora
 
 ## Recomendación
 
-1. DB temporal única por ejecución/worker.
-2. Guard que aborte si tests apuntan a `local.db`.
+1. ~~DB temporal única por ejecución/worker.~~ (P0.3)
+2. ~~Guard que aborte si tests apuntan a `local.db`.~~ (P0.3)
 3. Seed idempotente que actualice datos canónicos.
-4. Tests RED para P0/P1.
+4. Tests RED para P1 restantes.
 5. Script y threshold de coverage por módulos críticos.
 6. No reutilizar servers locales para validación reproducible.
 7. Mantener E2E Must sobre build y DB fresca.

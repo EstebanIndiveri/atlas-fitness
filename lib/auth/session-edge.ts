@@ -1,14 +1,18 @@
+import { MissingSessionSecretError, resolveSessionSecret } from './session-secret';
 import type { SessionData } from '@/types/auth';
 
-const SESSION_SECRET = process.env.SESSION_SECRET || 'dev-secret-change-in-production';
 const SESSION_COOKIE_NAME = 'atlas_session';
+
+function getSessionSecret(): string {
+  return resolveSessionSecret();
+}
 
 /**
  * Creates an HMAC signature for data using Web Crypto API (Edge compatible)
  */
 async function createSignature(data: string): Promise<string> {
   const encoder = new TextEncoder();
-  const keyData = encoder.encode(SESSION_SECRET);
+  const keyData = encoder.encode(getSessionSecret());
   const messageData = encoder.encode(data);
 
   const key = await crypto.subtle.importKey(
@@ -64,7 +68,10 @@ export async function decodeSessionEdge(cookieValue: string): Promise<SessionDat
     const decoded = base64Decode(payload);
     const data = JSON.parse(decoded);
     return data;
-  } catch {
+  } catch (error) {
+    if (error instanceof MissingSessionSecretError) {
+      throw error;
+    }
     return null;
   }
 }

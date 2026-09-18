@@ -166,6 +166,8 @@ describe('Streaks service', () => {
       expect(open.endedAt).toBeNull();
       await expect(isActiveDay(testUserId, TODAY)).resolves.toBe(false);
 
+      await workoutsService.deleteWorkout(open.id, testUserId);
+
       const ended = await workoutsService.createWorkout(testUserId);
       await db
         .update(workouts)

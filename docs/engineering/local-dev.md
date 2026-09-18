@@ -62,10 +62,11 @@ Pegá el output en `.env`. **Nunca commitees `.env`** ni tokens reales.
 |----------|-------------|--------|
 | `TURSO_DATABASE_URL` | `file:./local.db` | Default. No uses `libsql://…` en este camino. |
 | `TURSO_AUTH_TOKEN` | vacío | El file DB no lo necesita. |
-| `SESSION_SECRET` | placeholder o `openssl rand -hex 32` | HMAC de la cookie de sesión. |
+| `SESSION_SECRET` | placeholder o `openssl rand -hex 32` | HMAC de la cookie de sesión. **Obligatorio.** En producción no hay fallback público. |
 | `CRON_SECRET` | placeholder o `openssl rand -hex 32` | Bearer de `/api/cron/*`. Playwright CI inyecta `test-secret-for-e2e` en `webServer.env` — no lo saques del config. |
 | `TELEGRAM_BOT_TOKEN` | vacío | Vacío = sin HTTP saliente a `api.telegram.org`. |
-| `TELEGRAM_WEBHOOK_SECRET` | vacío | Vacío = el stub/curl no exige header. |
+| `TELEGRAM_WEBHOOK_SECRET` | vacío | En producción o con bot token: obligatorio y debe coincidir con el header. |
+| `ALLOW_INSECURE_TELEGRAM_WEBHOOK` | `true` | Solo local/test. Permite el stub/curl **sin** header si `NODE_ENV` no es `production` y no hay bot token. Ignorado en producción. |
 
 El file DB `local.db` está en `.gitignore`. `tsx` carga `.env` vía `lib/dev/load-local-env.ts` (Next.js ya carga `.env` para `npm run dev`).
 
@@ -125,7 +126,7 @@ Sin header o con Bearer incorrecto → `401` `{ "code": "UNAUTHORIZED" }`.
 
 #### curl: webhook stub, `update_id` duplicado
 
-Sin `TELEGRAM_WEBHOOK_SECRET` (default local) no hace falta header extra. No hay llamadas de red a Telegram si `TELEGRAM_BOT_TOKEN` está vacío.
+Sin `TELEGRAM_WEBHOOK_SECRET`, el stub/curl local **solo** funciona si `ALLOW_INSECURE_TELEGRAM_WEBHOOK=true` (default de `.env.example`) y no hay `TELEGRAM_BOT_TOKEN`. No hay llamadas de red a Telegram si `TELEGRAM_BOT_TOKEN` está vacío.
 
 ```bash
 # 1) Login seed + link-code (cookie de sesión)
@@ -149,7 +150,7 @@ curl -sS -X POST http://localhost:3000/api/telegram/webhook \
 
 Si no te interesa el link y solo la idempotencia, cualquier JSON con `update_id` numérico sirve: el segundo POST con el mismo id debe devolver `duplicate: true`.
 
-Si más adelante llenaste `TELEGRAM_WEBHOOK_SECRET` para el bot real, este curl de smoke **también** tiene que mandar el header `X-Telegram-Bot-Api-Secret-Token` (mismo valor). Para volver al stub sin header, vaciá el secret y reiniciá el server — ver [Volver al smoke](#volver-al-smoke-sin-red).
+Si más adelante llenaste `TELEGRAM_WEBHOOK_SECRET` para el bot real, este curl de smoke **también** tiene que mandar el header `X-Telegram-Bot-Api-Secret-Token` (mismo valor). Para volver al stub sin header, vaciá el secret, dejá `ALLOW_INSECURE_TELEGRAM_WEBHOOK=true` y reiniciá el server — ver [Volver al smoke](#volver-al-smoke-sin-red).
 
 ---
 
@@ -222,7 +223,9 @@ Los datos de Turso cloud y del archivo son independientes. Cambiar la URL no mig
 
 El camino default sigue siendo el **stub** de smoke (token vacío, sin HTTP saliente). Esto es opt-in.
 
-Atlas valida el webhook con el header `X-Telegram-Bot-Api-Secret-Token` si `TELEGRAM_WEBHOOK_SECRET` está seteado (`lib/telegram/webhook-secret.ts`). **No** lee un `?secret=` de query. Telegram manda ese header cuando registrás el webhook con `secret_token` (Bot API).
+Atlas valida el webhook con el header `X-Telegram-Bot-Api-Secret-Token`. En producción, y siempre que `TELEGRAM_BOT_TOKEN` esté seteado, el secret es **obligatorio** (`lib/telegram/webhook-secret.ts`, comparación timing-safe). **No** lee un `?secret=` de query. Telegram manda ese header cuando registrás el webhook con `secret_token` (Bot API).
+
+El modo inseguro (aceptar POST sin header) existe **solo** con `ALLOW_INSECURE_TELEGRAM_WEBHOOK=true` en desarrollo/test y **sin** bot token. En producción el flag se ignora.
 
 #### 1. Bot en BotFather
 
@@ -250,7 +253,7 @@ En `.env`:
 TELEGRAM_WEBHOOK_SECRET=el-valor-que-elegiste
 ```
 
-Recomendado en bot real. Si queda vacío, Atlas no exige el header (útil solo para el curl de smoke).
+Recomendado en bot real. En producción o con `TELEGRAM_BOT_TOKEN` no puede quedar vacío.
 
 #### 3. Túnel HTTPS al puerto 3000
 
@@ -352,6 +355,7 @@ TURSO_DATABASE_URL=file:./local.db
 TURSO_AUTH_TOKEN=
 TELEGRAM_BOT_TOKEN=
 TELEGRAM_WEBHOOK_SECRET=
+ALLOW_INSECURE_TELEGRAM_WEBHOOK=true
 ```
 
 Reiniciá `npm run dev`. Opcional: `deleteWebhook` si habías registrado uno. El curl de stub otra vez **no** pide header de secret.
@@ -363,11 +367,13 @@ Reiniciá `npm run dev`. Opcional: `deleteWebhook` si habías registrado uno. El
 ```bash
 npm run lint
 npm run typecheck
-npm test                 # Jest (incluye loader de .env y setup:local)
+npm test                 # Jest: DB temporal aislada bajo /tmp (nunca local.db ni Turso)
 npm run test:e2e         # Playwright — primero migrate + seed + build
 ```
 
-Playwright levanta `npm start` con `CRON_SECRET` en `webServer.env` (default `test-secret-for-e2e` si no hay env). No hace falta Telegram real ni Turso cloud.
+`npm test` pisa `TURSO_DATABASE_URL` con un archivo único en `/tmp` y **aborta** si el URL apunta a `file:./local.db` o a Turso (`libsql://` / `https://`). Cada proceso Jest migra su propia DB. No borra `./local.db`.
+
+Playwright levanta `npm start` (`NODE_ENV=production`) con `SESSION_SECRET` y `TELEGRAM_WEBHOOK_SECRET` explícitos en `webServer.env`. El spec de Telegram manda el header `X-Telegram-Bot-Api-Secret-Token`. No hace falta Telegram real ni Turso cloud.
 
 ## Fuera de este doc
 

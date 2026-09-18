@@ -1,9 +1,24 @@
 import { eq, and, isNull } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { workouts, workoutSets } from '@/lib/db/schema';
+import { isUniqueConstraintError } from '@/lib/db/unique-error';
 import { AppError } from '@/types/errors';
 import { isValidWeightKg, parseWeightKg } from '@/lib/format/weight';
-import type { WorkoutSet } from '@/lib/db/schema';
+import type { Workout, WorkoutSet } from '@/lib/db/schema';
+
+function assertWorkoutAllowsSetMutation(workout: Workout, action: 'create' | 'update' | 'delete'): void {
+  if (!workout.endedAt) {
+    return;
+  }
+
+  if (action === 'create') {
+    throw new AppError('VALIDATION', 'No puedes agregar series a un entrenamiento finalizado');
+  }
+  if (action === 'update') {
+    throw new AppError('VALIDATION', 'No puedes modificar series de un entrenamiento finalizado');
+  }
+  throw new AppError('VALIDATION', 'No puedes eliminar series de un entrenamiento finalizado');
+}
 
 export interface CreateWorkoutSetInput {
   workoutId: number;
@@ -54,9 +69,7 @@ export async function createWorkoutSet(input: CreateWorkoutSetInput): Promise<Wo
         throw new AppError('FORBIDDEN', 'No tienes permiso para modificar este entrenamiento');
       }
 
-      if (workout.endedAt) {
-        throw new AppError('VALIDATION', 'No puedes agregar series a un entrenamiento finalizado');
-      }
+      assertWorkoutAllowsSetMutation(workout, 'create');
 
       // Atomic insert - unique constraint will prevent duplicates
       return tx
@@ -74,22 +87,11 @@ export async function createWorkoutSet(input: CreateWorkoutSetInput): Promise<Wo
 
     return workoutSet;
   } catch (error) {
-    // Handle unique constraint violation
-    // LibSQL/Drizzle may wrap constraint errors in cause
-    if (error instanceof Error) {
-      const message = error.message;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const causeMessage = (error as any).cause?.message || '';
-      
-      // Check for UNIQUE constraint failure
-      if (
-        message.includes('UNIQUE') ||
-        message.includes('unique') ||
-        causeMessage.includes('UNIQUE') ||
-        causeMessage.includes('unique')
-      ) {
-        throw new AppError('CONFLICT', 'Ya existe una serie con este índice en el entrenamiento');
-      }
+    if (error instanceof AppError) {
+      throw error;
+    }
+    if (isUniqueConstraintError(error)) {
+      throw new AppError('CONFLICT', 'Ya existe una serie con este índice en el entrenamiento');
     }
     throw error;
   }
@@ -130,6 +132,8 @@ export async function updateWorkoutSet(input: UpdateWorkoutSetInput): Promise<Wo
     throw new AppError('FORBIDDEN', 'No tienes permiso para modificar esta serie');
   }
 
+  assertWorkoutAllowsSetMutation(workout, 'update');
+
   const updateData: Partial<typeof workoutSets.$inferInsert> = {};
   if (input.exerciseId !== undefined) updateData.exerciseId = input.exerciseId;
   if (input.setIndex !== undefined) updateData.setIndex = input.setIndex;
@@ -169,6 +173,8 @@ export async function deleteWorkoutSet(setId: number, userId: number): Promise<v
   if (workout.userId !== userId) {
     throw new AppError('FORBIDDEN', 'No tienes permiso para eliminar esta serie');
   }
+
+  assertWorkoutAllowsSetMutation(workout, 'delete');
 
   await db.update(workoutSets).set({ deletedAt: new Date() }).where(eq(workoutSets.id, setId));
 }

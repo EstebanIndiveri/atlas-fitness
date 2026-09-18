@@ -36,6 +36,7 @@ describe('.env.example (local / Box defaults)', () => {
 
     expect(parsed.TELEGRAM_BOT_TOKEN).toBe('');
     expect(parsed.TELEGRAM_WEBHOOK_SECRET).toBe('');
+    expect(parsed.ALLOW_INSECURE_TELEGRAM_WEBHOOK).toBe('true');
     expect(contents).toMatch(/BotFather|optional/i);
   });
 

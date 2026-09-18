@@ -213,6 +213,30 @@ describe('Workout Sets Service', () => {
       expect(updated.weightKg).toBe('105');
     });
 
+    it('should throw VALIDATION when updating a set on a finished workout', async () => {
+      const workout = await workoutsService.createWorkout(testUserId);
+      const set = await workoutSetsService.createWorkoutSet({
+        workoutId: workout.id,
+        userId: testUserId,
+        exerciseId: testExerciseId,
+        setIndex: 1,
+        reps: 10,
+        weightKg: '100',
+      });
+      await workoutsService.updateWorkout(workout.id, testUserId, { endedAt: new Date() });
+
+      await expect(
+        workoutSetsService.updateWorkoutSet({
+          setId: set.id,
+          userId: testUserId,
+          weightKg: '20',
+        }),
+      ).rejects.toMatchObject({
+        code: 'VALIDATION',
+        message: 'No puedes modificar series de un entrenamiento finalizado',
+      });
+    });
+
     it('should throw FORBIDDEN if set belongs to workout of another user', async () => {
       const [otherUser] = await db
         .insert(users)
@@ -259,6 +283,27 @@ describe('Workout Sets Service', () => {
 
       const sets = await workoutSetsService.listWorkoutSets(workout.id, testUserId);
       expect(sets).toHaveLength(0);
+    });
+
+    it('should throw VALIDATION when deleting a set on a finished workout', async () => {
+      const workout = await workoutsService.createWorkout(testUserId);
+      const set = await workoutSetsService.createWorkoutSet({
+        workoutId: workout.id,
+        userId: testUserId,
+        exerciseId: testExerciseId,
+        setIndex: 1,
+        reps: 10,
+        weightKg: '100',
+      });
+      await workoutsService.updateWorkout(workout.id, testUserId, { endedAt: new Date() });
+
+      await expect(workoutSetsService.deleteWorkoutSet(set.id, testUserId)).rejects.toMatchObject({
+        code: 'VALIDATION',
+        message: 'No puedes eliminar series de un entrenamiento finalizado',
+      });
+
+      const sets = await workoutSetsService.listWorkoutSets(workout.id, testUserId);
+      expect(sets).toHaveLength(1);
     });
 
     it('should throw FORBIDDEN if set belongs to workout of another user', async () => {

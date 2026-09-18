@@ -1,15 +1,19 @@
-import { createHmac } from 'crypto';
+import { createHmac, timingSafeEqual } from 'crypto';
+import { MissingSessionSecretError, resolveSessionSecret } from './session-secret';
 import type { SessionData } from '@/types/auth';
 
-const SESSION_SECRET = process.env.SESSION_SECRET || 'dev-secret-change-in-production';
 const SESSION_COOKIE_NAME = 'atlas_session';
 const SESSION_MAX_AGE = 7 * 24 * 60 * 60; // 7 days in seconds
+
+function getSessionSecret(): string {
+  return resolveSessionSecret();
+}
 
 /**
  * Creates an HMAC signature for data
  */
 function createSignature(data: string): string {
-  return createHmac('sha256', SESSION_SECRET).update(data).digest('hex');
+  return createHmac('sha256', getSessionSecret()).update(data).digest('hex');
 }
 
 /**
@@ -17,7 +21,12 @@ function createSignature(data: string): string {
  */
 function verifySignature(data: string, signature: string): boolean {
   const expectedSignature = createSignature(data);
-  return expectedSignature === signature;
+  const expected = Buffer.from(expectedSignature);
+  const actual = Buffer.from(signature);
+  if (expected.length !== actual.length) {
+    return false;
+  }
+  return timingSafeEqual(expected, actual);
 }
 
 /**
@@ -45,7 +54,10 @@ export function decodeSession(cookieValue: string): SessionData | null {
 
     const data = JSON.parse(Buffer.from(payload, 'base64').toString('utf-8'));
     return data;
-  } catch {
+  } catch (error) {
+    if (error instanceof MissingSessionSecretError) {
+      throw error;
+    }
     return null;
   }
 }
