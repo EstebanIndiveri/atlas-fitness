@@ -14,7 +14,7 @@ Reglas de testing, seed data, y criterios de aceptación para Must v2.
 | **Streaks** | Racha días consecutivos (TZ Cordoba) | TZ `America/Argentina/Cordoba`, conteo correcto, nudge |
 | **Soft Delete** | Workouts, sets, exercises custom | Listados filtran `deleted_at IS NULL` |
 | **PR (max weight_kg)** | Peso récord por ejercicio | Decimal string en asserts, empate → más reciente, badge visible en UI |
-| **Telegram Idempotency** | Webhook sin duplicados | `update_id` en `bot_messages`, rollback/retry seguro |
+| **Sesión guiada** | Rutina seed → check sets → rest + cue → Gemini/fallback next → cierre | Fallback sin key, 200+null active, copy es-AR |
 
 ## Seed Data
 

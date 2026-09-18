@@ -20,6 +20,7 @@ describe('AppShell', () => {
     expect(screen.getByTestId('app-header')).toBeTruthy();
     expect(screen.getByRole('navigation', { name: 'Principal' })).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Inicio' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Sesión' })).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Historial' })).toBeTruthy();
     expect(screen.getByTestId('settings-link').textContent).toBe('Ajustes');
     expect(screen.getByRole('button', { name: 'Cerrar sesión' })).toBeTruthy();

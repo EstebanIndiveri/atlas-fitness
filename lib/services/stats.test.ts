@@ -8,6 +8,8 @@ import {
   workouts,
   workoutSets,
   exercises,
+  routineExercises,
+  routines,
   userStreaks,
   telegramLinkCodes,
   dailyCheckins,
@@ -26,6 +28,8 @@ describe('Stats Service', () => {
     await db.delete(dailyCheckins);
     await db.delete(workoutSets);
     await db.delete(workouts);
+    await db.delete(routineExercises);
+    await db.delete(routines);
     await db.delete(exercises);
     await db.delete(userStreaks);
     await db.delete(botMessages);

@@ -36,11 +36,11 @@ describe('docs/engineering/local-dev.md (HU-D integraciones reales)', () => {
     expect(md).toMatch(/\/ayuda|\/log|\/start/);
   });
 
-  it('documents system tip fallback and GEMINI_API_KEY stub without implementing AI', () => {
+  it('documents system tip fallback and optional GEMINI_API_KEY with next-exercise fallback', () => {
     expect(md).toMatch(/fallback/i);
     expect(md).toMatch(/source\s*=\s*'system'|source=system/i);
     expect(md).toMatch(/GEMINI_API_KEY/);
-    expect(md).toMatch(/no implement|no está cableada|not wired|Won't de este PR/i);
+    expect(md).toMatch(/next-exercise|siguiente ejercicio/i);
   });
 
   it("lists Won't: Mini App, Vercel crons, secrets in repo, implementing AI", () => {

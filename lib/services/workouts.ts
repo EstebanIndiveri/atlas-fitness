@@ -2,6 +2,7 @@ import { eq, and, isNull, desc } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { workouts, workoutSets } from '@/lib/db/schema';
 import { updateStreakFromActivity } from '@/lib/services/streaks';
+import { getRoutineById } from '@/lib/services/routines';
 import { AppError } from '@/types/errors';
 import type { Workout, WorkoutSet } from '@/lib/db/schema';
 
@@ -18,11 +19,21 @@ export interface UpdateWorkoutInput {
 /**
  * Creates a new workout for a user
  */
-export async function createWorkout(userId: number): Promise<Workout> {
+export async function createWorkout(
+  userId: number,
+  routineId?: number | null,
+): Promise<Workout> {
+  let resolvedRoutineId: number | null = null;
+  if (routineId !== undefined && routineId !== null) {
+    await getRoutineById(routineId);
+    resolvedRoutineId = routineId;
+  }
+
   const [workout] = await db
     .insert(workouts)
     .values({
       userId,
+      routineId: resolvedRoutineId,
       startedAt: new Date(),
     })
     .returning();

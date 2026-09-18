@@ -1,7 +1,9 @@
 # AI Integration
 
-Hoy **no hay** cliente Gemini, Groq ni otra API de IA cableada. `lib/ai/` es un placeholder.
+Gemini se usa **solo server-side** para sugerir el siguiente ejercicio de una rutina (`POST /api/workouts/:id/next-exercise`).
 
-El cron `GET /api/cron/daily-tip` pasa `aiContent = null`. `ensureTodayTip` en `lib/services/tips.ts` guarda un tip del pool es-AR con `source = 'system'`. Eso es el Must (fallback obligatorio, ADR-001).
+- Env: `GEMINI_API_KEY` (vacía = fallback). Nunca `NEXT_PUBLIC_*`.
+- Sin clave, timeout o respuesta inválida → orden de `routine_exercises.sort_order`.
+- Tips diarios **no** pasan por Gemini: `ensureTodayTip` sigue persistiendo `source = 'system'`.
 
-Cablear un proveedor es **Won't** del PR de docs de integraciones reales. Stub comentado: `# GEMINI_API_KEY=` en `.env.example` (la variable no se lee). Guía: `docs/engineering/local-dev.md` (sección IA / tips).
+Detalle: `docs/architecture/ADR-003-gemini-guided-session.md` y `docs/engineering/local-dev.md`.

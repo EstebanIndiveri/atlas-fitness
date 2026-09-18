@@ -155,6 +155,7 @@ Sin imports circulares. Sin dead imports.
 - `docs/architecture/ADR-001-system-stack.md`
 - `docs/architecture/ADR-002-client-channels.md`
 - `docs/architecture/ADR-001b-habit-motivation.md`
+- `docs/architecture/ADR-003-gemini-guided-session.md`
 - `docs/backlog/README.md`
 - `docs/engineering/conventions-fe.md`
 - `docs/engineering/conventions-be.md`

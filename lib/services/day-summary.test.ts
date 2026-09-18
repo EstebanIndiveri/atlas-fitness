@@ -4,6 +4,8 @@ import {
   botMessages,
   dailyCheckins,
   exercises,
+  routineExercises,
+  routines,
   streakNudges,
   telegramLinkCodes,
   users,
@@ -26,6 +28,8 @@ describe('getDaySummary', () => {
     await db.delete(dailyCheckins);
     await db.delete(workoutSets);
     await db.delete(workouts);
+    await db.delete(routineExercises);
+    await db.delete(routines);
     await db.delete(exercises);
     await db.delete(telegramLinkCodes);
     await db.delete(userStreaks);

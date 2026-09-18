@@ -314,17 +314,21 @@ Con la cuenta vinculada, en el chat del bot:
 
 Si el bot no contesta: `getWebhookInfo`, que `npm run dev` y el túnel sigan vivos, y que el secret de `setWebhook` sea el mismo que en `.env` (y que hayas reiniciado Next).
 
-### IA / tips (no cableada)
+### IA / tips y Gemini (sesión guiada)
 
-Comportamiento **actual** (Must):
+Comportamiento **tips** (Must, sin cambio):
 
 - `GET /api/cron/daily-tip` (Bearer `CRON_SECRET`) llama `ensureTodayTip(hoy, null)`.
-- No hay cliente Gemini, Groq ni otra API en `lib/ai/` (solo un README placeholder).
 - El cron deja `aiContent = null` a propósito (`app/api/cron/daily-tip/route.ts`).
 - `lib/services/tips.ts` toma un tip al azar del pool es-AR y persiste `source = 'system'`.
 - La TipCard del dashboard y `/recordatorio` leen ese tip. Si el cron no corrió, `getOrCreateTodayTip` también cae al pool system.
 
-Cablear un proveedor es **Won't de este PR**. En `.env.example` hay un stub **comentado** (`# GEMINI_API_KEY=`) para no olvidar el nombre el día que exista código. Hoy esa variable **no se lee**.
+Comportamiento **siguiente ejercicio** (Epic-E):
+
+- `GEMINI_API_KEY` en `.env` (vacía por default). Nunca `NEXT_PUBLIC_*`.
+- `POST /api/workouts/:id/next-exercise` usa Gemini **solo server-side**.
+- Sin clave, timeout o JSON inválido → **fallback** determinista (orden de `routine_exercises`).
+- ADR: `docs/architecture/ADR-003-gemini-guided-session.md`.
 
 El curl de smoke del cron alcanza para ver un tip `source: "system"` sin red de IA.
 
@@ -360,4 +364,4 @@ Playwright levanta `npm start` con `CRON_SECRET` en `webServer.env` (default `te
 - Crons de producción en Vercel (`vercel.json`) — PR aparte.
 - Sesión viva / notas como features nuevas — ya shipped; no se re-documentan acá.
 - Secretos reales en el repo — prohibido.
-- Implementar Gemini/Groq — Won't de este PR.
+- Reescribir tips diarios con Gemini — Won't de Epic-E (tips siguen `source=system`).

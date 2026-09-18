@@ -14,6 +14,7 @@ const PUBLIC_LINKS = [
 
 const APP_LINKS = [
   { href: '/dashboard', label: UI_COPY.navHome },
+  { href: '/dashboard/session', label: UI_COPY.navSession, testId: 'session-link' },
   { href: '/dashboard/history', label: UI_COPY.navHistory },
   { href: '/dashboard/settings', label: UI_COPY.navSettings, testId: 'settings-link' },
 ] as const;

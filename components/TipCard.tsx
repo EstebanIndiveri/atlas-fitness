@@ -141,20 +141,33 @@ export function TipCard({ activeWorkout, onStartWorkout }: TipCardProps) {
       <div className="flex flex-col gap-3 sm:flex-row">
         {activeWorkout ? (
           <Link
-            href={`/dashboard/workout/${activeWorkout.id}`}
+            href={
+              activeWorkout.routineId
+                ? `/dashboard/session/${activeWorkout.id}`
+                : `/dashboard/workout/${activeWorkout.id}`
+            }
             className={buttonClassName({ variant: 'success', className: 'flex-1 text-center' })}
             data-testid="continue-workout-cta"
           >
-            Continuar Entrenamiento
+            {activeWorkout.routineId ? 'Continuar sesión guiada' : 'Continuar Entrenamiento'}
           </Link>
         ) : (
-          <Button
-            onClick={onStartWorkout}
-            className="flex-1"
-            data-testid="new-workout-button"
-          >
-            Empezar Entreno
-          </Button>
+          <>
+            <Button
+              onClick={onStartWorkout}
+              className="flex-1"
+              data-testid="new-workout-button"
+            >
+              Empezar Entreno
+            </Button>
+            <Link
+              href="/dashboard/session"
+              className={buttonClassName({ variant: 'secondary', className: 'flex-1 text-center' })}
+              data-testid="guided-session-cta"
+            >
+              Sesión guiada
+            </Link>
+          </>
         )}
       </div>
     </Card>
