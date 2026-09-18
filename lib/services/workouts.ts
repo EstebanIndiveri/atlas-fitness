@@ -1,7 +1,7 @@
 import { eq, and, isNull, desc } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { routines, workouts, workoutSets } from '@/lib/db/schema';
-import { isUniqueConstraintError } from '@/lib/db/unique-error';
+import { isSqliteBusyError, isUniqueConstraintError } from '@/lib/db/unique-error';
 import { updateStreakFromActivity } from '@/lib/services/streaks';
 import { AppError } from '@/types/errors';
 import type { Workout, WorkoutSet } from '@/lib/db/schema';
@@ -32,8 +32,19 @@ async function resolveRoutineId(routineId?: number | null): Promise<number | nul
   return routineId;
 }
 
+async function findActiveWorkoutRow(userId: number): Promise<Workout | undefined> {
+  return db.query.workouts.findFirst({
+    where: and(
+      eq(workouts.userId, userId),
+      isNull(workouts.endedAt),
+      isNull(workouts.deletedAt),
+    ),
+  });
+}
+
 /**
  * Creates a new workout for a user. At most one active (not ended, not deleted) workout per user.
+ * Atomicity comes from the partial unique index `workouts_user_id_active_unique`.
  */
 export async function createWorkout(
   userId: number,
@@ -41,21 +52,14 @@ export async function createWorkout(
 ): Promise<Workout> {
   const resolvedRoutineId = await resolveRoutineId(routineId);
 
-  try {
-    const created = await db.transaction(async (tx) => {
-      const existing = await tx.query.workouts.findFirst({
-        where: and(
-          eq(workouts.userId, userId),
-          isNull(workouts.endedAt),
-          isNull(workouts.deletedAt),
-        ),
-      });
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const existing = await findActiveWorkoutRow(userId);
+    if (existing) {
+      throw new AppError('CONFLICT', 'Ya tienes un entrenamiento en curso');
+    }
 
-      if (existing) {
-        throw new AppError('CONFLICT', 'Ya tienes un entrenamiento en curso');
-      }
-
-      const [workout] = await tx
+    try {
+      const [workout] = await db
         .insert(workouts)
         .values({
           userId,
@@ -65,18 +69,18 @@ export async function createWorkout(
         .returning();
 
       return workout;
-    });
-
-    return created;
-  } catch (error) {
-    if (error instanceof AppError) {
+    } catch (error) {
+      if (isUniqueConstraintError(error)) {
+        throw new AppError('CONFLICT', 'Ya tienes un entrenamiento en curso');
+      }
+      if (isSqliteBusyError(error) && attempt < 2) {
+        continue;
+      }
       throw error;
     }
-    if (isUniqueConstraintError(error)) {
-      throw new AppError('CONFLICT', 'Ya tienes un entrenamiento en curso');
-    }
-    throw error;
   }
+
+  throw new AppError('CONFLICT', 'Ya tienes un entrenamiento en curso');
 }
 
 /**
@@ -182,14 +186,5 @@ export async function deleteWorkout(workoutId: number, userId: number): Promise<
  * Gets the active workout (not ended) for a user
  */
 export async function getActiveWorkout(userId: number): Promise<Workout | null> {
-  const workout = await db.query.workouts.findFirst({
-    where: and(
-      eq(workouts.userId, userId),
-      isNull(workouts.endedAt),
-      isNull(workouts.deletedAt)
-    ),
-    orderBy: desc(workouts.startedAt),
-  });
-
-  return workout || null;
+  return (await findActiveWorkoutRow(userId)) || null;
 }
