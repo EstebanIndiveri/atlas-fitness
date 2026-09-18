@@ -1,10 +1,10 @@
-# Gemini 3.6 Flash Migration Implementation Plan
+# Gemini Flash Migration Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Restore live Gemini suggestions in guided workouts by replacing the retired model with `gemini-3.6-flash`.
+**Goal:** Restore live Gemini suggestions in guided workouts by replacing the retired model with `gemini-3.5-flash-lite`.
 
-**Architecture:** Keep the existing server-side `generateContent` adapter and its typed JSON contract. Change only the model identifier, preserve every fallback path, and verify both the adapter URL and a real provider response.
+**Architecture:** Keep the existing server-side `generateContent` adapter, its four-second timeout, and its typed JSON contract. Change the model identifier to the Flash variant proven responsive by a live probe, preserve every fallback path, and verify both the adapter URL and a real provider response.
 
 **Tech Stack:** TypeScript 6, Jest 30, Gemini Generative Language API, Next.js 16 server-side services.
 
@@ -21,14 +21,14 @@
 
 **Files:**
 - Modify: `lib/ai/gemini.test.ts:65-91`
-- Modify: `lib/ai/gemini.ts:3-4`
+- Modify: `lib/ai/gemini.ts:3-5`
 
 - [ ] **Step 1: Make the successful adapter test capture the requested URL**
 
 Update the existing `parses a successful generateContent response` test:
 
 ```ts
-it('calls Gemini 3.6 Flash and parses a successful response', async () => {
+it('calls Gemini 3.5 Flash Lite and parses a successful response', async () => {
   let requestedUrl = '';
   const result = await fetchGeminiNextExercise(input, {
     env: { GEMINI_API_KEY: 'test-key' },
@@ -54,7 +54,7 @@ it('calls Gemini 3.6 Flash and parses a successful response', async () => {
   });
 
   expect(requestedUrl).toContain(
-    '/models/gemini-3.6-flash:generateContent?key=test-key',
+    '/models/gemini-3.5-flash-lite:generateContent?key=test-key',
   );
   expect(result).toEqual({
     nextExerciseId: 2,
@@ -80,11 +80,11 @@ Expected: FAIL because the requested URL still contains
 Change `lib/ai/gemini.ts`:
 
 ```ts
-export const GEMINI_MODEL = 'gemini-3.6-flash';
+export const GEMINI_MODEL = 'gemini-3.5-flash-lite';
 ```
 
-Keep `GEMINI_GENERATE_URL`, the request body, timeout, parsing, and fallback
-behavior unchanged.
+Keep `GEMINI_GENERATE_URL`, the four-second timeout, request body, parsing, and
+fallback behavior unchanged.
 
 - [ ] **Step 4: Run focused regression tests**
 
@@ -124,4 +124,3 @@ Expected: `responded` is `true` and `result.nextExerciseId` is either `2` or
 git add lib/ai/gemini.ts lib/ai/gemini.test.ts
 git commit -m "fix: migrate guided sessions to Gemini 3.6 Flash"
 ```
-

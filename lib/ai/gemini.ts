@@ -1,6 +1,6 @@
 import type { GeminiNextExercisePayload } from '@/types/routine';
 
-export const GEMINI_MODEL = 'gemini-2.0-flash';
+export const GEMINI_MODEL = 'gemini-3.5-flash-lite';
 export const GEMINI_GENERATE_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 export const GEMINI_TIMEOUT_MS = 4000;
 

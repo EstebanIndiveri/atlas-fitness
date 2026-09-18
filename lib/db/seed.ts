@@ -17,8 +17,8 @@ const SYSTEM_EXERCISES = [
     muscleGroup: 'Pecho',
     instructions:
       'Acostado en un banco plano, baja la barra hasta el pecho y empuja hacia arriba con control.',
-    imageUrl: 'https://via.placeholder.com/400x300?text=Press+Banca',
-    videoUrl: 'https://www.youtube.com/watch?v=bench-press-example',
+    imageUrl: null,
+    videoUrl: 'https://www.youtube.com/results?search_query=press+banca+tecnica',
     isSystem: true,
   },
   {
@@ -27,8 +27,8 @@ const SYSTEM_EXERCISES = [
     muscleGroup: 'Piernas',
     instructions:
       'Con la barra en los hombros, baja doblando rodillas y caderas hasta que los muslos estén paralelos al suelo.',
-    imageUrl: 'https://via.placeholder.com/400x300?text=Sentadilla',
-    videoUrl: 'https://www.youtube.com/watch?v=squat-example',
+    imageUrl: null,
+    videoUrl: 'https://www.youtube.com/results?search_query=sentadilla+con+barra+tecnica',
     isSystem: true,
   },
   {
@@ -37,8 +37,8 @@ const SYSTEM_EXERCISES = [
     muscleGroup: 'Espalda',
     instructions:
       'Con la barra en el suelo, agáchate y levántala manteniendo la espalda recta hasta estar de pie.',
-    imageUrl: 'https://via.placeholder.com/400x300?text=Peso+Muerto',
-    videoUrl: 'https://www.youtube.com/watch?v=deadlift-example',
+    imageUrl: null,
+    videoUrl: 'https://www.youtube.com/results?search_query=peso+muerto+tecnica',
     isSystem: true,
   },
   {
@@ -47,8 +47,8 @@ const SYSTEM_EXERCISES = [
     muscleGroup: 'Hombros',
     instructions:
       'De pie, empuja la barra desde los hombros hacia arriba hasta extender completamente los brazos.',
-    imageUrl: 'https://via.placeholder.com/400x300?text=Press+Militar',
-    videoUrl: 'https://www.youtube.com/watch?v=overhead-press-example',
+    imageUrl: null,
+    videoUrl: 'https://www.youtube.com/results?search_query=press+militar+tecnica',
     isSystem: true,
   },
   {
@@ -57,8 +57,8 @@ const SYSTEM_EXERCISES = [
     muscleGroup: 'Espalda',
     instructions:
       'Inclinado hacia adelante, tira de la barra hacia tu abdomen manteniendo los codos cerca del cuerpo.',
-    imageUrl: 'https://via.placeholder.com/400x300?text=Remo+con+Barra',
-    videoUrl: 'https://www.youtube.com/watch?v=barbell-row-example',
+    imageUrl: null,
+    videoUrl: 'https://www.youtube.com/results?search_query=remo+con+barra+tecnica',
     isSystem: true,
   },
 ];
@@ -209,7 +209,8 @@ async function seed() {
     });
 
     if (existing) {
-      console.log(`  Exercise "${exercise.name}" (${exercise.slug}) already exists`);
+      await db.update(exercises).set(exercise).where(eq(exercises.id, existing.id));
+      console.log(`  Updated exercise: ${exercise.name} (${exercise.slug})`);
     } else {
       await db.insert(exercises).values(exercise);
       console.log(`  Created exercise: ${exercise.name} (${exercise.slug})`);
