@@ -32,6 +32,46 @@ export const exercises = sqliteTable('exercises', {
 });
 
 /**
+ * Routines table — seed (and later user) templates for guided sessions.
+ */
+export const routines = sqliteTable('routines', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  slug: text('slug').notNull().unique(),
+  name: text('name').notNull(),
+  description: text('description'),
+  kind: text('kind').notNull().default('gym'),
+  restSeconds: integer('rest_seconds').notNull().default(90),
+  isSystem: integer('is_system', { mode: 'boolean' }).notNull().default(true),
+  userId: integer('user_id').references(() => users.id),
+  deletedAt: integer('deleted_at', { mode: 'timestamp' }),
+});
+
+/**
+ * Routine exercises — ordered target sets/reps for a routine.
+ */
+export const routineExercises = sqliteTable(
+  'routine_exercises',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    routineId: integer('routine_id')
+      .notNull()
+      .references(() => routines.id),
+    exerciseId: integer('exercise_id')
+      .notNull()
+      .references(() => exercises.id),
+    sortOrder: integer('sort_order').notNull(),
+    targetSets: integer('target_sets').notNull(),
+    targetReps: integer('target_reps').notNull(),
+  },
+  (table) => ({
+    uniqueRoutineOrder: uniqueIndex('routine_exercises_routine_id_sort_order_unique').on(
+      table.routineId,
+      table.sortOrder,
+    ),
+  }),
+);
+
+/**
  * Workouts table — training sessions
  */
 export const workouts = sqliteTable('workouts', {
@@ -39,6 +79,7 @@ export const workouts = sqliteTable('workouts', {
   userId: integer('user_id')
     .notNull()
     .references(() => users.id),
+  routineId: integer('routine_id').references(() => routines.id),
   startedAt: integer('started_at', { mode: 'timestamp' }).notNull(),
   endedAt: integer('ended_at', { mode: 'timestamp' }),
   note: text('note'),
@@ -190,6 +231,12 @@ export type NewUser = typeof users.$inferInsert;
 
 export type Exercise = typeof exercises.$inferSelect;
 export type NewExercise = typeof exercises.$inferInsert;
+
+export type Routine = typeof routines.$inferSelect;
+export type NewRoutine = typeof routines.$inferInsert;
+
+export type RoutineExercise = typeof routineExercises.$inferSelect;
+export type NewRoutineExercise = typeof routineExercises.$inferInsert;
 
 export type Workout = typeof workouts.$inferSelect;
 export type NewWorkout = typeof workouts.$inferInsert;

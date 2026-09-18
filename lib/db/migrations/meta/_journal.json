@@ -29,6 +29,13 @@
       "when": 1789662000000,
       "tag": "0003_streak_nudges",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1789670000000,
+      "tag": "0004_routines",
+      "breakpoints": true
     }
   ]
 }

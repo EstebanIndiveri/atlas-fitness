@@ -33,6 +33,7 @@ export default defineConfig({
       CRON_SECRET: process.env.CRON_SECRET || 'test-secret-for-e2e',
       TELEGRAM_BOT_TOKEN: '',
       TELEGRAM_WEBHOOK_SECRET: '',
+      GEMINI_API_KEY: '',
     },
   },
 });

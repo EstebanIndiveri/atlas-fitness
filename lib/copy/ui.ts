@@ -7,6 +7,7 @@ export const UI_COPY = {
   navHome: 'Inicio',
   navHistory: 'Historial',
   navSettings: 'Ajustes',
+  navSession: 'Sesión',
   navLogin: 'Iniciar sesión',
   navRegister: 'Crear cuenta',
   logout: 'Cerrar sesión',

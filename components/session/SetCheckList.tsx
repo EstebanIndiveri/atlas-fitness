@@ -1,0 +1,70 @@
+'use client';
+
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { SESSION_COPY } from '@/lib/copy/session';
+
+type SetCheckListProps = {
+  targetSets: number;
+  completedCount: number;
+  weight: string;
+  onWeightChange: (value: string) => void;
+  onCompleteSet: () => void;
+  busy: boolean;
+};
+
+export function SetCheckList({
+  targetSets,
+  completedCount,
+  weight,
+  onWeightChange,
+  onCompleteSet,
+  busy,
+}: SetCheckListProps) {
+  const slots = Array.from({ length: targetSets }, (_, index) => index + 1);
+
+  return (
+    <div>
+      <ol className="mb-4 space-y-2" data-testid="set-checklist">
+        {slots.map((slot) => {
+          const done = slot <= completedCount;
+          return (
+            <li
+              key={slot}
+              className="flex items-center justify-between rounded-md border border-line px-3 py-2"
+              data-testid={done ? 'set-complete' : 'set-pending'}
+            >
+              <span className="text-sm text-ink">
+                {SESSION_COPY.setProgress(slot, targetSets)}
+              </span>
+              <span className="text-sm text-ink-muted" aria-hidden>
+                {done ? '✓' : '○'}
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+      {completedCount < targetSets ? (
+        <div className="space-y-3">
+          <Input
+            id="guided-weight"
+            label={SESSION_COPY.weightLabel}
+            type="text"
+            inputMode="decimal"
+            value={weight}
+            onChange={(event) => onWeightChange(event.target.value)}
+            data-testid="guided-weight-input"
+          />
+          <Button
+            size="lg"
+            onClick={onCompleteSet}
+            disabled={busy || !weight.trim()}
+            data-testid="complete-set-button"
+          >
+            {SESSION_COPY.completeSet}
+          </Button>
+        </div>
+      ) : null}
+    </div>
+  );
+}

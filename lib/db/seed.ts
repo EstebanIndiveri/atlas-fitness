@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import { db } from './client';
-import { users, exercises, userStreaks, dailyTips } from './schema';
+import { users, exercises, userStreaks, dailyTips, routines, routineExercises } from './schema';
 import { eq } from 'drizzle-orm';
 
 const QA_USER_EMAIL = 'qa@atlas.test';
@@ -62,6 +62,92 @@ const SYSTEM_EXERCISES = [
   },
 ];
 
+async function exerciseIdBySlug(slug: string): Promise<number> {
+  const row = await db.query.exercises.findFirst({
+    where: eq(exercises.slug, slug),
+  });
+  if (!row) {
+    throw new Error(`Seed exercise missing: ${slug}`);
+  }
+  return row.id;
+}
+
+async function seedRoutines(): Promise<void> {
+  console.log('\nCreating system routines...');
+
+  const benchId = await exerciseIdBySlug('bench-press');
+  const squatId = await exerciseIdBySlug('squat');
+  const ohpId = await exerciseIdBySlug('overhead-press');
+
+  const templates = [
+    {
+      slug: 'full-body-expres',
+      name: 'Full body exprés',
+      description: 'Dos ejercicios, una serie cada uno. Ideal para una sesión guiada corta.',
+      kind: 'gym',
+      restSeconds: 30,
+      items: [
+        { exerciseId: benchId, sortOrder: 1, targetSets: 1, targetReps: 5 },
+        { exerciseId: squatId, sortOrder: 2, targetSets: 1, targetReps: 5 },
+      ],
+    },
+    {
+      slug: 'empuje',
+      name: 'Empuje',
+      description: 'Press banca y press militar. Tres series.',
+      kind: 'gym',
+      restSeconds: 90,
+      items: [
+        { exerciseId: benchId, sortOrder: 1, targetSets: 3, targetReps: 8 },
+        { exerciseId: ohpId, sortOrder: 2, targetSets: 3, targetReps: 10 },
+      ],
+    },
+  ];
+
+  for (const template of templates) {
+    const existing = await db.query.routines.findFirst({
+      where: eq(routines.slug, template.slug),
+    });
+
+    let routineId: number;
+    if (existing) {
+      routineId = existing.id;
+      console.log(`  Routine "${template.name}" (${template.slug}) already exists`);
+    } else {
+      const [created] = await db
+        .insert(routines)
+        .values({
+          slug: template.slug,
+          name: template.name,
+          description: template.description,
+          kind: template.kind,
+          restSeconds: template.restSeconds,
+          isSystem: true,
+        })
+        .returning();
+      routineId = created.id;
+      console.log(`  Created routine: ${template.name} (${template.slug})`);
+    }
+
+    const existingItems = await db.query.routineExercises.findMany({
+      where: eq(routineExercises.routineId, routineId),
+    });
+    if (existingItems.length > 0) {
+      continue;
+    }
+
+    await db.insert(routineExercises).values(
+      template.items.map((item) => ({
+        routineId,
+        exerciseId: item.exerciseId,
+        sortOrder: item.sortOrder,
+        targetSets: item.targetSets,
+        targetReps: item.targetReps,
+      })),
+    );
+  }
+}
+
 async function seed() {
   console.log('Starting seed...');
 
@@ -114,6 +200,8 @@ async function seed() {
     }
   }
 
+  await seedRoutines();
+
   // Initialize user streak
   const existingStreak = await db.query.userStreaks.findFirst({
     where: eq(userStreaks.userId, userId),
@@ -163,6 +251,9 @@ async function seed() {
   console.log(`  Password: ${QA_USER_PASSWORD}`);
   console.log('\nSystem exercises (slugs):');
   SYSTEM_EXERCISES.forEach((ex) => console.log(`  - ${ex.slug}: ${ex.name}`));
+  console.log('\nSystem routines (slugs):');
+  console.log('  - full-body-expres: Full body exprés');
+  console.log('  - empuje: Empuje');
 }
 
 seed()

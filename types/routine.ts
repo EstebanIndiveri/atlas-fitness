@@ -1,3 +1,5 @@
+import type { StreakStats } from '@/types/streak';
+
 export type RoutineKind = 'gym' | 'home';
 
 export interface RoutineExerciseItem {
@@ -24,9 +26,33 @@ export interface RoutineSummary {
   exercises: RoutineExerciseItem[];
 }
 
+export type SuggestionSource = 'gemini' | 'fallback';
+
 export interface NextExerciseSuggestion {
-  source: 'gemini' | 'fallback';
+  source: SuggestionSource;
   isLast: boolean;
   nextExerciseId: number | null;
+  message: string;
+}
+
+export type ImprovementDirection = 'up' | 'down' | 'same' | 'none';
+
+export interface ExerciseImprovement {
+  exerciseId: number;
+  exerciseName: string;
+  currentMaxKg: string;
+  previousMaxKg: string | null;
+  deltaKg: string | null;
+  direction: ImprovementDirection;
+}
+
+export interface GuidedCloseSummary {
+  streak: StreakStats;
+  improvements: ExerciseImprovement[];
+}
+
+export interface GeminiNextExercisePayload {
+  nextExerciseId: number | null;
+  isLast: boolean;
   message: string;
 }
