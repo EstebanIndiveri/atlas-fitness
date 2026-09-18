@@ -4,6 +4,7 @@ export type ErrorCode =
   | 'NOT_FOUND'
   | 'VALIDATION'
   | 'CONFLICT'
+  | 'RATE_LIMIT'
   | 'SERVICE_UNAVAILABLE';
 
 export interface ApiError {
@@ -15,6 +16,7 @@ export class AppError extends Error {
   constructor(
     public code: ErrorCode,
     message: string,
+    public retryAfterSeconds?: number,
   ) {
     super(message);
     this.name = 'AppError';

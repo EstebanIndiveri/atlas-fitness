@@ -54,11 +54,21 @@ export function handleApiError(error: unknown): NextResponse {
     NOT_FOUND: 404,
     VALIDATION: 400,
     CONFLICT: 409,
+    RATE_LIMIT: 429,
     SERVICE_UNAVAILABLE: 503,
   } as const;
 
   if (error instanceof AppError) {
-    return NextResponse.json(error.toJSON(), { status: statusByCode[error.code] });
+    const headers = new Headers();
+    if (error.code === 'RATE_LIMIT') {
+      const retryAfter = Math.max(1, Math.ceil(error.retryAfterSeconds ?? 60));
+      headers.set('Retry-After', String(retryAfter));
+    }
+
+    return NextResponse.json(error.toJSON(), {
+      status: statusByCode[error.code],
+      headers,
+    });
   }
 
   if (isMissingDatabaseSchemaError(error)) {

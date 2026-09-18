@@ -29,6 +29,12 @@ export const REQUIRED_SCHEMA: readonly RequiredTable[] = [
     indexes: [],
   },
   {
+    name: 'rate_limit_buckets',
+    columns: ['key', 'window_start', 'count'],
+    primaryKey: ['key'],
+    indexes: [],
+  },
+  {
     name: 'exercises',
     columns: [
       'id',

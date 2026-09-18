@@ -42,6 +42,12 @@ export default defineConfig({
       TELEGRAM_BOT_TOKEN: '',
       TELEGRAM_WEBHOOK_SECRET,
       GEMINI_API_KEY: '',
+      // E2E registers a fresh user per several specs from one IP; keep production
+      // defaults (login 10 / register 5) and raise only the Playwright server.
+      AUTH_RATE_LIMIT_LOGIN_PER_MINUTE:
+        process.env.AUTH_RATE_LIMIT_LOGIN_PER_MINUTE || '100',
+      AUTH_RATE_LIMIT_REGISTER_PER_MINUTE:
+        process.env.AUTH_RATE_LIMIT_REGISTER_PER_MINUTE || '100',
     },
   },
 });

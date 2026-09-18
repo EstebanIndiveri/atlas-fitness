@@ -21,6 +21,7 @@ route.ts → validate (Zod) → auth/session → service → db/adapter → resp
 - Crons: Bearer `CRON_SECRET`; tip/nudge por usuario linkeado (no env chat global).
 - Decimal para `weight_kg` en DB y serialización string en JSON de dominio cuando aplique.
 - Catálogo (ejercicios/rutinas): `isSystem || userId === currentUser` vía `lib/auth/ownership.ts`. Recurso ajeno → `NOT_FOUND` (404, sin filtrar existencia). Listados: sistema + propios. DTOs sin `userId`.
+- Auth login/register: rate limit durable por IP+acción (`lib/auth/rate-limit.ts` + `rate_limit_buckets`). Over limit → 429 + `Retry-After`.
 
 ## Anti-patrones
 
