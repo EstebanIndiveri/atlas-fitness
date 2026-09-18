@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { TW_SMOKE } from './tailwind-smoke';
+import { expectCssColor, TW_SMOKE } from './tailwind-smoke';
 
 test.describe('Workout Flow', () => {
   test.beforeEach(async ({ page }) => {
@@ -30,7 +30,7 @@ test.describe('Workout Flow', () => {
     
     // Should be on workout session page
     await expect(page.locator('h1:has-text("Sesión Activa")')).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('main').first()).toHaveCSS('background-color', TW_SMOKE.gray50);
+    await expectCssColor(page.locator('main').first(), 'background-color', TW_SMOKE.gray50);
     await expect(page.locator('[data-testid="add-set-button"]')).toHaveCSS(
       'border-radius',
       TW_SMOKE.roundedMd,
