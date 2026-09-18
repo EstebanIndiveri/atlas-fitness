@@ -1,0 +1,130 @@
+# Testing
+
+## Resultado ejecutado
+
+Sobre `53bc87b`, el 18-09-2026:
+
+| Validación | Resultado |
+|---|---|
+| Jest | 48 suites, 272 tests aprobados |
+| `npx jest --runInBand --coverage` | 91.78% statements, 81.49% branches |
+| Playwright con DB fresca | 42 aprobados, 1 flaky aprobado en retry, 1 omitido |
+| Typecheck | aprobado |
+| Build | aprobado con warnings |
+| npm audit | 4 moderadas |
+
+El repositorio contiene 58 archivos de test: 48 Jest y 10 specs Playwright.
+
+## Jest
+
+`jest.config.ts` usa `next/jest`, proveedor V8, `jsdom`, alias `@/*` y excluye
+E2E. `setupFilesAfterEnv` está comentado y no existe `jest.setup.ts`.
+`ts-jest` está instalado, pero la configuración activa usa el transform de
+Next/SWC.
+
+No hay:
+
+- script de coverage;
+- `collectCoverageFrom`;
+- thresholds;
+- DB temporal obligatoria;
+- guard contra `local.db`.
+
+Por eso el porcentaje cubre archivos importados por las suites, no
+necesariamente toda la superficie de producción.
+
+## Playwright
+
+`playwright.config.ts`:
+
+- ejecuta Chromium;
+- usa `npm run start`, por lo que requiere build previo;
+- corre paralelo localmente y con un worker en CI;
+- reutiliza server existente fuera de CI;
+- captura trace en primer retry;
+- inyecta DB/secrets de test al web server.
+
+Los 10 specs cubren home, auth, workouts, sesión guiada, streaks, tips, Telegram,
+crons, estilos y PWA. Un caso de prompt PWA se omite porque Chromium headless no
+dispara `beforeinstallprompt`.
+
+## Fortalezas
+
+- buen volumen para el tamaño del código;
+- services y helpers de dominio ampliamente cubiertos;
+- pruebas de fallback Gemini;
+- pruebas de idempotencia Telegram;
+- pruebas de PWA, contraste y tokens;
+- E2E de flujos Must;
+- CI separa `test.db` para Jest y `local.db` para E2E.
+
+## Riesgos del harness
+
+### Tests destructivos
+
+El cliente cae en `file:./local.db`, y tests de services borran tablas. Ejecutar
+`npm test` localmente sin una URL segura puede eliminar datos de desarrollo.
+
+### Contaminación entre suites
+
+Jest puede recrear `bench-press` sin media. El seed omite actualizar ejercicios
+existentes, por lo que correr E2E después sobre la misma DB deja la sesión sin
+el recurso esperado. Con DB fresca, Playwright pasa.
+
+### Falso positivo
+
+`e2e/auth.spec.ts:116-135` permite resultados alternativos y puede aprobar sin
+demostrar un login QA exitoso.
+
+### E2E flaky por carrera de observación
+
+La verificación final reprodujo un timeout en
+`e2e/workouts.spec.ts:96-101`; el retry pasó. El test hace click y recién
+después registra `waitForResponse`, por lo que puede perder una respuesta rápida.
+El mismo orden aparece al guardar sets.
+
+Debe registrar la espera antes de disparar la acción, por ejemplo con
+`Promise.all([page.waitForResponse(...), button.click()])`.
+
+### Regresiones sin test
+
+Faltan casos para:
+
+- múltiples workouts activos;
+- update/delete de sets finalizados;
+- body con `routineId` inválido;
+- secret de sesión fallback;
+- webhook fail-open en producción;
+- ownership de ejercicios/rutinas personalizados;
+- expiración/revocación de sesión.
+
+## Warnings
+
+El build completó con warnings por un `pnpm-lock.yaml` externo usado para
+inferir workspace y por el módulo de `tailwind.config.ts`. ESLint no ignora
+`coverage/`, por lo que una ejecución local de coverage agrega ruido posterior.
+
+## Recomendación
+
+1. DB temporal única por ejecución/worker.
+2. Guard que aborte si tests apuntan a `local.db`.
+3. Seed idempotente que actualice datos canónicos.
+4. Tests RED para P0/P1.
+5. Script y threshold de coverage por módulos críticos.
+6. No reutilizar servers locales para validación reproducible.
+7. Mantener E2E Must sobre build y DB fresca.
+
+## Evidence
+
+- `package.json`
+- `jest.config.ts`
+- `playwright.config.ts`
+- `.github/workflows/ci.yml`
+- `lib/db/client.ts`
+- `lib/db/seed.ts`
+- `lib/**/*.test.ts`
+- `components/**/*.test.tsx`
+- `hooks/*.test.ts`
+- `e2e/*.spec.ts`
+- `e2e/auth.spec.ts`
+- `e2e/session.spec.ts`
