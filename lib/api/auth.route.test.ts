@@ -11,7 +11,7 @@ import { decodeSession, encodeSession, SESSION_COOKIE_NAME } from '@/lib/auth/se
 import { persistSession, revokeSession } from '@/lib/auth/session-store';
 import { SESSION_MAX_AGE_SECONDS } from '@/lib/auth/session-payload';
 import { db } from '@/lib/db/client';
-import { sessions, users } from '@/lib/db/schema';
+import { rateLimitBuckets, sessions, users } from '@/lib/db/schema';
 import type { SessionData } from '@/types/auth';
 
 const PASSWORD = 'Test1234!';
@@ -44,6 +44,7 @@ function cookieRequest(url: string, method: string, cookieValue: string): NextRe
 
 describe('auth session API', () => {
   beforeEach(async () => {
+    await db.delete(rateLimitBuckets);
     await db.delete(sessions);
     await db.delete(users);
   });

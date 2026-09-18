@@ -38,6 +38,16 @@ export const sessions = sqliteTable(
 );
 
 /**
+ * Auth rate-limit buckets — durable fixed-window counters (P1.3).
+ * Key is `action:ip` (login|register). Not process memory: serverless-safe.
+ */
+export const rateLimitBuckets = sqliteTable('rate_limit_buckets', {
+  key: text('key').primaryKey(),
+  windowStart: integer('window_start').notNull(),
+  count: integer('count').notNull(),
+});
+
+/**
  * Exercises table — system and user-custom exercises
  */
 export const exercises = sqliteTable('exercises', {
@@ -261,6 +271,9 @@ export type NewUser = typeof users.$inferInsert;
 
 export type SessionRow = typeof sessions.$inferSelect;
 export type NewSessionRow = typeof sessions.$inferInsert;
+
+export type RateLimitBucket = typeof rateLimitBuckets.$inferSelect;
+export type NewRateLimitBucket = typeof rateLimitBuckets.$inferInsert;
 
 export type Exercise = typeof exercises.$inferSelect;
 export type NewExercise = typeof exercises.$inferInsert;

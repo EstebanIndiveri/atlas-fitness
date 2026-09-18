@@ -11,6 +11,7 @@ import {
   dailyCheckins,
   streakNudges,
   botMessages,
+  rateLimitBuckets,
 } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 
@@ -24,6 +25,7 @@ describe('Auth Service', () => {
     await db.delete(botMessages);
     await db.delete(telegramLinkCodes);
     await db.delete(userStreaks);
+    await db.delete(rateLimitBuckets);
     await db.delete(sessions);
     await db.delete(users);
   });

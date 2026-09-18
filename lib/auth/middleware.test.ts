@@ -57,4 +57,18 @@ describe('handleApiError', () => {
       message: 'Internal server error',
     });
   });
+
+  it('returns HTTP 429 with Retry-After for RATE_LIMIT', async () => {
+    const response = handleApiError(
+      new AppError('RATE_LIMIT', 'Demasiados intentos. Probá de nuevo en un momento.', 17),
+    );
+    const body = (await response.json()) as { code: string; message: string };
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get('Retry-After')).toBe('17');
+    expect(body).toEqual({
+      code: 'RATE_LIMIT',
+      message: 'Demasiados intentos. Probá de nuevo en un momento.',
+    });
+  });
 });
