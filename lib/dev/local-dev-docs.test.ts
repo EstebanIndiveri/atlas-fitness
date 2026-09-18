@@ -15,15 +15,13 @@ describe('docs/engineering/local-dev.md (HU-D integraciones reales)', () => {
     expect(realAt).toBeGreaterThan(smokeAt);
   });
 
-  it('documents Turso cloud: create DB, env, migrate/seed, then switch back to file', () => {
-    expect(md).toMatch(/turso db create/i);
-    expect(md).toMatch(/TURSO_DATABASE_URL/);
-    expect(md).toMatch(/TURSO_AUTH_TOKEN/);
-    expect(md).toMatch(/npm run db:migrate/);
-    expect(md).toMatch(/npm run db:seed/);
+  it('documents safe Turso bootstrap and separates system from QA seed', () => {
+    expect(md).toMatch(/CONFIRM_REMOTE_DB_BOOTSTRAP=1/);
+    expect(md).toMatch(/npm run db:bootstrap:remote/);
+    expect(md).toMatch(/npm run db:seed:qa/);
+    expect(md).toMatch(/npm run db:verify/);
+    expect(md).toMatch(/no uses la cuenta QA en producción/i);
     expect(md).toMatch(/file:\.\/local\.db/);
-    expect(md).toMatch(/libsql:\/\//);
-    expect(md).toMatch(/volver/i);
   });
 
   it('documents real Telegram: BotFather → token → secret → tunnel → setWebhook → link-code → comando', () => {

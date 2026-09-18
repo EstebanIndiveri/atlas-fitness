@@ -31,7 +31,7 @@ Desde la raíz del repo:
 npm i
 cp .env.example .env          # si todavía no existe .env
 npm run db:migrate            # aplica migraciones al file DB
-npm run db:seed               # usuario QA + ejercicios + tips de ejemplo
+npm run db:seed:qa            # system seed + cuenta QA conocida (solo local/CI)
 npm run dev                   # http://localhost:3000
 ```
 
@@ -87,11 +87,12 @@ En Box: no pegues tokens de producción. El seed y el webhook stub alcanzan para
 
 | Campo | Valor |
 |-------|--------|
+| Seed QA | `npm run db:seed:qa` |
 | Email | `qa@atlas.test` |
 | Password | `Test1234!` |
 | Nombre | QA Test User |
 
-Definido en `lib/db/seed.ts`. El seed es idempotente (re-hashea la password si el user ya existe).
+`npm run db:seed` deja solo ejercicios/rutinas/tips del sistema. La cuenta conocida se agrega con `npm run db:seed:qa`. El seed QA es idempotente (re-hashea la password si el user ya existe).
 
 ### Checklist de smoke
 
@@ -179,15 +180,24 @@ El cliente libSQL (`lib/db/client.ts`, `lib/db/migrate.ts`) usa `TURSO_DATABASE_
    TURSO_AUTH_TOKEN=eyJ…          # el token que te dio Turso
    ```
 
-3. Aplicá schema y seed **sobre esa base cloud** (es otra DB; no se copia `local.db` solo):
+3. Base remota de desarrollo: bootstrap explícito + QA seed separado.
 
    ```bash
-   npm run db:migrate
-   npm run db:seed
-   npm run dev
+   CONFIRM_REMOTE_DB_BOOTSTRAP=1 npm run db:bootstrap:remote
+   npm run db:seed:qa
+   npm run db:verify
    ```
 
-4. Login smoke igual: `qa@atlas.test` / `Test1234!` (el seed es el mismo, ahora en Turso).
+   Usá esta secuencia para una base remota de desarrollo o preview donde sí querés la cuenta conocida `qa@atlas.test`.
+
+4. Base pública beta / producción: bootstrap seguro, sin QA seed.
+
+   ```bash
+   NODE_ENV=production CONFIRM_REMOTE_DB_BOOTSTRAP=1 npm run db:bootstrap:remote
+   npm run db:verify
+   ```
+
+   En producción el bootstrap carga **solo** ejercicios, rutinas y tips del sistema. Los usuarios reales se crean desde `/register`; **no uses la cuenta QA en producción**.
 
 #### Volver a `file:./local.db`
 
@@ -201,8 +211,7 @@ TURSO_AUTH_TOKEN=
 Token **vacío** (no un placeholder). Reiniciá el server. Si `local.db` no existía o está vacío:
 
 ```bash
-npm run db:migrate
-npm run db:seed
+npm run setup:local
 ```
 
 Los datos de Turso cloud y del archivo son independientes. Cambiar la URL no migra filas de un lado al otro.
