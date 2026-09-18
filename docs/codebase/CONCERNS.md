@@ -123,6 +123,10 @@ no expongan `userId`.
 
 ### P1.3 Sin rate limiting ni protección de consumo
 
+**Progreso P1.3 (en curso):** rate limit durable por IP+acción en
+`POST /api/auth/login` y `POST /api/auth/register` (Turso/SQLite buckets, 429 +
+`Retry-After`). Telegram, webhook, Gemini y crons quedan para P1.3b.
+
 Superficies:
 
 - login/registro;
