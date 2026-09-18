@@ -3,17 +3,60 @@
 @source "../app";
 @source "../components";
 
+/* HU-B design tokens — keep hex in sync with lib/ui/tokens.ts */
+@theme {
+  --color-ink: #0B1220;
+  --color-ink-muted: #445064;
+  --color-canvas: #F3EEE4;
+  --color-surface: #FFFDF8;
+  --color-line: #D9D1C3;
+  --color-brand: #1F6B4A;
+  --color-brand-hover: #17563B;
+  --color-brand-muted: #D7EDE3;
+  --color-brand-foreground: #FFFFFF;
+  --color-danger: #B42318;
+  --color-danger-muted: #FCEBEA;
+  --color-danger-foreground: #FFFFFF;
+  --color-success: #1F6B4A;
+  --color-success-foreground: #FFFFFF;
+  --color-warning: #9A3412;
+  --color-warning-muted: #FEF3C7;
+  --color-warning-foreground: #FFFFFF;
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  --text-display: 2rem;
+  --text-display--line-height: 1.15;
+  --text-display--font-weight: 700;
+  --text-title: 1.5rem;
+  --text-title--line-height: 1.25;
+  --text-title--font-weight: 650;
+  --text-body: 1rem;
+  --text-body--line-height: 1.5;
+  --text-caption: 0.875rem;
+  --text-caption--line-height: 1.4;
+
+  --spacing-page: 1rem;
+  --spacing-section: 1.5rem;
+  --spacing-stack: 1rem;
+
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+
+  --shadow-card: 0 1px 2px rgb(11 18 32 / 0.06), 0 8px 24px rgb(11 18 32 / 0.06);
+}
+
 :root {
-  --foreground-rgb: 0, 0, 0;
-  --background-rgb: 255, 255, 255;
+  --foreground-rgb: 11, 18, 32;
+  --background-rgb: 243, 238, 228;
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
-  background: rgb(var(--background-rgb));
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  color: var(--color-ink);
+  background: var(--color-canvas);
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
