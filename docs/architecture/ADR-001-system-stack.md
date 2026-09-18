@@ -21,7 +21,7 @@ App fitness usable desde el día 1: log de entrenos (ejercicio/sets/reps/peso), 
 |------|----------|
 | Runtime | Next.js App Router + TypeScript + React |
 | API | Route handlers; errores `{ code, message }` tipados |
-| Auth | Cookie sesión HMAC; link Telegram vía código |
+| Auth | Cookie sesión HMAC (`userId`+`sessionId`+`iat`+`exp`); revocación en tabla `sessions` (ADR-004); link Telegram vía código |
 | DB | Turso/libSQL + Drizzle; migraciones versionadas |
 | Pesos | `weight_kg` decimal/numeric; asserts string decimal |
 | TZ | Servidor `America/Argentina/Cordoba`; UI `es-AR` |
