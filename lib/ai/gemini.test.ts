@@ -62,11 +62,13 @@ describe('fetchGeminiNextExercise', () => {
     expect(result).toBeNull();
   });
 
-  it('parses a successful generateContent response', async () => {
+  it('calls Gemini 3.5 Flash Lite and parses a successful response', async () => {
+    let requestedUrl = '';
     const result = await fetchGeminiNextExercise(input, {
       env: { GEMINI_API_KEY: 'test-key' },
-      fetchImpl: async () =>
-        new Response(
+      fetchImpl: async (url) => {
+        requestedUrl = String(url);
+        return new Response(
           JSON.stringify({
             candidates: [
               {
@@ -81,8 +83,12 @@ describe('fetchGeminiNextExercise', () => {
             ],
           }),
           { status: 200, headers: { 'Content-Type': 'application/json' } },
-        ),
+        );
+      },
     });
+    expect(requestedUrl).toContain(
+      '/models/gemini-3.5-flash-lite:generateContent?key=test-key',
+    );
     expect(result).toEqual({
       nextExerciseId: 2,
       isLast: true,

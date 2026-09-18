@@ -5,6 +5,7 @@ describe('SESSION_COPY', () => {
   it('uses es-AR product copy for the guided flow', () => {
     expect(SESSION_COPY.pickTitle).toBe('Elegí una rutina');
     expect(SESSION_COPY.completeSet).toBe('Completar serie');
+    expect(SESSION_COPY.noImage).toBe('Sin imagen');
     expect(SESSION_COPY.closeTitle).toMatch(/Sesión completada/);
     expect(SESSION_COPY.streakDays(1)).toBe('1 día seguido');
     expect(SESSION_COPY.streakDays(3)).toBe('3 días seguidos');

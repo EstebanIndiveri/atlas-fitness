@@ -50,6 +50,7 @@ test.describe('Guided session (Epic-E Must)', () => {
     await page.waitForURL(/\/dashboard\/session\/\d+/, { timeout: 10000 });
 
     await expect(page.getByTestId('guided-exercise-name')).toHaveText('Press Banca');
+    // Media region is always rendered (placeholder when catalog imageUrl is null).
     await expect(page.getByTestId('guided-exercise-image')).toBeVisible();
 
     await page.fill('[data-testid="guided-weight-input"]', '40');
