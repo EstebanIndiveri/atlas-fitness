@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { requireAuth, handleApiError } from '@/lib/auth/middleware';
 import * as workoutsService from '@/lib/services/workouts';
-import { z } from 'zod';
+import { AppError } from '@/types/errors';
 
 const createWorkoutSchema = z.object({
   routineId: z.number().int().positive().optional(),
@@ -23,8 +24,10 @@ export async function POST(request: NextRequest) {
     const session = requireAuth(request);
     const raw = await readOptionalJson(request);
     const parsed = createWorkoutSchema.safeParse(raw);
-    const routineId = parsed.success ? parsed.data.routineId : undefined;
-    const workout = await workoutsService.createWorkout(session.userId, routineId);
+    if (!parsed.success) {
+      throw new AppError('VALIDATION', 'Datos de entrenamiento inválidos');
+    }
+    const workout = await workoutsService.createWorkout(session.userId, parsed.data.routineId);
 
     return NextResponse.json(workout, { status: 201 });
   } catch (error) {

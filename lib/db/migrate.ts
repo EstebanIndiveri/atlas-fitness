@@ -1,20 +1,13 @@
-import { drizzle } from 'drizzle-orm/libsql';
-import { migrate } from 'drizzle-orm/libsql/migrator';
-import { createClient } from '@libsql/client';
 import { loadLocalEnv } from '../dev/load-local-env';
+import { runLibsqlMigrations } from './run-migrations';
+import { resolveDatabaseUrl } from './database-url';
 
 const runMigrations = async () => {
   loadLocalEnv();
 
-  const client = createClient({
-    url: process.env.TURSO_DATABASE_URL || 'file:./local.db',
-    authToken: process.env.TURSO_AUTH_TOKEN || undefined,
-  });
-
-  const db = drizzle(client);
-
+  const url = resolveDatabaseUrl();
   console.log('Running migrations...');
-  await migrate(db, { migrationsFolder: './lib/db/migrations' });
+  await runLibsqlMigrations(url, process.env.TURSO_AUTH_TOKEN || undefined);
   console.log('Migrations complete!');
 
   process.exit(0);

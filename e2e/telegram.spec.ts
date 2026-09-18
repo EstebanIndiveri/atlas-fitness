@@ -73,8 +73,14 @@ test.describe('Telegram link + webhook', () => {
       },
     };
 
-    const first = await request.post('/api/telegram/webhook', { data: update });
-    const second = await request.post('/api/telegram/webhook', { data: update });
+    const first = await request.post('/api/telegram/webhook', {
+      data: update,
+      headers: { 'X-Telegram-Bot-Api-Secret-Token': process.env.TELEGRAM_WEBHOOK_SECRET ?? '' },
+    });
+    const second = await request.post('/api/telegram/webhook', {
+      data: update,
+      headers: { 'X-Telegram-Bot-Api-Secret-Token': process.env.TELEGRAM_WEBHOOK_SECRET ?? '' },
+    });
     expect(first.status()).toBe(200);
     expect(second.status()).toBe(200);
     const firstBody = await first.json();
@@ -102,8 +108,14 @@ test.describe('Telegram link + webhook', () => {
       },
     };
 
-    const logFirst = await request.post('/api/telegram/webhook', { data: logUpdate });
-    const logSecond = await request.post('/api/telegram/webhook', { data: logUpdate });
+    const logFirst = await request.post('/api/telegram/webhook', {
+      data: logUpdate,
+      headers: { 'X-Telegram-Bot-Api-Secret-Token': process.env.TELEGRAM_WEBHOOK_SECRET ?? '' },
+    });
+    const logSecond = await request.post('/api/telegram/webhook', {
+      data: logUpdate,
+      headers: { 'X-Telegram-Bot-Api-Secret-Token': process.env.TELEGRAM_WEBHOOK_SECRET ?? '' },
+    });
     expect(logFirst.status()).toBe(200);
     expect(logSecond.status()).toBe(200);
     expect((await logSecond.json()).duplicate).toBe(true);

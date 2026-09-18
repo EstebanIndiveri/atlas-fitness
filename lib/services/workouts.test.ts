@@ -48,21 +48,64 @@ describe('Workouts Service', () => {
       expect(workout.endedAt).toBeNull();
       expect(workout.deletedAt).toBeNull();
     });
+
+    it('should reject a second active workout with CONFLICT', async () => {
+      await workoutsService.createWorkout(testUserId);
+
+      await expect(workoutsService.createWorkout(testUserId)).rejects.toMatchObject({
+        code: 'CONFLICT',
+        message: 'Ya tienes un entrenamiento en curso',
+      });
+    });
+
+    it('should allow a new workout after the previous one is finished', async () => {
+      const first = await workoutsService.createWorkout(testUserId);
+      await workoutsService.updateWorkout(first.id, testUserId, { endedAt: new Date() });
+
+      const second = await workoutsService.createWorkout(testUserId);
+      expect(second.id).not.toBe(first.id);
+      expect(second.endedAt).toBeNull();
+    });
+
+    it('should reject an unknown routineId with VALIDATION', async () => {
+      await expect(workoutsService.createWorkout(testUserId, 99999)).rejects.toMatchObject({
+        code: 'VALIDATION',
+        message: 'Rutina no válida',
+      });
+    });
+
+    it('should reject concurrent creates so only one active workout remains', async () => {
+      const results = await Promise.allSettled([
+        workoutsService.createWorkout(testUserId),
+        workoutsService.createWorkout(testUserId),
+      ]);
+
+      const fulfilled = results.filter((result) => result.status === 'fulfilled');
+      const rejected = results.filter((result) => result.status === 'rejected');
+
+      expect(fulfilled).toHaveLength(1);
+      expect(rejected).toHaveLength(1);
+      if (rejected[0].status === 'rejected') {
+        expect(rejected[0].reason).toMatchObject({ code: 'CONFLICT' });
+      }
+
+      const active = await workoutsService.getActiveWorkout(testUserId);
+      expect(active).not.toBeNull();
+    });
   });
 
   describe('listWorkouts', () => {
     it('should list workouts for a user excluding soft deleted', async () => {
-      // Create active workout
-      const active = await workoutsService.createWorkout(testUserId);
+      const finished = await workoutsService.createWorkout(testUserId);
+      await workoutsService.updateWorkout(finished.id, testUserId, { endedAt: new Date() });
 
-      // Create and soft delete another
       const deleted = await workoutsService.createWorkout(testUserId);
       await workoutsService.deleteWorkout(deleted.id, testUserId);
 
       const list = await workoutsService.listWorkouts(testUserId);
 
       expect(list).toHaveLength(1);
-      expect(list[0].id).toBe(active.id);
+      expect(list[0].id).toBe(finished.id);
     });
 
     it('should return empty array if user has no workouts', async () => {
