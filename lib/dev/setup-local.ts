@@ -5,7 +5,7 @@ import { loadLocalEnv } from './load-local-env';
 
 export type EnvCopyResult = 'copied' | 'skipped';
 
-export type SetupScript = 'db:migrate' | 'db:seed';
+export type SetupScript = 'db:migrate' | 'db:seed:qa';
 
 export type ScriptRunner = (script: SetupScript, cwd: string) => Promise<void>;
 
@@ -61,6 +61,6 @@ export async function setupLocal(
   loadLocalEnv(cwd);
 
   await run('db:migrate', cwd);
-  await run('db:seed', cwd);
+  await run('db:seed:qa', cwd);
   return copyResult;
 }

@@ -9,12 +9,13 @@ function makeTempCwd(): string {
 }
 
 describe('package.json local scripts', () => {
-  it('exposes migrate, seed, setup:local, and dev', () => {
+  it('exposes migrate, system seed, QA seed, setup:local, and dev', () => {
     const pkg = JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf8')) as {
       scripts: Record<string, string>;
     };
     expect(pkg.scripts['db:migrate']).toBe('tsx lib/db/migrate.ts');
     expect(pkg.scripts['db:seed']).toBe('tsx lib/db/seed.ts');
+    expect(pkg.scripts['db:seed:qa']).toBe('tsx scripts/seed-qa.ts');
     expect(pkg.scripts['setup:local']).toBe('tsx scripts/setup-local.ts');
     expect(pkg.scripts.dev).toMatch(/next dev/);
   });
@@ -67,7 +68,7 @@ describe('setupLocal', () => {
     }
   });
 
-  it('copies env if missing then runs migrate and seed in order', async () => {
+  it('copies env if missing then runs migrate and QA seed in order', async () => {
     const dir = makeTempCwd();
     cwd = dir;
     writeFileSync(join(dir, '.env.example'), 'CRON_SECRET=example\n', 'utf8');
@@ -78,6 +79,6 @@ describe('setupLocal', () => {
     });
 
     expect(existsSync(join(dir, '.env'))).toBe(true);
-    expect(calls).toEqual(['db:migrate', 'db:seed']);
+    expect(calls).toEqual(['db:migrate', 'db:seed:qa']);
   });
 });
