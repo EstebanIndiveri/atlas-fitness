@@ -12,6 +12,9 @@ async function main(): Promise<void> {
         result.missingColumns.length > 0
           ? `missing columns: ${result.missingColumns.join(', ')}`
           : null,
+        result.missingPrimaryKeys.length > 0
+          ? `missing or invalid primary keys: ${result.missingPrimaryKeys.join(', ')}`
+          : null,
         result.missingIndexes.length > 0
           ? `missing or invalid indexes: ${result.missingIndexes.join(', ')}`
           : null,

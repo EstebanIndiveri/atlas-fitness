@@ -12,6 +12,7 @@ export interface DatabaseReadiness {
   ready: boolean;
   missingTables: string[];
   missingColumns: string[];
+  missingPrimaryKeys: string[];
   missingIndexes: string[];
 }
 
@@ -51,6 +52,19 @@ function extractIndexes(rows: unknown[]): Map<string, ExistingIndex> {
   return indexes;
 }
 
+function extractPrimaryKeyColumns(rows: readonly unknown[]): string[] {
+  return rows
+    .flatMap((row) => {
+      const name = getRowValue(row, 'name');
+      const ordinal = getRowValue(row, 'pk');
+      return typeof name === 'string' && typeof ordinal === 'number' && ordinal > 0
+        ? [{ name, ordinal }]
+        : [];
+    })
+    .sort((left, right) => left.ordinal - right.ordinal)
+    .map(({ name }) => name);
+}
+
 function quoteIdentifier(identifier: string): string {
   return `"${identifier.replaceAll('"', '""')}"`;
 }
@@ -85,10 +99,32 @@ function matchesPredicate(indexSql: unknown, requiredPredicate: string): boolean
   );
 }
 
+/**
+ * Reports a table primary key when its PRAGMA metadata does not match the required column order.
+ *
+ * @param tableName - Table name used in the diagnostic.
+ * @param requiredColumns - Required primary-key columns in declaration order.
+ * @param tableInfoRows - Rows returned by `PRAGMA table_info`.
+ * @returns An empty array for a match, otherwise the required primary-key diagnostic.
+ * @example
+ * findMissingPrimaryKey('user_streaks', ['user_id'], [{ name: 'user_id', pk: 1 }]);
+ */
+export function findMissingPrimaryKey(
+  tableName: string,
+  requiredColumns: readonly string[],
+  tableInfoRows: readonly unknown[],
+): string[] {
+  return matchesColumns(extractPrimaryKeyColumns(tableInfoRows), requiredColumns)
+    ? []
+    : [`${tableName}(${requiredColumns.join(', ')})`];
+}
+
 async function inspectTable(
   client: DatabaseClient,
   contract: RequiredTable,
-): Promise<Pick<DatabaseReadiness, 'missingColumns' | 'missingIndexes'>> {
+): Promise<
+  Pick<DatabaseReadiness, 'missingColumns' | 'missingPrimaryKeys' | 'missingIndexes'>
+> {
   const [tableInfo, indexList] = await Promise.all([
     client.execute(`PRAGMA table_info(${quoteIdentifier(contract.name)})`),
     client.execute(`PRAGMA index_list(${quoteIdentifier(contract.name)})`),
@@ -98,6 +134,11 @@ async function inspectTable(
   const missingColumns = contract.columns
     .filter((column) => !existingColumns.has(column))
     .map((column) => `${contract.name}.${column}`);
+  const missingPrimaryKeys = findMissingPrimaryKey(
+    contract.name,
+    contract.primaryKey,
+    tableInfo.rows,
+  );
 
   const missingIndexes = (
     await Promise.all(
@@ -131,7 +172,7 @@ async function inspectTable(
     )
   ).filter((name): name is string => name !== null);
 
-  return { missingColumns, missingIndexes };
+  return { missingColumns, missingPrimaryKeys, missingIndexes };
 }
 
 /**
@@ -148,7 +189,7 @@ export function findMissingTables(existingTables: Iterable<string>): string[] {
 /**
  * Inspects the configured database and reports whether the application schema is ready.
  *
- * @returns A readiness summary with missing required tables, columns, and indexes.
+ * @returns A readiness summary with missing required tables, columns, primary keys, and indexes.
  * @throws If the database cannot be reached or a schema query fails.
  * @example
  * await inspectConfiguredDatabase();
@@ -173,15 +214,18 @@ export async function inspectConfiguredDatabase(): Promise<DatabaseReadiness> {
       ),
     );
     const missingColumns = tableResults.flatMap((table) => table.missingColumns);
+    const missingPrimaryKeys = tableResults.flatMap((table) => table.missingPrimaryKeys);
     const missingIndexes = tableResults.flatMap((table) => table.missingIndexes);
 
     return {
       ready:
         missingTables.length === 0 &&
         missingColumns.length === 0 &&
+        missingPrimaryKeys.length === 0 &&
         missingIndexes.length === 0,
       missingTables,
       missingColumns,
+      missingPrimaryKeys,
       missingIndexes,
     };
   } finally {

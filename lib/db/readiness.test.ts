@@ -6,7 +6,12 @@ import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { cwd } from 'node:process';
 
-import { inspectConfiguredDatabase, findMissingTables, REQUIRED_TABLES } from './readiness';
+import {
+  inspectConfiguredDatabase,
+  findMissingPrimaryKey,
+  findMissingTables,
+  REQUIRED_TABLES,
+} from './readiness';
 
 function makeTempDatabaseUrl(): { directory: string; url: string } {
   const directory = mkdtempSync(join(cwd(), '.readiness-db-'));
@@ -22,6 +27,35 @@ describe('findMissingTables', () => {
     expect(findMissingTables(['users', 'workouts'])).toEqual(
       REQUIRED_TABLES.filter((name) => name !== 'users' && name !== 'workouts'),
     );
+  });
+});
+
+describe('findMissingPrimaryKey', () => {
+  it('rejects a primary key on the wrong column', () => {
+    expect(
+      findMissingPrimaryKey('user_streaks', ['user_id'], [
+        { name: 'user_id', pk: 0 },
+        { name: 'current_streak', pk: 1 },
+      ]),
+    ).toEqual(['user_streaks(user_id)']);
+  });
+
+  it('accepts composite primary-key columns in PRAGMA ordinal order', () => {
+    expect(
+      findMissingPrimaryKey('memberships', ['user_id', 'organization_id'], [
+        { name: 'organization_id', pk: 2 },
+        { name: 'user_id', pk: 1 },
+      ]),
+    ).toEqual([]);
+  });
+
+  it('rejects composite primary-key columns declared in the wrong order', () => {
+    expect(
+      findMissingPrimaryKey('memberships', ['organization_id', 'user_id'], [
+        { name: 'organization_id', pk: 2 },
+        { name: 'user_id', pk: 1 },
+      ]),
+    ).toEqual(['memberships(organization_id, user_id)']);
   });
 });
 
@@ -49,6 +83,7 @@ describe('inspectConfiguredDatabase', () => {
       ready: false,
       missingTables: REQUIRED_TABLES,
       missingColumns: [],
+      missingPrimaryKeys: [],
       missingIndexes: [],
     });
   });
@@ -75,7 +110,41 @@ describe('inspectConfiguredDatabase', () => {
       ready: false,
       missingTables: [],
       missingColumns: ['workouts.routine_id'],
+      missingPrimaryKeys: [],
       missingIndexes: ['daily_checkins_user_id_local_date_unique'],
+    });
+  });
+
+  it('returns not ready when user_streaks lacks its required primary key', async () => {
+    const { directory, url } = makeTempDatabaseUrl();
+    tempDirectories.push(directory);
+    process.env.TURSO_DATABASE_URL = url;
+    delete process.env.TURSO_AUTH_TOKEN;
+
+    const client = createClient({ url });
+    try {
+      await migrate(drizzle(client), { migrationsFolder: './lib/db/migrations' });
+      await client.execute('DROP TABLE user_streaks');
+      await client.execute(`
+        CREATE TABLE user_streaks (
+          user_id integer NOT NULL,
+          current_streak integer DEFAULT 0 NOT NULL,
+          longest_streak integer DEFAULT 0 NOT NULL,
+          last_workout_date text,
+          updated_at integer DEFAULT (unixepoch()) NOT NULL,
+          FOREIGN KEY (user_id) REFERENCES users(id)
+        )
+      `);
+    } finally {
+      client.close();
+    }
+
+    await expect(inspectConfiguredDatabase()).resolves.toEqual({
+      ready: false,
+      missingTables: [],
+      missingColumns: [],
+      missingPrimaryKeys: ['user_streaks(user_id)'],
+      missingIndexes: [],
     });
   });
 
@@ -100,6 +169,7 @@ describe('inspectConfiguredDatabase', () => {
       ready: false,
       missingTables: [],
       missingColumns: [],
+      missingPrimaryKeys: [],
       missingIndexes: ['users_email_unique'],
     });
   });
@@ -127,6 +197,7 @@ describe('inspectConfiguredDatabase', () => {
       ready: false,
       missingTables: [],
       missingColumns: [],
+      missingPrimaryKeys: [],
       missingIndexes: ['workout_sets_workout_id_set_index_unique'],
     });
   });
@@ -155,6 +226,7 @@ describe('inspectConfiguredDatabase', () => {
       ready: true,
       missingTables: [],
       missingColumns: [],
+      missingPrimaryKeys: [],
       missingIndexes: [],
     });
   });
@@ -177,6 +249,7 @@ describe('inspectConfiguredDatabase', () => {
       ready: true,
       missingTables: [],
       missingColumns: [],
+      missingPrimaryKeys: [],
       missingIndexes: [],
     });
   });
