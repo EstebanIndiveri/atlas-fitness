@@ -56,9 +56,10 @@ describe('.env.example (local / Box defaults)', () => {
     expect(contents).toMatch(/ngrok|cloudflared/i);
   });
 
-  it('documents AI as not wired yet with a commented env stub', () => {
-    expect(contents).toMatch(/# GEMINI_API_KEY=/);
-    expect(contents).toMatch(/not wired yet|Won't this PR/i);
-    expect(parsed.GEMINI_API_KEY).toBeUndefined();
+  it('documents optional Gemini key without requiring a live provider', () => {
+    expect(contents).toMatch(/^GEMINI_API_KEY=/m);
+    expect(parsed.GEMINI_API_KEY).toBe('');
+    expect(contents).toMatch(/fallback/i);
+    expect(contents).not.toMatch(/NEXT_PUBLIC_GEMINI/);
   });
 });
