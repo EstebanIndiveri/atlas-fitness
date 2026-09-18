@@ -4,10 +4,11 @@
 import { describe, it, expect, beforeEach } from '@jest/globals';
 import { NextRequest } from 'next/server';
 import { GET } from '@/app/api/workouts/active/route';
-import { encodeSession, SESSION_COOKIE_NAME } from '@/lib/auth/session';
+import { issueSessionCookieHeader } from '@/lib/auth/session-store';
 import * as workoutsService from '@/lib/services/workouts';
 import { db } from '@/lib/db/client';
 import {
+  sessions,
   users,
   workouts,
   workoutSets,
@@ -18,8 +19,8 @@ import {
   botMessages,
 } from '@/lib/db/schema';
 
-function authenticatedRequest(userId: number): NextRequest {
-  const cookie = `${SESSION_COOKIE_NAME}=${encodeSession({ userId })}`;
+async function authenticatedRequest(userId: number): Promise<NextRequest> {
+  const cookie = await issueSessionCookieHeader(userId);
   return new NextRequest('http://localhost:3000/api/workouts/active', {
     method: 'GET',
     headers: { cookie },
@@ -43,6 +44,7 @@ describe('GET /api/workouts/active', () => {
     await db.delete(userStreaks);
     await db.delete(botMessages);
     await db.delete(telegramLinkCodes);
+    await db.delete(sessions);
     await db.delete(users);
 
     const [user] = await db
@@ -57,7 +59,7 @@ describe('GET /api/workouts/active', () => {
   });
 
   it('returns HTTP 200 with JSON null when there is no active workout', async () => {
-    const response = await GET(authenticatedRequest(testUserId));
+    const response = await GET(await authenticatedRequest(testUserId));
 
     expect(response.status).toBe(200);
     expect(await response.json()).toBeNull();
@@ -66,7 +68,7 @@ describe('GET /api/workouts/active', () => {
   it('returns HTTP 200 with workout JSON when an active workout exists', async () => {
     const workout = await workoutsService.createWorkout(testUserId);
 
-    const response = await GET(authenticatedRequest(testUserId));
+    const response = await GET(await authenticatedRequest(testUserId));
     const body = (await response.json()) as { id: number; endedAt: string | null };
 
     expect(response.status).toBe(200);

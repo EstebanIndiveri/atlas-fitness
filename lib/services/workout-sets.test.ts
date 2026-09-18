@@ -3,6 +3,7 @@ import * as workoutSetsService from './workout-sets';
 import * as workoutsService from './workouts';
 import { db } from '@/lib/db/client';
 import {
+  sessions,
   users,
   workouts,
   workoutSets,
@@ -32,6 +33,7 @@ describe('Workout Sets Service', () => {
     await db.delete(userStreaks);
     await db.delete(botMessages);
     await db.delete(telegramLinkCodes);
+    await db.delete(sessions);
     await db.delete(users);
 
     // Create test user

@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from '@jest/globals';
 import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import {
+  sessions,
   botMessages,
   dailyCheckins,
   streakNudges,
@@ -24,6 +25,7 @@ describe('consumeLinkCode', () => {
     await db.delete(workouts);
     await db.delete(telegramLinkCodes);
     await db.delete(userStreaks);
+    await db.delete(sessions);
     await db.delete(users);
   });
 

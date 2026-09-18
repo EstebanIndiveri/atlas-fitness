@@ -12,7 +12,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const session = requireAuth(request);
+    const session = await requireAuth(request);
     const { id } = await params;
     const workoutId = parseInt(id, 10);
     if (Number.isNaN(workoutId)) {

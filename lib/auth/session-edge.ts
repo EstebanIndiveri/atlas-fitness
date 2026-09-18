@@ -1,7 +1,10 @@
 import { MissingSessionSecretError, resolveSessionSecret } from './session-secret';
+import {
+  SESSION_COOKIE_NAME,
+  parseSessionPayload,
+  timingSafeEqualHex,
+} from './session-payload';
 import type { SessionData } from '@/types/auth';
-
-const SESSION_COOKIE_NAME = 'atlas_session';
 
 function getSessionSecret(): string {
   return resolveSessionSecret();
@@ -34,7 +37,7 @@ async function createSignature(data: string): Promise<string> {
  */
 async function verifySignature(data: string, signature: string): Promise<boolean> {
   const expectedSignature = await createSignature(data);
-  return expectedSignature === signature;
+  return timingSafeEqualHex(expectedSignature, signature);
 }
 
 /**
@@ -66,8 +69,8 @@ export async function decodeSessionEdge(cookieValue: string): Promise<SessionDat
     }
 
     const decoded = base64Decode(payload);
-    const data = JSON.parse(decoded);
-    return data;
+    const data: unknown = JSON.parse(decoded);
+    return parseSessionPayload(data);
   } catch (error) {
     if (error instanceof MissingSessionSecretError) {
       throw error;

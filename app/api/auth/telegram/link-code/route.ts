@@ -4,7 +4,7 @@ import { requireAuth, handleApiError } from '@/lib/auth/middleware';
 
 export async function POST(request: NextRequest) {
   try {
-    const session = requireAuth(request);
+    const session = await requireAuth(request);
 
     const result = await generateLinkCode(session.userId);
 

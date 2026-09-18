@@ -1,34 +1,47 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSessionFromCookies } from './session';
 import { AppError } from '@/types/errors';
 import { isMissingDatabaseSchemaError } from '../db/errors';
+import { getSessionFromCookies } from './session';
+import { isSessionActive } from './session-store';
 import type { SessionData } from '@/types/auth';
 
 export interface AuthenticatedRequest extends NextRequest {
   userId?: number;
 }
 
+const UNAUTHORIZED_MESSAGE = 'Autenticación requerida';
+
 /**
- * Extracts session from request and validates authentication
- * Sets x-user-id header for authenticated requests
+ * Extracts session from request and validates authentication + revocation.
  */
-export function requireAuth(request: NextRequest): SessionData {
+export async function requireAuth(request: NextRequest): Promise<SessionData> {
   const cookieHeader = request.headers.get('cookie');
   const session = getSessionFromCookies(cookieHeader);
 
-  if (!session || !session.userId) {
-    throw new AppError('UNAUTHORIZED', 'Authentication required');
+  if (!session) {
+    throw new AppError('UNAUTHORIZED', UNAUTHORIZED_MESSAGE);
+  }
+
+  const active = await isSessionActive(session.sessionId, session.userId);
+  if (!active) {
+    throw new AppError('UNAUTHORIZED', UNAUTHORIZED_MESSAGE);
   }
 
   return session;
 }
 
 /**
- * Optional auth - returns session if present, null otherwise
+ * Optional auth - returns session if present and active, null otherwise
  */
-export function optionalAuth(request: NextRequest): SessionData | null {
+export async function optionalAuth(request: NextRequest): Promise<SessionData | null> {
   const cookieHeader = request.headers.get('cookie');
-  return getSessionFromCookies(cookieHeader);
+  const session = getSessionFromCookies(cookieHeader);
+  if (!session) {
+    return null;
+  }
+
+  const active = await isSessionActive(session.sessionId, session.userId);
+  return active ? session : null;
 }
 
 /**

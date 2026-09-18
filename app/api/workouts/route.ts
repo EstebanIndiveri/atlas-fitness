@@ -21,7 +21,7 @@ async function readOptionalJson(request: NextRequest): Promise<unknown> {
  */
 export async function POST(request: NextRequest) {
   try {
-    const session = requireAuth(request);
+    const session = await requireAuth(request);
     const raw = await readOptionalJson(request);
     const parsed = createWorkoutSchema.safeParse(raw);
     if (!parsed.success) {
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
-    const session = requireAuth(request);
+    const session = await requireAuth(request);
     const workouts = await workoutsService.listWorkouts(session.userId);
 
     return NextResponse.json(workouts);

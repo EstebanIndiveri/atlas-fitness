@@ -9,7 +9,7 @@ import { isNull } from 'drizzle-orm';
  */
 export async function GET(request: NextRequest) {
   try {
-    requireAuth(request);
+    await requireAuth(request);
 
     const allExercises = await db.query.exercises.findMany({
       where: isNull(exercises.deletedAt),

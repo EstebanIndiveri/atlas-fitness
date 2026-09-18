@@ -8,7 +8,7 @@ import { cordobaLocalDate } from '@/lib/time/cordoba';
  */
 export async function GET(request: NextRequest) {
   try {
-    const session = requireAuth(request);
+    const session = await requireAuth(request);
     const checkin = await getDailyCheckin(session.userId, cordobaLocalDate());
     return NextResponse.json(checkin);
   } catch (error) {
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const session = requireAuth(request);
+    const session = await requireAuth(request);
     const body = await request.json();
     const { mood } = body;
 

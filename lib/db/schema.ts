@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { sqliteTable, text, integer, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, uniqueIndex, index } from 'drizzle-orm/sqlite-core';
 
 /**
  * Users table — authentication and profile
@@ -14,6 +14,28 @@ export const users = sqliteTable('users', {
     .notNull()
     .default(sql`(unixepoch())`),
 });
+
+/**
+ * Auth sessions — HMAC cookie revocation store (ADR-004).
+ * Distinct from guided workout sessions (ADR-003).
+ */
+export const sessions = sqliteTable(
+  'sessions',
+  {
+    id: text('id').primaryKey(),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .default(sql`(unixepoch())`),
+    expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
+    revokedAt: integer('revoked_at', { mode: 'timestamp' }),
+  },
+  (table) => ({
+    userIdIdx: index('sessions_user_id_idx').on(table.userId),
+  }),
+);
 
 /**
  * Exercises table — system and user-custom exercises
@@ -236,6 +258,9 @@ export const streakNudges = sqliteTable(
 // Type exports
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
+
+export type SessionRow = typeof sessions.$inferSelect;
+export type NewSessionRow = typeof sessions.$inferInsert;
 
 export type Exercise = typeof exercises.$inferSelect;
 export type NewExercise = typeof exercises.$inferInsert;

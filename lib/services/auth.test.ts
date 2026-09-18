@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from '@jest/globals';
 import * as authService from './auth';
 import { db } from '@/lib/db/client';
 import {
+  sessions,
   users,
   telegramLinkCodes,
   userStreaks,
@@ -23,6 +24,7 @@ describe('Auth Service', () => {
     await db.delete(botMessages);
     await db.delete(telegramLinkCodes);
     await db.delete(userStreaks);
+    await db.delete(sessions);
     await db.delete(users);
   });
 

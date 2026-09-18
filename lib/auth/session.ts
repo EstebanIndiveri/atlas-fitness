@@ -1,9 +1,12 @@
-import { createHmac, timingSafeEqual } from 'crypto';
+import { createHmac } from 'crypto';
 import { MissingSessionSecretError, resolveSessionSecret } from './session-secret';
+import {
+  SESSION_COOKIE_NAME,
+  SESSION_MAX_AGE_SECONDS,
+  parseSessionPayload,
+  timingSafeEqualHex,
+} from './session-payload';
 import type { SessionData } from '@/types/auth';
-
-const SESSION_COOKIE_NAME = 'atlas_session';
-const SESSION_MAX_AGE = 7 * 24 * 60 * 60; // 7 days in seconds
 
 function getSessionSecret(): string {
   return resolveSessionSecret();
@@ -20,13 +23,7 @@ function createSignature(data: string): string {
  * Verifies an HMAC signature
  */
 function verifySignature(data: string, signature: string): boolean {
-  const expectedSignature = createSignature(data);
-  const expected = Buffer.from(expectedSignature);
-  const actual = Buffer.from(signature);
-  if (expected.length !== actual.length) {
-    return false;
-  }
-  return timingSafeEqual(expected, actual);
+  return timingSafeEqualHex(createSignature(data), signature);
 }
 
 /**
@@ -52,8 +49,8 @@ export function decodeSession(cookieValue: string): SessionData | null {
       return null;
     }
 
-    const data = JSON.parse(Buffer.from(payload, 'base64').toString('utf-8'));
-    return data;
+    const data: unknown = JSON.parse(Buffer.from(payload, 'base64').toString('utf-8'));
+    return parseSessionPayload(data);
   } catch (error) {
     if (error instanceof MissingSessionSecretError) {
       throw error;
@@ -67,7 +64,7 @@ export function decodeSession(cookieValue: string): SessionData | null {
  */
 export function createSessionCookie(data: SessionData): string {
   const value = encodeSession(data);
-  const maxAge = SESSION_MAX_AGE;
+  const maxAge = SESSION_MAX_AGE_SECONDS;
   const sameSite = 'lax';
   const secure = process.env.NODE_ENV === 'production';
 
@@ -119,4 +116,4 @@ export function getSessionFromCookies(cookieHeader: string | null): SessionData 
   return decodeSession(sessionCookie);
 }
 
-export { SESSION_COOKIE_NAME };
+export { SESSION_COOKIE_NAME, SESSION_MAX_AGE_SECONDS };

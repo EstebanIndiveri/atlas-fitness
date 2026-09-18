@@ -1,6 +1,20 @@
-import { describe, it, expect } from '@jest/globals';
+import { createHmac } from 'crypto';
+import { describe, expect, it } from '@jest/globals';
 import { encodeSession, decodeSession, createSessionCookie, parseCookies } from './session';
+import { buildSessionPayload, SESSION_MAX_AGE_SECONDS } from './session-payload';
 import type { SessionData } from '@/types/auth';
+
+function sampleSession(userId: number): SessionData {
+  return buildSessionPayload(userId);
+}
+
+function cookieValue(setCookie: string): string {
+  const match = setCookie.match(/atlas_session=([^;]+)/);
+  if (!match) {
+    throw new Error('missing atlas_session');
+  }
+  return match[1];
+}
 
 describe('Session utilities', () => {
   describe('parseCookies', () => {
@@ -13,7 +27,6 @@ describe('Session utilities', () => {
     });
 
     it('should handle cookies with base64 padding (=)', () => {
-      // Base64 values can end with = or == for padding
       const cookieHeader = 'session=eyJhbGciOiJIUzI1NiJ9.payload==.signature';
       const cookies = parseCookies(cookieHeader);
 
@@ -36,62 +49,44 @@ describe('Session utilities', () => {
 
   describe('Session round-trip with base64 padding', () => {
     it('should encode, cookie-ify, parse, and decode session with padding', () => {
-      // Create a session data that will produce base64 with = padding
-      // userId: 1 produces eyJ1c2VySWQiOjF9 (no padding)
-      // userId: 11 produces eyJ1c2VySWQiOjExfQ== (with == padding)
-      const sessionData: SessionData = { userId: 11 };
+      const sessionData = sampleSession(11);
 
-      // Encode session
       const encoded = encodeSession(sessionData);
       expect(encoded).toContain('.');
 
-      // Create cookie string
       const cookieString = createSessionCookie(sessionData);
       expect(cookieString).toContain('atlas_session=');
       expect(cookieString).toContain('HttpOnly');
+      expect(cookieString).toContain(`Max-Age=${SESSION_MAX_AGE_SECONDS}`);
 
-      // Extract just the cookie value from the Set-Cookie header
-      const match = cookieString.match(/atlas_session=([^;]+)/);
-      expect(match).not.toBeNull();
-      const cookieValue = match![1];
+      const cookieValueFromHeader = cookieValue(cookieString);
+      const cookies = parseCookies(`atlas_session=${cookieValueFromHeader}`);
 
-      // Parse cookies from header (simulating browser sending it back)
-      const cookieHeader = `atlas_session=${cookieValue}`;
-      const cookies = parseCookies(cookieHeader);
-
-      expect(cookies.atlas_session).toBe(cookieValue);
+      expect(cookies.atlas_session).toBe(cookieValueFromHeader);
       expect(cookies.atlas_session).toContain('.');
 
-      // Decode session
       const decoded = decodeSession(cookies.atlas_session);
 
       expect(decoded).not.toBeNull();
       expect(decoded?.userId).toBe(11);
+      expect(decoded?.sessionId).toBe(sessionData.sessionId);
+      expect(decoded?.iat).toBe(sessionData.iat);
+      expect(decoded?.exp).toBe(sessionData.exp);
     });
 
     it('should handle session with userId that produces no padding', () => {
-      const sessionData: SessionData = { userId: 1 };
-
+      const sessionData = sampleSession(1);
       const cookieString = createSessionCookie(sessionData);
-      const match = cookieString.match(/atlas_session=([^;]+)/);
-      const cookieValue = match![1];
-
-      const cookies = parseCookies(`atlas_session=${cookieValue}`);
-      const decoded = decodeSession(cookies.atlas_session);
+      const decoded = decodeSession(parseCookies(`atlas_session=${cookieValue(cookieString)}`).atlas_session);
 
       expect(decoded).not.toBeNull();
       expect(decoded?.userId).toBe(1);
     });
 
     it('should handle session with large userId', () => {
-      const sessionData: SessionData = { userId: 999999 };
-
+      const sessionData = sampleSession(999999);
       const cookieString = createSessionCookie(sessionData);
-      const match = cookieString.match(/atlas_session=([^;]+)/);
-      const cookieValue = match![1];
-
-      const cookies = parseCookies(`atlas_session=${cookieValue}`);
-      const decoded = decodeSession(cookies.atlas_session);
+      const decoded = decodeSession(parseCookies(`atlas_session=${cookieValue(cookieString)}`).atlas_session);
 
       expect(decoded).not.toBeNull();
       expect(decoded?.userId).toBe(999999);
@@ -104,9 +99,7 @@ describe('Session utilities', () => {
       delete process.env.SESSION_SECRET;
 
       try {
-        expect(() => encodeSession({ userId: 1 })).toThrow(
-          'SESSION_SECRET es obligatorio',
-        );
+        expect(() => encodeSession(sampleSession(1))).toThrow('SESSION_SECRET es obligatorio');
       } finally {
         if (previous === undefined) {
           delete process.env.SESSION_SECRET;
@@ -117,19 +110,22 @@ describe('Session utilities', () => {
     });
 
     it('should encode and decode session correctly', () => {
-      const sessionData: SessionData = { userId: 42 };
+      const sessionData = sampleSession(42);
+      const decoded = decodeSession(encodeSession(sessionData));
 
-      const encoded = encodeSession(sessionData);
-      const decoded = decodeSession(encoded);
+      expect(decoded).toEqual(sessionData);
+    });
 
-      expect(decoded).not.toBeNull();
-      expect(decoded?.userId).toBe(42);
+    it('issues a different sessionId for each payload', () => {
+      const first = sampleSession(1);
+      const second = sampleSession(1);
+      expect(first.sessionId).not.toBe(second.sessionId);
     });
 
     it('rejects a cookie forged with the legacy public fallback secret', () => {
       const previous = process.env.SESSION_SECRET;
       process.env.SESSION_SECRET = 'dev-secret-change-in-production';
-      const forged = encodeSession({ userId: 999 });
+      const forged = encodeSession(sampleSession(999));
       process.env.SESSION_SECRET = previous ?? 'a-different-explicit-dev-session-secret-value';
 
       try {
@@ -144,20 +140,34 @@ describe('Session utilities', () => {
     });
 
     it('should return null for invalid session string', () => {
-      const decoded = decodeSession('invalid');
-      expect(decoded).toBeNull();
+      expect(decodeSession('invalid')).toBeNull();
     });
 
     it('should return null for tampered signature', () => {
-      const sessionData: SessionData = { userId: 1 };
-      const encoded = encodeSession(sessionData);
-
-      // Tamper with signature
+      const encoded = encodeSession(sampleSession(1));
       const [payload] = encoded.split('.');
-      const tampered = `${payload}.wrongsignature`;
+      expect(decodeSession(`${payload}.wrongsignature`)).toBeNull();
+    });
 
-      const decoded = decodeSession(tampered);
-      expect(decoded).toBeNull();
+    it('rejects an expired payload even with a valid HMAC', () => {
+      const now = Math.floor(Date.now() / 1000);
+      const expired: SessionData = {
+        userId: 3,
+        sessionId: 'ab'.repeat(16),
+        iat: now - 100,
+        exp: now - 10,
+      };
+
+      expect(decodeSession(encodeSession(expired))).toBeNull();
+    });
+
+    it('rejects the legacy userId-only HMAC cookie', () => {
+      const payload = Buffer.from(JSON.stringify({ userId: 1 })).toString('base64');
+      const signature = createHmac('sha256', process.env.SESSION_SECRET ?? '')
+        .update(payload)
+        .digest('hex');
+
+      expect(decodeSession(`${payload}.${signature}`)).toBeNull();
     });
   });
 });

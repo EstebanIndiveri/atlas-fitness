@@ -8,7 +8,7 @@ import { getStreakForUser } from '@/lib/services/streaks';
  */
 export async function GET(request: NextRequest) {
   try {
-    const session = requireAuth(request);
+    const session = await requireAuth(request);
     const streak = await getStreakForUser(session.userId);
     return NextResponse.json(streak);
   } catch (error) {
