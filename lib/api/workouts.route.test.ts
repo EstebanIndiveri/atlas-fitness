@@ -83,6 +83,35 @@ describe('POST /api/workouts', () => {
     expect(body.message).toBe('Rutina no válida');
   });
 
+  it('returns 400 VALIDATION when routineId belongs to another user', async () => {
+    const [other] = await db
+      .insert(users)
+      .values({
+        name: 'Other Workout API',
+        email: 'other-workout-api@test.com',
+        passwordHash: 'hash',
+      })
+      .returning();
+    const [foreign] = await db
+      .insert(routines)
+      .values({
+        slug: 'foreign-workout-api',
+        name: 'Ajena',
+        kind: 'gym',
+        restSeconds: 45,
+        isSystem: false,
+        userId: other.id,
+      })
+      .returning();
+
+    const response = await POST(await authenticatedRequest(testUserId, { routineId: foreign.id }));
+    const body = (await response.json()) as { code: string; message: string };
+
+    expect(response.status).toBe(400);
+    expect(body.code).toBe('VALIDATION');
+    expect(body.message).toBe('Rutina no válida');
+  });
+
   it('returns 409 CONFLICT when an active workout already exists', async () => {
     await workoutsService.createWorkout(testUserId);
 

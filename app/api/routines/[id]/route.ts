@@ -11,13 +11,13 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    await requireAuth(request);
+    const session = await requireAuth(request);
     const { id } = await params;
     const routineId = parseInt(id, 10);
     if (Number.isNaN(routineId)) {
       throw new AppError('VALIDATION', 'ID de rutina inválido');
     }
-    const routine = await getRoutineById(routineId);
+    const routine = await getRoutineById(routineId, session.userId);
     return NextResponse.json(routine);
   } catch (error) {
     return handleApiError(error);

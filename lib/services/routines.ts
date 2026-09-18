@@ -1,4 +1,5 @@
 import { eq, and, isNull, asc } from 'drizzle-orm';
+import { assertCanAccessCatalogItem, catalogVisibleToUser } from '@/lib/auth/ownership';
 import { db } from '@/lib/db/client';
 import { exercises, routineExercises, routines } from '@/lib/db/schema';
 import { AppError } from '@/types/errors';
@@ -8,9 +9,9 @@ function asKind(value: string): RoutineKind {
   return value === 'home' ? 'home' : 'gym';
 }
 
-export async function listRoutines(): Promise<RoutineSummary[]> {
+export async function listRoutines(userId: number): Promise<RoutineSummary[]> {
   const rows = await db.query.routines.findMany({
-    where: isNull(routines.deletedAt),
+    where: and(isNull(routines.deletedAt), catalogVisibleToUser(routines, userId)),
     orderBy: [asc(routines.id)],
   });
 
@@ -21,7 +22,10 @@ export async function listRoutines(): Promise<RoutineSummary[]> {
   return result;
 }
 
-export async function getRoutineById(routineId: number): Promise<RoutineSummary> {
+export async function getRoutineById(
+  routineId: number,
+  userId: number,
+): Promise<RoutineSummary> {
   const row = await db.query.routines.findFirst({
     where: eq(routines.id, routineId),
   });
@@ -30,6 +34,7 @@ export async function getRoutineById(routineId: number): Promise<RoutineSummary>
     throw new AppError('NOT_FOUND', 'Rutina no encontrada');
   }
 
+  assertCanAccessCatalogItem(row, userId, 'Rutina no encontrada');
   return loadRoutineExercises(row);
 }
 

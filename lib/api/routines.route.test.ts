@@ -4,6 +4,7 @@
 import { describe, it, expect, beforeEach } from '@jest/globals';
 import { NextRequest } from 'next/server';
 import { GET } from '@/app/api/routines/route';
+import { GET as GET_ONE } from '@/app/api/routines/[id]/route';
 import { issueSessionCookieHeader } from '@/lib/auth/session-store';
 import { db } from '@/lib/db/client';
 import {
@@ -31,6 +32,7 @@ async function authenticatedRequest(userId: number): Promise<NextRequest> {
 
 describe('GET /api/routines', () => {
   let userId: number;
+  let systemRoutineId: number;
 
   beforeEach(async () => {
     await db.delete(workoutSets);
@@ -73,6 +75,7 @@ describe('GET /api/routines', () => {
         isSystem: true,
       })
       .returning();
+    systemRoutineId = routine.id;
 
     await db.insert(routineExercises).values({
       routineId: routine.id,
@@ -95,5 +98,40 @@ describe('GET /api/routines', () => {
   it('returns 401 without a session', async () => {
     const response = await GET(new NextRequest('http://localhost:3000/api/routines'));
     expect(response.status).toBe(401);
+  });
+
+  it('omits foreign custom routines and 404s GET by id', async () => {
+    const [other] = await db
+      .insert(users)
+      .values({ name: 'Other Routines API', email: 'other-routines-api@test.com', passwordHash: 'hash' })
+      .returning();
+    const [foreign] = await db
+      .insert(routines)
+      .values({
+        slug: 'foreign-api',
+        name: 'Ajena API',
+        kind: 'home',
+        restSeconds: 20,
+        isSystem: false,
+        userId: other.id,
+      })
+      .returning();
+
+    const listRes = await GET(await authenticatedRequest(userId));
+    const list = (await listRes.json()) as { slug: string }[];
+    expect(list.map((item) => item.slug)).toEqual(['full-body-expres']);
+
+    const oneRes = await GET_ONE(
+      await authenticatedRequest(userId),
+      { params: Promise.resolve({ id: String(foreign.id) }) },
+    );
+    expect(oneRes.status).toBe(404);
+    await expect(oneRes.json()).resolves.toMatchObject({ code: 'NOT_FOUND' });
+
+    const systemRes = await GET_ONE(
+      await authenticatedRequest(userId),
+      { params: Promise.resolve({ id: String(systemRoutineId) }) },
+    );
+    expect(systemRes.status).toBe(200);
   });
 });

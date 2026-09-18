@@ -20,6 +20,7 @@ route.ts → validate (Zod) → auth/session → service → db/adapter → resp
 - Sets/PR: evitar TOCTOU; tests negativos.
 - Crons: Bearer `CRON_SECRET`; tip/nudge por usuario linkeado (no env chat global).
 - Decimal para `weight_kg` en DB y serialización string en JSON de dominio cuando aplique.
+- Catálogo (ejercicios/rutinas): `isSystem || userId === currentUser` vía `lib/auth/ownership.ts`. Recurso ajeno → `NOT_FOUND` (404, sin filtrar existencia). Listados: sistema + propios. DTOs sin `userId`.
 
 ## Anti-patrones
 

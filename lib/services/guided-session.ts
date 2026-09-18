@@ -31,7 +31,7 @@ export async function suggestNextExerciseForWorkout(
     throw new AppError('VALIDATION', 'Este entrenamiento no está vinculado a una rutina');
   }
 
-  const routine = await getRoutineById(workout.routineId);
+  const routine = await getRoutineById(workout.routineId, userId);
   const orderedIds = routine.exercises.map((item) => item.exerciseId);
   const completedIds = completedExerciseIdsForRoutine(routine, workout.sets);
 
