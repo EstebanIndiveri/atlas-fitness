@@ -44,6 +44,11 @@ describe('.env.example (local / Box defaults)', () => {
     expect(parsed.TELEGRAM_BOT_TOKEN).toBe('');
   });
 
+  it('defaults remote bootstrap confirmation and QA seed controls to empty strings', () => {
+    expect(parsed.CONFIRM_REMOTE_DB_BOOTSTRAP).toBe('');
+    expect(parsed.SEED_QA_USER).toBe('');
+  });
+
   it('documents optional Turso cloud without changing the file-DB default', () => {
     expect(contents).toMatch(/libsql:\/\/your-database\.turso\.io/);
     expect(contents).toMatch(/Switch back to smoke/i);

@@ -2,6 +2,7 @@ import { describe, it, expect, afterEach } from '@jest/globals';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { LOCAL_FILE_DB_URL } from './load-local-env';
 import { copyEnvExampleIfMissing, setupLocal } from './setup-local';
 
 function makeTempCwd(): string {
@@ -67,8 +68,15 @@ describe('copyEnvExampleIfMissing', () => {
 
 describe('setupLocal', () => {
   let cwd: string | undefined;
+  const originalTursoDatabaseUrl = process.env.TURSO_DATABASE_URL;
 
   afterEach(() => {
+    if (originalTursoDatabaseUrl === undefined) {
+      delete process.env.TURSO_DATABASE_URL;
+    } else {
+      process.env.TURSO_DATABASE_URL = originalTursoDatabaseUrl;
+    }
+
     if (cwd) {
       rmSync(cwd, { recursive: true, force: true });
       cwd = undefined;
@@ -78,7 +86,8 @@ describe('setupLocal', () => {
   it('copies env if missing then runs migrate and QA seed in order', async () => {
     const dir = makeTempCwd();
     cwd = dir;
-    writeFileSync(join(dir, '.env.example'), 'CRON_SECRET=example\n', 'utf8');
+    delete process.env.TURSO_DATABASE_URL;
+    writeFileSync(join(dir, '.env.example'), `TURSO_DATABASE_URL=${LOCAL_FILE_DB_URL}\nCRON_SECRET=example\n`, 'utf8');
 
     const calls: string[] = [];
     await setupLocal(dir, async (script) => {
@@ -86,6 +95,46 @@ describe('setupLocal', () => {
     });
 
     expect(existsSync(join(dir, '.env'))).toBe(true);
+    expect(calls).toEqual(['db:migrate', 'db:seed:qa']);
+  });
+
+  it('rejects a non-file TURSO_DATABASE_URL before running migrate or QA seed', async () => {
+    const dir = makeTempCwd();
+    cwd = dir;
+    delete process.env.TURSO_DATABASE_URL;
+    writeFileSync(
+      join(dir, '.env'),
+      'TURSO_DATABASE_URL=libsql://atlas-remote.turso.io\nCRON_SECRET=example\n',
+      'utf8',
+    );
+    writeFileSync(join(dir, '.env.example'), `TURSO_DATABASE_URL=${LOCAL_FILE_DB_URL}\nCRON_SECRET=example\n`, 'utf8');
+
+    const calls: string[] = [];
+
+    await expect(
+      setupLocal(dir, async (script) => {
+        calls.push(script);
+      }),
+    ).rejects.toThrow(/setup:local.*file:/i);
+    expect(calls).toEqual([]);
+  });
+
+  it('accepts custom file URLs and still runs local setup scripts', async () => {
+    const dir = makeTempCwd();
+    cwd = dir;
+    delete process.env.TURSO_DATABASE_URL;
+    writeFileSync(
+      join(dir, '.env'),
+      'TURSO_DATABASE_URL=file:./custom-local.db\nCRON_SECRET=example\n',
+      'utf8',
+    );
+    writeFileSync(join(dir, '.env.example'), `TURSO_DATABASE_URL=${LOCAL_FILE_DB_URL}\nCRON_SECRET=example\n`, 'utf8');
+
+    const calls: string[] = [];
+    await setupLocal(dir, async (script) => {
+      calls.push(script);
+    });
+
     expect(calls).toEqual(['db:migrate', 'db:seed:qa']);
   });
 });

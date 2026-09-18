@@ -43,7 +43,7 @@ npm run setup:local
 npm run dev
 ```
 
-`setup:local` **no pisa** un `.env` existente.
+`setup:local` **no pisa** un `.env` existente y corta antes de migrar o seedear si `TURSO_DATABASE_URL` no empieza con `file:`.
 
 #### Generar secretos locales (opcional)
 
@@ -180,24 +180,26 @@ El cliente libSQL (`lib/db/client.ts`, `lib/db/migrate.ts`) usa `TURSO_DATABASE_
    TURSO_AUTH_TOKEN=eyJ…          # el token que te dio Turso
    ```
 
-3. Base remota de desarrollo: bootstrap explícito + QA seed separado.
+#### Base remota de desarrollo
 
-   ```bash
-   CONFIRM_REMOTE_DB_BOOTSTRAP=1 npm run db:bootstrap:remote
-   npm run db:seed:qa
-   npm run db:verify
-   ```
+Usá este camino para una base remota de desarrollo o preview donde sí querés la cuenta conocida `qa@atlas.test`.
 
-   Usá esta secuencia para una base remota de desarrollo o preview donde sí querés la cuenta conocida `qa@atlas.test`.
+```bash
+CONFIRM_REMOTE_DB_BOOTSTRAP=1 npm run db:bootstrap:remote
+npm run db:seed:qa
+npm run db:verify
+```
 
-4. Base pública beta / producción: bootstrap seguro, sin QA seed.
+`npm run setup:local` es solo para file DB. Si querés volver al smoke local después de usar Turso cloud, dejá `TURSO_DATABASE_URL=file:./local.db` antes de reintentarlo.
 
-   ```bash
-   NODE_ENV=production CONFIRM_REMOTE_DB_BOOTSTRAP=1 npm run db:bootstrap:remote
-   npm run db:verify
-   ```
+#### Base pública beta / producción
 
-   En producción el bootstrap carga **solo** ejercicios, rutinas y tips del sistema. Los usuarios reales se crean desde `/register`; **no uses la cuenta QA en producción**.
+```bash
+NODE_ENV=production CONFIRM_REMOTE_DB_BOOTSTRAP=1 npm run db:bootstrap:remote
+npm run db:verify
+```
+
+En producción el bootstrap carga **solo** ejercicios, rutinas y tips del sistema. Los usuarios reales se crean desde `/register`; **no uses la cuenta QA en producción**.
 
 #### Volver a `file:./local.db`
 

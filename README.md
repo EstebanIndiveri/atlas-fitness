@@ -73,7 +73,7 @@ npm start
 ```bash
 # Desarrollo
 npm run dev          # Iniciar servidor de desarrollo (con Turbopack)
-npm run setup:local  # Copiar .env si falta + migrate + seed QA según el .env actual
+npm run setup:local  # Copiar .env si falta + migrate + seed QA solo con file: DB
 npm run db:migrate   # Aplicar migraciones Drizzle
 npm run db:seed      # system data only
 npm run db:seed:qa   # system data + known QA account; local/CI only
