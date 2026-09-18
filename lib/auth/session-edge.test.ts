@@ -1,3 +1,6 @@
+/**
+ * @jest-environment node
+ */
 import { describe, expect, it } from '@jest/globals';
 import { decodeSession, encodeSession } from './session';
 import { decodeSessionEdge, getSessionFromCookiesEdge } from './session-edge';
