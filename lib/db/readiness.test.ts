@@ -48,6 +48,59 @@ describe('inspectConfiguredDatabase', () => {
     await expect(inspectConfiguredDatabase()).resolves.toEqual({
       ready: false,
       missingTables: REQUIRED_TABLES,
+      missingColumns: [],
+      missingIndexes: [],
+    });
+  });
+
+  it('returns not ready when every table exists but required columns and indexes are missing', async () => {
+    const { directory, url } = makeTempDatabaseUrl();
+    tempDirectories.push(directory);
+    process.env.TURSO_DATABASE_URL = url;
+    delete process.env.TURSO_AUTH_TOKEN;
+
+    const client = createClient({ url });
+    try {
+      await migrate(drizzle(client), { migrationsFolder: './lib/db/migrations' });
+      await client.execute('ALTER TABLE workouts DROP COLUMN routine_id');
+      await client.execute('DROP INDEX daily_checkins_user_id_local_date_unique');
+      await client.execute(
+        'CREATE UNIQUE INDEX daily_checkins_user_id_local_date_unique ON daily_checkins (id)',
+      );
+    } finally {
+      client.close();
+    }
+
+    await expect(inspectConfiguredDatabase()).resolves.toEqual({
+      ready: false,
+      missingTables: [],
+      missingColumns: ['workouts.routine_id'],
+      missingIndexes: ['daily_checkins_user_id_local_date_unique'],
+    });
+  });
+
+  it('rejects a partial index when the required unique index must cover every row', async () => {
+    const { directory, url } = makeTempDatabaseUrl();
+    tempDirectories.push(directory);
+    process.env.TURSO_DATABASE_URL = url;
+    delete process.env.TURSO_AUTH_TOKEN;
+
+    const client = createClient({ url });
+    try {
+      await migrate(drizzle(client), { migrationsFolder: './lib/db/migrations' });
+      await client.execute('DROP INDEX users_email_unique');
+      await client.execute(
+        'CREATE UNIQUE INDEX users_email_unique ON users (email) WHERE id > 0',
+      );
+    } finally {
+      client.close();
+    }
+
+    await expect(inspectConfiguredDatabase()).resolves.toEqual({
+      ready: false,
+      missingTables: [],
+      missingColumns: [],
+      missingIndexes: ['users_email_unique'],
     });
   });
 
@@ -68,6 +121,8 @@ describe('inspectConfiguredDatabase', () => {
     await expect(inspectConfiguredDatabase()).resolves.toEqual({
       ready: true,
       missingTables: [],
+      missingColumns: [],
+      missingIndexes: [],
     });
   });
 });

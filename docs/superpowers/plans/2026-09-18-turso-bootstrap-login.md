@@ -58,22 +58,21 @@ prevents this operational step from being forgotten or misused in production.
 | `lib/dev/load-local-env.ts` | Classify bootstrap controls as documented optional environment keys |
 | `lib/dev/local-dev-docs.test.ts` | Prevent documentation from regressing |
 
-### Task 1: Rotate exposed credentials and establish a safe execution baseline
+### Task 1: Validate credentials and establish a safe execution baseline
 
 **Files:**
 - Modify locally only: `.env`
 - Do not commit: `.env`
 
-- [ ] **Step 1: Revoke every credential exposed in screenshots or chat**
+- [ ] **Step 1: Validate provider credentials without printing their values**
 
-Revoke and replace:
+Run read-only checks against Turso (`select 1`), Telegram (`getMe`) and Gemini
+(`models`). Continue while all three authenticate successfully. Rotate a
+provider credential only if its check fails or the project owner explicitly
+requests rotation.
 
-1. Telegram bot token through BotFather.
-2. Gemini API key through Google AI Studio / Google Cloud.
-3. Turso database token through the database token controls.
-4. Turso account/API token through Turso Settings → API Tokens.
-
-Expected: all previously visible credentials are inactive before continuing.
+Expected: Turso, Telegram and Gemini each report a successful authenticated
+response.
 
 - [ ] **Step 2: Generate three independent application secrets**
 
