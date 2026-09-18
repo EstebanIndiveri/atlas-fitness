@@ -14,7 +14,7 @@ import {
   workouts,
   workoutSets,
 } from '@/lib/db/schema';
-import { getDaySummary } from './day-summary';
+import { getDaySummary, listCatalogExercises } from './day-summary';
 import * as workoutsService from './workouts';
 import * as workoutSetsService from './workout-sets';
 import { addLocalDateDays, cordobaLocalDate } from '@/lib/time/cordoba';
@@ -109,5 +109,33 @@ describe('getDaySummary', () => {
 
     const summary = await getDaySummary(userId, cordobaLocalDate());
     expect(summary.setCount).toBe(0);
+  });
+
+  it('lists system exercises plus own customs only', async () => {
+    const [other] = await db
+      .insert(users)
+      .values({ name: 'Other Catalog', email: 'other-catalog@test.com', passwordHash: 'hash' })
+      .returning();
+    await db.insert(exercises).values([
+      {
+        slug: 'own-custom',
+        name: 'Own custom',
+        muscleGroup: 'Test',
+        instructions: 'x',
+        isSystem: false,
+        userId,
+      },
+      {
+        slug: 'foreign-custom',
+        name: 'Foreign custom',
+        muscleGroup: 'Test',
+        instructions: 'x',
+        isSystem: false,
+        userId: other.id,
+      },
+    ]);
+
+    const catalog = await listCatalogExercises(userId);
+    expect(catalog.map((item) => item.slug).sort()).toEqual(['bench-press', 'own-custom']);
   });
 });

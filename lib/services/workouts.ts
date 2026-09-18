@@ -1,4 +1,5 @@
 import { eq, and, isNull, desc } from 'drizzle-orm';
+import { canAccessCatalogItem } from '@/lib/auth/ownership';
 import { db } from '@/lib/db/client';
 import { routines, workouts, workoutSets } from '@/lib/db/schema';
 import { isSqliteBusyError, isUniqueConstraintError } from '@/lib/db/unique-error';
@@ -16,7 +17,10 @@ export interface UpdateWorkoutInput {
   mood?: number | null;
 }
 
-async function resolveRoutineId(routineId?: number | null): Promise<number | null> {
+async function resolveRoutineId(
+  userId: number,
+  routineId?: number | null,
+): Promise<number | null> {
   if (routineId === undefined || routineId === null) {
     return null;
   }
@@ -25,7 +29,7 @@ async function resolveRoutineId(routineId?: number | null): Promise<number | nul
     where: eq(routines.id, routineId),
   });
 
-  if (!routine || routine.deletedAt) {
+  if (!routine || routine.deletedAt || !canAccessCatalogItem(routine, userId)) {
     throw new AppError('VALIDATION', 'Rutina no válida');
   }
 
@@ -50,7 +54,7 @@ export async function createWorkout(
   userId: number,
   routineId?: number | null,
 ): Promise<Workout> {
-  const resolvedRoutineId = await resolveRoutineId(routineId);
+  const resolvedRoutineId = await resolveRoutineId(userId, routineId);
 
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const existing = await findActiveWorkoutRow(userId);

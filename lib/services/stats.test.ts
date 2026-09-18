@@ -241,6 +241,33 @@ describe('Stats Service', () => {
       );
     });
 
+    it('should throw NOT_FOUND for another user custom exercise', async () => {
+      const [otherUser] = await db
+        .insert(users)
+        .values({
+          name: 'Other Stats',
+          email: 'other-stats@test.com',
+          passwordHash: 'hash',
+        })
+        .returning();
+      const [foreign] = await db
+        .insert(exercises)
+        .values({
+          slug: 'foreign-stats',
+          name: 'Ajeno stats',
+          muscleGroup: 'Test',
+          instructions: 'x',
+          isSystem: false,
+          userId: otherUser.id,
+        })
+        .returning();
+
+      await expect(statsService.getExerciseHistory(foreign.id, testUserId)).rejects.toMatchObject({
+        code: 'NOT_FOUND',
+        message: 'Ejercicio no encontrado',
+      });
+    });
+
     it('should return empty history if no sets for exercise', async () => {
       const history = await statsService.getExerciseHistory(exercise1Id, testUserId);
 

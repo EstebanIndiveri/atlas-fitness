@@ -2,6 +2,7 @@ import { eq, and, isNull } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { workouts, workoutSets } from '@/lib/db/schema';
 import { isUniqueConstraintError } from '@/lib/db/unique-error';
+import { requireAccessibleExercise } from '@/lib/services/exercises';
 import { AppError } from '@/types/errors';
 import { isValidWeightKg, parseWeightKg } from '@/lib/format/weight';
 import type { Workout, WorkoutSet } from '@/lib/db/schema';
@@ -70,6 +71,7 @@ export async function createWorkoutSet(input: CreateWorkoutSetInput): Promise<Wo
       }
 
       assertWorkoutAllowsSetMutation(workout, 'create');
+      await requireAccessibleExercise(input.exerciseId, input.userId);
 
       // Atomic insert - unique constraint will prevent duplicates
       return tx
@@ -135,7 +137,10 @@ export async function updateWorkoutSet(input: UpdateWorkoutSetInput): Promise<Wo
   assertWorkoutAllowsSetMutation(workout, 'update');
 
   const updateData: Partial<typeof workoutSets.$inferInsert> = {};
-  if (input.exerciseId !== undefined) updateData.exerciseId = input.exerciseId;
+  if (input.exerciseId !== undefined) {
+    await requireAccessibleExercise(input.exerciseId, input.userId);
+    updateData.exerciseId = input.exerciseId;
+  }
   if (input.setIndex !== undefined) updateData.setIndex = input.setIndex;
   if (input.reps !== undefined) updateData.reps = input.reps;
   if (input.weightKg !== undefined) updateData.weightKg = parseWeightKg(input.weightKg);

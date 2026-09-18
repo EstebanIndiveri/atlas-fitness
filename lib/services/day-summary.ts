@@ -1,4 +1,4 @@
-import { and, eq, isNull, or } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { exercises, workouts, workoutSets } from '@/lib/db/schema';
 import { cordobaLocalDate } from '@/lib/time/cordoba';
@@ -80,16 +80,8 @@ export async function getDaySummary(
   };
 }
 
-export async function listCatalogExercises(userId: number) {
-  return db.query.exercises.findMany({
-    where: and(
-      isNull(exercises.deletedAt),
-      or(eq(exercises.isSystem, true), eq(exercises.userId, userId))
-    ),
-    orderBy: (table, { asc }) => [asc(table.name)],
-  });
-}
-
 export function nextSetIndex(sets: Pick<WorkoutSet, 'setIndex'>[]): number {
   return sets.reduce((max, set) => Math.max(max, set.setIndex), 0) + 1;
 }
+
+export { listCatalogExercises } from '@/lib/services/exercises';

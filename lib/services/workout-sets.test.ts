@@ -175,6 +175,45 @@ describe('Workout Sets Service', () => {
       ).rejects.toThrow('No tienes permiso para modificar este entrenamiento');
     });
 
+    it('should throw NOT_FOUND if exercise belongs to another user', async () => {
+      const [otherUser] = await db
+        .insert(users)
+        .values({
+          name: 'Other Exercise Owner',
+          email: 'other-ex-owner@test.com',
+          passwordHash: 'hash',
+        })
+        .returning();
+
+      const [foreignExercise] = await db
+        .insert(exercises)
+        .values({
+          slug: 'foreign-exercise',
+          name: 'Ejercicio ajeno',
+          muscleGroup: 'Test',
+          instructions: 'x',
+          isSystem: false,
+          userId: otherUser.id,
+        })
+        .returning();
+
+      const workout = await workoutsService.createWorkout(testUserId);
+
+      await expect(
+        workoutSetsService.createWorkoutSet({
+          workoutId: workout.id,
+          userId: testUserId,
+          exerciseId: foreignExercise.id,
+          setIndex: 1,
+          reps: 10,
+          weightKg: '100',
+        }),
+      ).rejects.toMatchObject({
+        code: 'NOT_FOUND',
+        message: 'Ejercicio no encontrado',
+      });
+    });
+
     it('should throw VALIDATION if workout is already ended', async () => {
       const workout = await workoutsService.createWorkout(testUserId);
       await workoutsService.updateWorkout(workout.id, testUserId, { endedAt: new Date() });
@@ -236,6 +275,49 @@ describe('Workout Sets Service', () => {
       ).rejects.toMatchObject({
         code: 'VALIDATION',
         message: 'No puedes modificar series de un entrenamiento finalizado',
+      });
+    });
+
+    it('should throw NOT_FOUND when updating exerciseId to a foreign custom', async () => {
+      const workout = await workoutsService.createWorkout(testUserId);
+      const set = await workoutSetsService.createWorkoutSet({
+        workoutId: workout.id,
+        userId: testUserId,
+        exerciseId: testExerciseId,
+        setIndex: 1,
+        reps: 10,
+        weightKg: '100',
+      });
+
+      const [otherUser] = await db
+        .insert(users)
+        .values({
+          name: 'Other Exercise Owner 2',
+          email: 'other-ex-owner2@test.com',
+          passwordHash: 'hash',
+        })
+        .returning();
+      const [foreignExercise] = await db
+        .insert(exercises)
+        .values({
+          slug: 'foreign-exercise-update',
+          name: 'Ajeno update',
+          muscleGroup: 'Test',
+          instructions: 'x',
+          isSystem: false,
+          userId: otherUser.id,
+        })
+        .returning();
+
+      await expect(
+        workoutSetsService.updateWorkoutSet({
+          setId: set.id,
+          userId: testUserId,
+          exerciseId: foreignExercise.id,
+        }),
+      ).rejects.toMatchObject({
+        code: 'NOT_FOUND',
+        message: 'Ejercicio no encontrado',
       });
     });
 

@@ -1,7 +1,7 @@
 import { eq, and, isNull, desc } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { workouts, workoutSets, exercises } from '@/lib/db/schema';
-import { AppError } from '@/types/errors';
+import { requireAccessibleExercise } from '@/lib/services/exercises';
 import { compareDecimal } from '@/lib/format/decimal';
 
 export interface PersonalRecord {
@@ -109,13 +109,7 @@ export async function getExerciseHistory(
   exerciseId: number,
   userId: number
 ): Promise<ExerciseHistory> {
-  const exercise = await db.query.exercises.findFirst({
-    where: eq(exercises.id, exerciseId),
-  });
-
-  if (!exercise || exercise.deletedAt) {
-    throw new AppError('NOT_FOUND', 'Ejercicio no encontrado');
-  }
+  const exercise = await requireAccessibleExercise(exerciseId, userId);
 
   const history = await db
     .select({

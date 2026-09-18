@@ -267,7 +267,7 @@ describe('getRoutineById (sanity)', () => {
       targetSets: 3,
       targetReps: 8,
     });
-    const loaded = await getRoutineById(routine.id);
+    const loaded = await getRoutineById(routine.id, 1);
     expect(loaded.exercises).toHaveLength(1);
   });
 });

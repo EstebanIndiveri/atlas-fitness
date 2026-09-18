@@ -11,6 +11,8 @@ import {
   dailyCheckins,
   streakNudges,
   botMessages,
+  routines,
+  routineExercises,
 } from '@/lib/db/schema';
 
 describe('Workouts Service', () => {
@@ -25,6 +27,8 @@ describe('Workouts Service', () => {
     await db.delete(userStreaks);
     await db.delete(botMessages);
     await db.delete(telegramLinkCodes);
+    await db.delete(routineExercises);
+    await db.delete(routines);
     await db.delete(sessions);
     await db.delete(users);
 
@@ -71,6 +75,34 @@ describe('Workouts Service', () => {
 
     it('should reject an unknown routineId with VALIDATION', async () => {
       await expect(workoutsService.createWorkout(testUserId, 99999)).rejects.toMatchObject({
+        code: 'VALIDATION',
+        message: 'Rutina no válida',
+      });
+    });
+
+    it('should reject another user custom routineId with VALIDATION', async () => {
+      const [otherUser] = await db
+        .insert(users)
+        .values({
+          name: 'Other Routines Owner',
+          email: 'other-routine-owner@test.com',
+          passwordHash: 'hash',
+        })
+        .returning();
+
+      const [foreign] = await db
+        .insert(routines)
+        .values({
+          slug: 'foreign-routine',
+          name: 'Rutina ajena',
+          kind: 'gym',
+          restSeconds: 45,
+          isSystem: false,
+          userId: otherUser.id,
+        })
+        .returning();
+
+      await expect(workoutsService.createWorkout(testUserId, foreign.id)).rejects.toMatchObject({
         code: 'VALIDATION',
         message: 'Rutina no válida',
       });
