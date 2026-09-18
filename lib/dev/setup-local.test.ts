@@ -21,6 +21,13 @@ describe('package.json local scripts', () => {
   });
 });
 
+describe('scripts/setup-local.ts', () => {
+  it('does not log the QA password', () => {
+    const script = readFileSync(join(process.cwd(), 'scripts/setup-local.ts'), 'utf8');
+    expect(script).not.toContain('Test1234!');
+  });
+});
+
 describe('copyEnvExampleIfMissing', () => {
   let cwd: string | undefined;
 
