@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { GuidedExerciseCard } from '@/components/session/GuidedExerciseCard';
 import { RestTimer } from '@/components/session/RestTimer';
@@ -14,6 +14,7 @@ import { SESSION_COPY } from '@/lib/copy/session';
 
 export default function GuidedSessionPlayerPage() {
   const params = useParams();
+  const router = useRouter();
   const workoutId = String(params.workoutId ?? '');
   const session = useGuidedSession(workoutId);
   const rest = useRestTimer();
@@ -31,6 +32,11 @@ export default function GuidedSessionPlayerPage() {
     } catch {
       // error state lives in the hook when load fails; keep rest from starting
     }
+  };
+
+  const handleSaveAndClose = async () => {
+    await session.saveAndClose();
+    router.push('/dashboard');
   };
 
   if (session.loading) {
@@ -74,7 +80,7 @@ export default function GuidedSessionPlayerPage() {
           summary={session.summary}
           mood={session.mood}
           onMood={session.setMood}
-          onSave={() => void session.saveAndClose()}
+          onSave={() => void handleSaveAndClose()}
           saving={session.busy || ended}
         />
       ) : (
