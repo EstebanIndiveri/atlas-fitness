@@ -21,6 +21,7 @@ export const SESSION_COPY = {
   lastExerciseDone: 'Terminaste la rutina. Cerrá la sesión cuando quieras.',
   fallbackNext: 'Siguiente según el orden de la rutina.',
   seeVideo: 'Ver video',
+  noImage: 'Sin imagen',
   closeTitle: '¡Sesión completada!',
   closeCongrats: 'Buen trabajo. Cada sesión suma.',
   streakLabel: 'Racha',
