@@ -62,7 +62,6 @@ describe('POST /api/telegram/webhook secret', () => {
   const originalSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
   const originalToken = process.env.TELEGRAM_BOT_TOKEN;
   const originalFlag = process.env.ALLOW_INSECURE_TELEGRAM_WEBHOOK;
-  const originalNodeEnv = process.env.NODE_ENV;
 
   afterEach(() => {
     if (originalSecret === undefined) {
@@ -80,7 +79,6 @@ describe('POST /api/telegram/webhook secret', () => {
     } else {
       process.env.ALLOW_INSECURE_TELEGRAM_WEBHOOK = originalFlag;
     }
-    process.env.NODE_ENV = originalNodeEnv;
   });
 
   function request(secret: string | null): NextRequest {
@@ -96,7 +94,6 @@ describe('POST /api/telegram/webhook secret', () => {
   }
 
   it('rejects without secret when a bot token is configured', async () => {
-    process.env.NODE_ENV = 'test';
     process.env.TELEGRAM_BOT_TOKEN = '123:ABC';
     delete process.env.TELEGRAM_WEBHOOK_SECRET;
     delete process.env.ALLOW_INSECURE_TELEGRAM_WEBHOOK;
@@ -109,7 +106,6 @@ describe('POST /api/telegram/webhook secret', () => {
   });
 
   it('accepts a matching X-Telegram-Bot-Api-Secret-Token', async () => {
-    process.env.NODE_ENV = 'test';
     process.env.TELEGRAM_WEBHOOK_SECRET = 'hook-secret';
     process.env.TELEGRAM_BOT_TOKEN = '123:ABC';
 

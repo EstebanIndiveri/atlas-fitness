@@ -1,6 +1,6 @@
 const LOCAL_DB_NAME = 'local.db';
 
-export function isJestRuntime(env: NodeJS.ProcessEnv = process.env): boolean {
+export function isJestRuntime(env: Record<string, string | undefined> = process.env): boolean {
   return env.JEST_WORKER_ID !== undefined;
 }
 
@@ -35,7 +35,7 @@ export function assertSafeTestDatabaseUrl(url: string): void {
   }
 }
 
-export function resolveDatabaseUrl(env: NodeJS.ProcessEnv = process.env): string {
+export function resolveDatabaseUrl(env: Record<string, string | undefined> = process.env): string {
   const configured = env.TURSO_DATABASE_URL?.trim();
 
   if (isJestRuntime(env)) {

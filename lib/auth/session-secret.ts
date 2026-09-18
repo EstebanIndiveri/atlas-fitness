@@ -31,7 +31,7 @@ export function isWeakSessionSecret(secret: string): boolean {
 }
 
 export function resolveSessionSecret(
-  env: NodeJS.ProcessEnv = process.env,
+  env: Record<string, string | undefined> = process.env,
 ): string {
   const secret = env.SESSION_SECRET?.trim() ?? '';
   const isProduction = env.NODE_ENV === 'production';
