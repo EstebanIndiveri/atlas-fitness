@@ -69,7 +69,7 @@ test.describe('Guided session (Epic-E Must)', () => {
 
     await expect(page.getByTestId('session-close')).toBeVisible({ timeout: 5000 });
     await expect(page.getByTestId('session-close')).toContainText('¡Sesión completada!');
-    await expect(page.getByTestId('close-improvement')).toBeVisible();
+    await expect(page.getByTestId('close-improvement').first()).toBeVisible();
 
     await page.click('[data-testid="close-mood-4"]');
     await page.click('[data-testid="close-save"]');
