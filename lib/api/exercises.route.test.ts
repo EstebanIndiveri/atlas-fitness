@@ -23,11 +23,16 @@ import {
 } from '@/lib/db/schema';
 import type { ExerciseCatalogItem } from '@/types/exercise';
 
-async function authed(userId: number, url: string, init?: RequestInit): Promise<NextRequest> {
+async function authed(
+  userId: number,
+  url: string,
+  init?: { method?: string; body?: string },
+): Promise<NextRequest> {
   const cookie = await issueSessionCookieHeader(userId);
   return new NextRequest(url, {
-    ...init,
-    headers: { cookie, 'content-type': 'application/json', ...init?.headers },
+    method: init?.method,
+    body: init?.body,
+    headers: { cookie, 'content-type': 'application/json' },
   });
 }
 
