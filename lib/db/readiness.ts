@@ -62,6 +62,29 @@ function matchesColumns(actual: readonly string[], required: readonly string[]):
   );
 }
 
+function normalizePredicate(predicate: string): string {
+  return predicate
+    .replace(/`([a-z_][a-z0-9_]*)`/gi, '$1')
+    .replace(/"([a-z_][a-z0-9_]*)"/gi, '$1')
+    .replace(/\[([a-z_][a-z0-9_]*)\]/gi, '$1')
+    .trim()
+    .replace(/;$/, '')
+    .replace(/\s+/g, ' ')
+    .toLowerCase();
+}
+
+function matchesPredicate(indexSql: unknown, requiredPredicate: string): boolean {
+  if (typeof indexSql !== 'string') {
+    return false;
+  }
+
+  const predicate = /\bwhere\b([\s\S]+)$/i.exec(indexSql)?.[1];
+  return (
+    typeof predicate === 'string' &&
+    normalizePredicate(predicate) === normalizePredicate(requiredPredicate)
+  );
+}
+
 async function inspectTable(
   client: DatabaseClient,
   contract: RequiredTable,
@@ -90,9 +113,20 @@ async function inspectTable(
         const indexInfo = await client.execute(
           `PRAGMA index_info(${quoteIdentifier(requiredIndex.name)})`,
         );
-        return matchesColumns(extractNames(indexInfo.rows), requiredIndex.columns)
-          ? null
-          : requiredIndex.name;
+        if (!matchesColumns(extractNames(indexInfo.rows), requiredIndex.columns)) {
+          return requiredIndex.name;
+        }
+
+        if (requiredIndex.predicate === undefined) {
+          return null;
+        }
+
+        const indexDefinition = await client.execute({
+          sql: "select sql from sqlite_master where type = 'index' and name = ?",
+          args: [requiredIndex.name],
+        });
+        const indexSql = getRowValue(indexDefinition.rows.at(0), 'sql');
+        return matchesPredicate(indexSql, requiredIndex.predicate) ? null : requiredIndex.name;
       }),
     )
   ).filter((name): name is string => name !== null);

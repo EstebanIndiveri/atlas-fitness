@@ -2,6 +2,7 @@ interface RequiredIndex {
   name: string;
   columns: readonly string[];
   partial?: boolean;
+  predicate?: string;
 }
 
 interface RequiredTable {
@@ -91,6 +92,7 @@ export const REQUIRED_SCHEMA: readonly RequiredTable[] = [
         name: 'workout_sets_workout_id_set_index_unique',
         columns: ['workout_id', 'set_index'],
         partial: true,
+        predicate: 'deleted_at IS NULL',
       },
     ],
   },

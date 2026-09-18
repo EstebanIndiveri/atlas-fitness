@@ -104,6 +104,61 @@ describe('inspectConfiguredDatabase', () => {
     });
   });
 
+  it('rejects a required partial index when its predicate is inverted', async () => {
+    const { directory, url } = makeTempDatabaseUrl();
+    tempDirectories.push(directory);
+    process.env.TURSO_DATABASE_URL = url;
+    delete process.env.TURSO_AUTH_TOKEN;
+
+    const client = createClient({ url });
+    try {
+      await migrate(drizzle(client), { migrationsFolder: './lib/db/migrations' });
+      await client.execute('DROP INDEX workout_sets_workout_id_set_index_unique');
+      await client.execute(`
+        CREATE UNIQUE INDEX workout_sets_workout_id_set_index_unique
+        ON workout_sets (workout_id, set_index)
+        WHERE deleted_at IS NOT NULL
+      `);
+    } finally {
+      client.close();
+    }
+
+    await expect(inspectConfiguredDatabase()).resolves.toEqual({
+      ready: false,
+      missingTables: [],
+      missingColumns: [],
+      missingIndexes: ['workout_sets_workout_id_set_index_unique'],
+    });
+  });
+
+  it('accepts harmless predicate whitespace, quoting, and case differences', async () => {
+    const { directory, url } = makeTempDatabaseUrl();
+    tempDirectories.push(directory);
+    process.env.TURSO_DATABASE_URL = url;
+    delete process.env.TURSO_AUTH_TOKEN;
+
+    const client = createClient({ url });
+    try {
+      await migrate(drizzle(client), { migrationsFolder: './lib/db/migrations' });
+      await client.execute('DROP INDEX workout_sets_workout_id_set_index_unique');
+      await client.execute(`
+        CREATE UNIQUE INDEX workout_sets_workout_id_set_index_unique
+        ON workout_sets (workout_id, set_index)
+        where "DELETED_AT"    is
+        null
+      `);
+    } finally {
+      client.close();
+    }
+
+    await expect(inspectConfiguredDatabase()).resolves.toEqual({
+      ready: true,
+      missingTables: [],
+      missingColumns: [],
+      missingIndexes: [],
+    });
+  });
+
   it('returns ready after the configured database has been migrated', async () => {
     const { directory, url } = makeTempDatabaseUrl();
     tempDirectories.push(directory);
