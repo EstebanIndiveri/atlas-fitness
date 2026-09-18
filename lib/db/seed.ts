@@ -1,7 +1,8 @@
 import bcrypt from 'bcryptjs';
-import { db } from './client';
-import { users, exercises, userStreaks, dailyTips, routines, routineExercises } from './schema';
 import { eq } from 'drizzle-orm';
+import { db } from './client';
+import { shouldSeedQaUser } from './seed-options';
+import { users, exercises, userStreaks, dailyTips, routines, routineExercises } from './schema';
 
 const QA_USER_EMAIL = 'qa@atlas.test';
 const QA_USER_PASSWORD = 'Test1234!';
@@ -148,11 +149,8 @@ async function seedRoutines(): Promise<void> {
   }
 }
 
-async function seed() {
-  console.log('Starting seed...');
-
-  // Create QA user
-  console.log('Creating QA user...');
+async function seedQaAccount(): Promise<void> {
+  console.log('\nCreating QA user...');
   const passwordHash = await bcrypt.hash(QA_USER_PASSWORD, 10);
 
   const existingUser = await db.query.users.findFirst({
@@ -182,7 +180,25 @@ async function seed() {
 
   console.log(`QA user created/updated with ID: ${userId}`);
   console.log(`  Email: ${QA_USER_EMAIL}`);
-  console.log(`  Password: ${QA_USER_PASSWORD}`);
+
+  const existingStreak = await db.query.userStreaks.findFirst({
+    where: eq(userStreaks.userId, userId),
+  });
+
+  if (!existingStreak) {
+    await db.insert(userStreaks).values({
+      userId,
+      currentStreak: 0,
+      longestStreak: 0,
+      lastWorkoutDate: null,
+    });
+    console.log('Initialized QA user streak record');
+  }
+}
+
+async function seed() {
+  console.log('Starting seed...');
+  const seedQaUser = shouldSeedQaUser();
 
   // Create system exercises
   console.log('\nCreating system exercises...');
@@ -201,21 +217,6 @@ async function seed() {
   }
 
   await seedRoutines();
-
-  // Initialize user streak
-  const existingStreak = await db.query.userStreaks.findFirst({
-    where: eq(userStreaks.userId, userId),
-  });
-
-  if (!existingStreak) {
-    await db.insert(userStreaks).values({
-      userId,
-      currentStreak: 0,
-      longestStreak: 0,
-      lastWorkoutDate: null,
-    });
-    console.log('\nInitialized user streak record');
-  }
 
   // Seed a few sample daily tips for testing
   console.log('\nSeeding sample daily tips...');
@@ -245,10 +246,11 @@ async function seed() {
     }
   }
 
+  if (seedQaUser) {
+    await seedQaAccount();
+  }
+
   console.log('\n✅ Seed completed successfully!');
-  console.log('\nTest credentials:');
-  console.log(`  Email: ${QA_USER_EMAIL}`);
-  console.log(`  Password: ${QA_USER_PASSWORD}`);
   console.log('\nSystem exercises (slugs):');
   SYSTEM_EXERCISES.forEach((ex) => console.log(`  - ${ex.slug}: ${ex.name}`));
   console.log('\nSystem routines (slugs):');

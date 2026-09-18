@@ -5,6 +5,13 @@ import { join } from 'node:path';
 describe('docs/engineering/local-dev.md (HU-D integraciones reales)', () => {
   const md = readFileSync(join(process.cwd(), 'docs/engineering/local-dev.md'), 'utf8');
 
+  function getSection(heading: string): string {
+    const escapedHeading = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const match = md.match(new RegExp(`^${escapedHeading}\\n([\\s\\S]*?)(?=^#{2,4} |\\Z)`, 'm'));
+    expect(match?.[1]).toBeDefined();
+    return match?.[1] ?? '';
+  }
+
   it('separates Smoke local from Integraciones reales', () => {
     expect(md).toMatch(/^## Smoke local/m);
     expect(md).toMatch(/^## Integraciones reales/m);
@@ -15,15 +22,23 @@ describe('docs/engineering/local-dev.md (HU-D integraciones reales)', () => {
     expect(realAt).toBeGreaterThan(smokeAt);
   });
 
-  it('documents Turso cloud: create DB, env, migrate/seed, then switch back to file', () => {
-    expect(md).toMatch(/turso db create/i);
-    expect(md).toMatch(/TURSO_DATABASE_URL/);
-    expect(md).toMatch(/TURSO_AUTH_TOKEN/);
-    expect(md).toMatch(/npm run db:migrate/);
-    expect(md).toMatch(/npm run db:seed/);
-    expect(md).toMatch(/file:\.\/local\.db/);
-    expect(md).toMatch(/libsql:\/\//);
-    expect(md).toMatch(/volver/i);
+  it('documents the exact remote development bootstrap sequence in its own section', () => {
+    const section = getSection('#### Base remota de desarrollo');
+
+    expect(section).toMatch(
+      /```bash\s+CONFIRM_REMOTE_DB_BOOTSTRAP=1 npm run db:bootstrap:remote\s+npm run db:seed:qa\s+npm run db:verify\s+```/,
+    );
+    expect(section).toMatch(/file:\.\/local\.db/);
+  });
+
+  it('documents the exact public beta production bootstrap sequence without QA seed', () => {
+    const section = getSection('#### Base pública beta / producción');
+
+    expect(section).toMatch(
+      /```bash\s+NODE_ENV=production CONFIRM_REMOTE_DB_BOOTSTRAP=1 npm run db:bootstrap:remote\s+npm run db:verify\s+```/,
+    );
+    expect(section).toMatch(/no uses la cuenta QA en producción/i);
+    expect(section).not.toMatch(/npm run db:seed:qa/);
   });
 
   it('documents real Telegram: BotFather → token → secret → tunnel → setWebhook → link-code → comando', () => {

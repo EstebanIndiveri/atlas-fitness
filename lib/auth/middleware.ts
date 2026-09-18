@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookies } from './session';
 import { AppError } from '@/types/errors';
+import { isMissingDatabaseSchemaError } from '../db/errors';
 import type { SessionData } from '@/types/auth';
 
 export interface AuthenticatedRequest extends NextRequest {
@@ -34,19 +35,32 @@ export function optionalAuth(request: NextRequest): SessionData | null {
  * Handles API errors and returns appropriate response
  */
 export function handleApiError(error: unknown): NextResponse {
-  if (error instanceof AppError) {
-    const status = {
-      UNAUTHORIZED: 401,
-      FORBIDDEN: 403,
-      NOT_FOUND: 404,
-      VALIDATION: 400,
-      CONFLICT: 409,
-    }[error.code];
+  const statusByCode = {
+    UNAUTHORIZED: 401,
+    FORBIDDEN: 403,
+    NOT_FOUND: 404,
+    VALIDATION: 400,
+    CONFLICT: 409,
+    SERVICE_UNAVAILABLE: 503,
+  } as const;
 
-    return NextResponse.json(error.toJSON(), { status });
+  if (error instanceof AppError) {
+    return NextResponse.json(error.toJSON(), { status: statusByCode[error.code] });
   }
 
-  console.error('Unexpected error:', error);
+  if (isMissingDatabaseSchemaError(error)) {
+    console.error('Database schema unavailable; returning sanitized 503 response.');
+    const unavailableError = new AppError(
+      'SERVICE_UNAVAILABLE',
+      'Servicio temporalmente no disponible',
+    );
+
+    return NextResponse.json(unavailableError.toJSON(), {
+      status: statusByCode.SERVICE_UNAVAILABLE,
+    });
+  }
+
+  console.error('Unexpected error in API handler.');
   return NextResponse.json(
     { code: 'INTERNAL_ERROR', message: 'Internal server error' },
     { status: 500 },

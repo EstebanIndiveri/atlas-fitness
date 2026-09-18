@@ -3,7 +3,8 @@ export type ErrorCode =
   | 'FORBIDDEN'
   | 'NOT_FOUND'
   | 'VALIDATION'
-  | 'CONFLICT';
+  | 'CONFLICT'
+  | 'SERVICE_UNAVAILABLE';
 
 export interface ApiError {
   code: ErrorCode;
