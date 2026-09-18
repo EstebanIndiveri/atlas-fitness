@@ -15,6 +15,7 @@
     "db:migrate": "tsx lib/db/migrate.ts",
     "db:seed": "tsx lib/db/seed.ts",
     "db:verify": "tsx scripts/verify-database.ts",
+    "db:bootstrap:remote": "tsx scripts/bootstrap-remote.ts",
     "db:seed:qa": "tsx scripts/seed-qa.ts",
     "setup:local": "tsx scripts/setup-local.ts"
   },
