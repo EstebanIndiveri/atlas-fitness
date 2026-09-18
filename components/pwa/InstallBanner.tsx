@@ -1,7 +1,8 @@
 'use client';
 
-import { PWA_COPY } from '@/lib/pwa/copy';
+import { Button } from '@/components/ui/Button';
 import { useInstallPrompt } from '@/hooks/useInstallPrompt';
+import { PWA_COPY } from '@/lib/pwa/copy';
 
 export function InstallBanner() {
   const { canInstall, promptInstall, dismiss } = useInstallPrompt();
@@ -12,29 +13,25 @@ export function InstallBanner() {
 
   return (
     <div
-      className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4"
+      className="mb-4 rounded-lg border border-warning bg-warning-muted p-4"
       data-testid="pwa-install-banner"
       role="region"
       aria-label={PWA_COPY.installTitle}
     >
-      <h2 className="text-sm font-semibold text-amber-950">{PWA_COPY.installTitle}</h2>
-      <p className="mt-1 text-sm text-amber-900">{PWA_COPY.installBody}</p>
+      <h2 className="text-sm font-semibold text-ink">{PWA_COPY.installTitle}</h2>
+      <p className="mt-1 text-sm text-ink">{PWA_COPY.installBody}</p>
       <div className="mt-3 flex flex-wrap gap-2">
-        <button
+        <Button
           type="button"
+          variant="warning"
           onClick={() => void promptInstall()}
-          className="rounded-md bg-amber-700 px-4 py-2 text-sm font-medium text-white hover:bg-amber-800"
           data-testid="pwa-install-cta"
         >
           {PWA_COPY.installCta}
-        </button>
-        <button
-          type="button"
-          onClick={dismiss}
-          className="rounded-md bg-white px-4 py-2 text-sm font-medium text-amber-900 hover:bg-amber-100"
-        >
+        </Button>
+        <Button type="button" variant="secondary" onClick={dismiss}>
           {PWA_COPY.installDismiss}
-        </button>
+        </Button>
       </div>
     </div>
   );

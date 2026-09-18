@@ -7,6 +7,9 @@ import { TipCard } from '@/components/TipCard';
 import { StreakChip } from '@/components/StreakChip';
 import { TelegramLinkBanner } from '@/components/TelegramLinkBanner';
 import { InstallBanner } from '@/components/pwa/InstallBanner';
+import { Card } from '@/components/ui/Card';
+import { EmptyState, LoadingState } from '@/components/ui/states';
+import { UI_COPY } from '@/lib/copy/ui';
 import { parseActiveWorkoutResponse } from '@/lib/workouts/parse-active-workout-response';
 import type { AuthUser } from '@/types/auth';
 import type { Workout } from '@/lib/db/schema';
@@ -64,23 +67,8 @@ export default function DashboardPage() {
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' });
-      window.location.href = '/login';
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-  };
-
   if (loading) {
-    return (
-      <main className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <p className="text-lg">Cargando...</p>
-        </div>
-      </main>
-    );
+    return <LoadingState />;
   }
 
   if (!user) {
@@ -88,90 +76,71 @@ export default function DashboardPage() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col p-4 sm:p-6 bg-gray-50">
-      <div className="max-w-4xl mx-auto w-full">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold">Atlas Fitness</h1>
-            <p className="text-gray-600 mt-1 text-sm sm:text-base" data-testid="welcome-message">
-              Bienvenido, {user.name}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Link
-              href="/dashboard/settings"
-              className="px-3 py-2 text-xs sm:text-sm bg-gray-100 hover:bg-gray-200 rounded-md"
-              data-testid="settings-link"
-            >
-              Ajustes
-            </Link>
-            <button
-              onClick={handleLogout}
-              className="px-3 py-2 text-xs sm:text-sm bg-gray-200 hover:bg-gray-300 rounded-md"
-            >
-              Cerrar sesión
-            </button>
-          </div>
+    <div className="mx-auto w-full max-w-4xl px-4 py-4 sm:px-6 sm:py-6">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-ink sm:text-3xl">{UI_COPY.brand}</h1>
+        <p className="mt-1 text-sm text-ink-muted sm:text-base" data-testid="welcome-message">
+          Bienvenido, {user.name}
+        </p>
+      </div>
+
+      <InstallBanner />
+
+      {!user.telegramUserId && <TelegramLinkBanner />}
+
+      <StreakChip />
+
+      <TipCard activeWorkout={activeWorkout} onStartWorkout={handleNewWorkout} />
+
+      <Card>
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-ink">Historial Reciente</h2>
+          <Link href="/dashboard/history" className="text-sm font-medium text-brand hover:underline">
+            Ver todo
+          </Link>
         </div>
 
-        <InstallBanner />
-
-        {!user.telegramUserId && <TelegramLinkBanner />}
-
-        <StreakChip />
-
-        <TipCard activeWorkout={activeWorkout} onStartWorkout={handleNewWorkout} />
-
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold">Historial Reciente</h2>
-            <Link
-              href="/dashboard/history"
-              className="text-sm text-blue-600 hover:text-blue-800"
-            >
-              Ver todo
-            </Link>
-          </div>
-
-          {recentWorkouts.length === 0 ? (
-            <p className="text-gray-500 text-sm">No tienes entrenamientos registrados aún.</p>
-          ) : (
-            <div className="space-y-3">
-              {recentWorkouts.map((workout) => (
-                <Link
-                  key={workout.id}
-                  href={`/dashboard/workout/${workout.id}`}
-                  className="block p-3 border border-gray-200 rounded-md hover:bg-gray-50"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium">
-                        {new Date(workout.startedAt).toLocaleDateString('es-AR', {
-                          day: 'numeric',
-                          month: 'long',
-                          year: 'numeric',
-                        })}
-                      </p>
-                      {workout.note && (
-                        <p className="text-xs text-gray-600 mt-1">{workout.note}</p>
-                      )}
-                    </div>
-                    {workout.mood && (
-                      <div className="text-xl" aria-label={`Estado de ánimo: ${workout.mood}`}>
-                        {workout.mood === 5 && '😄'}
-                        {workout.mood === 4 && '😊'}
-                        {workout.mood === 3 && '😐'}
-                        {workout.mood === 2 && '😕'}
-                        {workout.mood === 1 && '😞'}
-                      </div>
+        {recentWorkouts.length === 0 ? (
+          <EmptyState
+            title={UI_COPY.emptyWorkoutsTitle}
+            description={UI_COPY.emptyWorkoutsBody}
+          />
+        ) : (
+          <div className="space-y-3">
+            {recentWorkouts.map((workout) => (
+              <Link
+                key={workout.id}
+                href={`/dashboard/workout/${workout.id}`}
+                className="block rounded-md border border-line p-3 hover:bg-canvas"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-ink">
+                      {new Date(workout.startedAt).toLocaleDateString('es-AR', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric',
+                      })}
+                    </p>
+                    {workout.note && (
+                      <p className="mt-1 text-xs text-ink-muted">{workout.note}</p>
                     )}
                   </div>
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    </main>
+                  {workout.mood && (
+                    <div className="text-xl" aria-label={`Estado de ánimo: ${workout.mood}`}>
+                      {workout.mood === 5 && '😄'}
+                      {workout.mood === 4 && '😊'}
+                      {workout.mood === 3 && '😐'}
+                      {workout.mood === 2 && '😕'}
+                      {workout.mood === 1 && '😞'}
+                    </div>
+                  )}
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </Card>
+    </div>
   );
 }

@@ -1,6 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
+import { AppShell } from '@/components/shell/AppShell';
+import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
+import { Input } from '@/components/ui/Input';
+import { ErrorState } from '@/components/ui/states';
+import { UI_COPY } from '@/lib/copy/ui';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -37,66 +44,52 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-6 bg-gray-50">
-      <div className="w-full max-w-md">
-        <div className="bg-white rounded-lg shadow-md p-8">
-          <h1 className="text-3xl font-bold mb-2 text-center">Atlas Fitness</h1>
-          <p className="text-gray-600 text-center mb-8">Iniciar sesión</p>
+    <AppShell variant="public">
+      <div className="flex flex-col items-center justify-center px-4 py-section sm:px-6">
+        <div className="w-full max-w-md">
+          <Card className="p-8">
+            <h1 className="mb-2 text-center text-3xl font-bold text-ink">{UI_COPY.brand}</h1>
+            <p className="mb-8 text-center text-ink-muted">Iniciar sesión</p>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                Email
-              </label>
-              <input
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <Input
                 id="email"
+                label="Email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="tu@email.com"
               />
-            </div>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                Contraseña
-              </label>
-              <input
+              <Input
                 id="password"
+                label="Contraseña"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="••••••••"
               />
+
+              {error ? <ErrorState message={error} /> : null}
+
+              <Button type="submit" disabled={loading} size="lg">
+                {loading ? 'Cargando...' : 'Ingresar'}
+              </Button>
+            </form>
+
+            <div className="mt-6 text-center">
+              <p className="text-sm text-ink-muted">
+                ¿No tenés cuenta?{' '}
+                <Link href="/register" className="font-medium text-brand hover:underline">
+                  Registrate
+                </Link>
+              </p>
             </div>
-
-            {error && (
-              <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm">{error}</div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-            >
-              {loading ? 'Cargando...' : 'Ingresar'}
-            </button>
-          </form>
-
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              ¿No tenés cuenta?{' '}
-              <a href="/register" className="text-blue-600 hover:underline font-medium">
-                Registrate
-              </a>
-            </p>
-          </div>
+          </Card>
         </div>
       </div>
-    </main>
+    </AppShell>
   );
 }

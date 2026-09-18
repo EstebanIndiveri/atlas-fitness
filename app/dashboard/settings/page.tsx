@@ -3,6 +3,9 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { IosInstallHint } from '@/components/pwa/IosInstallHint';
+import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
+import { ErrorState, LoadingState } from '@/components/ui/states';
 import { PWA_COPY } from '@/lib/pwa/copy';
 import { TELEGRAM_FE_COPY } from '@/lib/telegram/copy';
 import { useLinkCode } from '@/hooks/useLinkCode';
@@ -35,83 +38,77 @@ export default function SettingsPage() {
   }, []);
 
   if (loadingUser) {
-    return (
-      <main className="flex min-h-screen items-center justify-center">
-        <p>{TELEGRAM_FE_COPY.loading}</p>
-      </main>
-    );
+    return <LoadingState label={TELEGRAM_FE_COPY.loading} />;
   }
 
   if (loadError || !user) {
     return (
-      <main className="flex min-h-screen items-center justify-center p-4">
-        <p className="text-red-700">{loadError ?? TELEGRAM_FE_COPY.loadError}</p>
-      </main>
+      <div className="px-4 py-section">
+        <ErrorState message={loadError ?? TELEGRAM_FE_COPY.loadError} />
+      </div>
     );
   }
 
   const linked = Boolean(user.telegramUserId);
 
   return (
-    <main className="min-h-screen bg-gray-50 p-4 sm:p-6">
-      <div className="mx-auto w-full max-w-lg">
-        <Link href="/dashboard" className="text-sm text-blue-600 hover:text-blue-800">
-          {TELEGRAM_FE_COPY.settingsBack}
-        </Link>
-        <h1 className="mt-4 text-2xl font-bold">{TELEGRAM_FE_COPY.settingsTitle}</h1>
+    <div className="mx-auto w-full max-w-lg px-4 py-4 sm:px-6 sm:py-6">
+      <Link href="/dashboard" className="text-sm font-medium text-brand hover:underline">
+        {TELEGRAM_FE_COPY.settingsBack}
+      </Link>
+      <h1 className="mt-4 text-2xl font-bold text-ink">{TELEGRAM_FE_COPY.settingsTitle}</h1>
 
-        <section className="mt-6 space-y-3" data-testid="pwa-install-settings">
-          <h2 className="text-lg font-semibold">{PWA_COPY.settingsInstallHeading}</h2>
-          <IosInstallHint forceVisible />
-        </section>
+      <section className="mt-6 space-y-3" data-testid="pwa-install-settings">
+        <h2 className="text-lg font-semibold text-ink">{PWA_COPY.settingsInstallHeading}</h2>
+        <IosInstallHint forceVisible />
+      </section>
 
-        <section className="mt-6 rounded-lg bg-white p-6 shadow-md" data-testid="telegram-settings">
-          <h2 className="text-lg font-semibold">Telegram</h2>
-          {linked ? (
-            <p className="mt-2 text-sm text-gray-700" data-testid="telegram-linked-status">
-              {TELEGRAM_FE_COPY.linked}
+      <Card className="mt-6" data-testid="telegram-settings">
+        <h2 className="text-lg font-semibold text-ink">Telegram</h2>
+        {linked ? (
+          <p className="mt-2 text-sm text-ink" data-testid="telegram-linked-status">
+            {TELEGRAM_FE_COPY.linked}
+          </p>
+        ) : (
+          <p className="mt-2 text-sm text-ink" data-testid="telegram-unlinked-status">
+            {TELEGRAM_FE_COPY.unlinked}
+          </p>
+        )}
+
+        <Button
+          type="button"
+          onClick={() => void requestCode()}
+          disabled={loading}
+          className="mt-4"
+          data-testid="generate-link-code"
+        >
+          {loading ? TELEGRAM_FE_COPY.generating : TELEGRAM_FE_COPY.generateCode}
+        </Button>
+
+        {error && (
+          <p className="mt-3 text-sm text-danger" data-testid="link-code-error">
+            {error}
+          </p>
+        )}
+
+        {code && (
+          <div className="mt-4 rounded-md border border-line bg-canvas p-4">
+            <p className="text-xs uppercase tracking-wide text-ink-muted">
+              {TELEGRAM_FE_COPY.codeLabel}
             </p>
-          ) : (
-            <p className="mt-2 text-sm text-gray-700" data-testid="telegram-unlinked-status">
-              {TELEGRAM_FE_COPY.unlinked}
+            <p
+              className="mt-1 font-mono text-2xl font-semibold tracking-widest text-ink"
+              data-testid="telegram-link-code"
+            >
+              {code.code}
             </p>
-          )}
-
-          <button
-            type="button"
-            onClick={() => void requestCode()}
-            disabled={loading}
-            className="mt-4 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-            data-testid="generate-link-code"
-          >
-            {loading ? TELEGRAM_FE_COPY.generating : TELEGRAM_FE_COPY.generateCode}
-          </button>
-
-          {error && (
-            <p className="mt-3 text-sm text-red-700" data-testid="link-code-error">
-              {error}
+            <p className="mt-2 text-sm text-ink-muted">{TELEGRAM_FE_COPY.codeHint}</p>
+            <p className="mt-1 text-xs text-ink-muted" data-testid="telegram-link-code-expiry">
+              Vence: {new Date(code.expiresAt).toLocaleString('es-AR')}
             </p>
-          )}
-
-          {code && (
-            <div className="mt-4 rounded-md border border-gray-200 bg-gray-50 p-4">
-              <p className="text-xs uppercase tracking-wide text-gray-500">
-                {TELEGRAM_FE_COPY.codeLabel}
-              </p>
-              <p
-                className="mt-1 font-mono text-2xl font-semibold tracking-widest"
-                data-testid="telegram-link-code"
-              >
-                {code.code}
-              </p>
-              <p className="mt-2 text-sm text-gray-600">{TELEGRAM_FE_COPY.codeHint}</p>
-              <p className="mt-1 text-xs text-gray-500" data-testid="telegram-link-code-expiry">
-                Vence: {new Date(code.expiresAt).toLocaleString('es-AR')}
-              </p>
-            </div>
-          )}
-        </section>
-      </div>
-    </main>
+          </div>
+        )}
+      </Card>
+    </div>
   );
 }

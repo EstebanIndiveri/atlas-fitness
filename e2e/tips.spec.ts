@@ -137,7 +137,7 @@ test.describe('Daily Tips', () => {
 
     const body = await moodResponse.json();
     expect(body.mood).toBe(3);
-    await expect(mood3Button).toHaveClass(/bg-blue-200/);
+    await expect(mood3Button).toHaveAttribute('aria-pressed', 'true');
   });
 
   test('should allow selecting different moods', async ({ page }) => {
@@ -145,11 +145,11 @@ test.describe('Daily Tips', () => {
     const mood5Button = page.getByTestId('mood-5');
 
     await mood1Button.click();
-    await expect(mood1Button).toHaveClass(/bg-blue-200/);
+    await expect(mood1Button).toHaveAttribute('aria-pressed', 'true');
 
     await mood5Button.click();
-    await expect(mood5Button).toHaveClass(/bg-blue-200/);
-    await expect(mood1Button).not.toHaveClass(/bg-blue-200/);
+    await expect(mood5Button).toHaveAttribute('aria-pressed', 'true');
+    await expect(mood1Button).toHaveAttribute('aria-pressed', 'false');
   });
 
   test('should show tip even with AI disabled (fallback to system)', async ({ page }) => {
@@ -197,7 +197,7 @@ test.describe('TipCard mood hydration', () => {
       ),
       mood4Button.click(),
     ]);
-    await expect(mood4Button).toHaveClass(/bg-blue-200/);
+    await expect(mood4Button).toHaveAttribute('aria-pressed', 'true');
 
     const moodGet = page.waitForResponse(
       (resp) =>
@@ -209,6 +209,6 @@ test.describe('TipCard mood hydration', () => {
     await page.reload({ waitUntil: 'domcontentloaded' });
     await moodGet;
     await page.waitForSelector('[data-testid="tip-card"]', { state: 'visible', timeout: 10000 });
-    await expect(page.getByTestId('mood-4')).toHaveClass(/bg-blue-200/);
+    await expect(page.getByTestId('mood-4')).toHaveAttribute('aria-pressed', 'true');
   });
 });

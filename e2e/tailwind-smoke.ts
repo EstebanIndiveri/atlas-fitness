@@ -1,12 +1,14 @@
 import { expect, type Locator } from '@playwright/test';
 import { cssColorsMatch } from '../lib/styles/css-color';
+import { ATLAS_COLOR_RGB, ATLAS_RADIUS_PX } from '../lib/ui/tokens';
 
-/** Default Tailwind palette — smoke that utilities apply. Not a design-token system. */
-export const TW_SMOKE = {
-  slate900: 'rgb(15, 23, 42)',
-  gray50: 'rgb(249, 250, 251)',
-  white: 'rgb(255, 255, 255)',
-  roundedMd: '6px',
+/** HU-B token smoke — compare computed colors in RGB channel space (rgb or lab). */
+export const ATLAS_SMOKE = {
+  brand: ATLAS_COLOR_RGB.brand,
+  canvas: ATLAS_COLOR_RGB.canvas,
+  ink: ATLAS_COLOR_RGB.ink,
+  brandForeground: ATLAS_COLOR_RGB.brandForeground,
+  roundedMd: ATLAS_RADIUS_PX.md,
 } as const;
 
 /**

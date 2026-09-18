@@ -3,9 +3,15 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
+import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
+import { Input, TextArea, fieldClassName } from '@/components/ui/Input';
+import { EmptyState, LoadingState } from '@/components/ui/states';
+import { UI_COPY } from '@/lib/copy/ui';
 import { compareDecimal } from '@/lib/format/decimal';
-import type { WorkoutSet, Exercise } from '@/lib/db/schema';
 import { formatWeightKg } from '@/lib/format/weight';
+import { cn } from '@/lib/ui/cn';
+import type { WorkoutSet, Exercise } from '@/lib/db/schema';
 
 interface WorkoutWithSets {
   id: number;
@@ -40,13 +46,11 @@ export default function WorkoutSessionPage() {
   const [restTimer, setRestTimer] = useState(0);
   const [timerActive, setTimerActive] = useState(false);
 
-  // Form state
   const [selectedExerciseId, setSelectedExerciseId] = useState<number | null>(null);
   const [reps, setReps] = useState('10');
   const [weight, setWeight] = useState('');
   const [editingSetId, setEditingSetId] = useState<number | null>(null);
 
-  // End workout form
   const [note, setNote] = useState('');
   const [mood, setMood] = useState<number | null>(null);
 
@@ -211,246 +215,232 @@ export default function WorkoutSessionPage() {
   };
 
   if (loading) {
-    return (
-      <main className="flex min-h-screen items-center justify-center">
-        <p className="text-lg">Cargando...</p>
-      </main>
-    );
+    return <LoadingState />;
   }
 
   if (!workout) {
     return (
-      <main className="flex min-h-screen items-center justify-center">
-        <p className="text-lg">Entrenamiento no encontrado</p>
-      </main>
+      <div className="px-4 py-section">
+        <p className="text-lg text-ink">{UI_COPY.workoutNotFound}</p>
+      </div>
     );
   }
 
   const isEnded = !!workout.endedAt;
 
   return (
-    <main className="flex min-h-screen flex-col p-4 bg-gray-50">
-      <div className="max-w-4xl mx-auto w-full">
-        <div className="flex items-center justify-between mb-4">
-          <Link href="/dashboard" className="text-blue-600 hover:text-blue-800 text-sm">
-            ← Volver
-          </Link>
-          {!isEnded && (
-            <button
-              onClick={() => setShowEndWorkout(true)}
-              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm"
-            >
-              Finalizar
-            </button>
-          )}
-        </div>
-
-        <div className="bg-white rounded-lg shadow-md p-4 mb-4">
-          <h1 className="text-xl font-bold mb-2">
-            {isEnded ? 'Entrenamiento Finalizado' : 'Sesión Activa'}
-          </h1>
-          <p className="text-sm text-gray-600">
-            Inicio: {new Date(workout.startedAt).toLocaleString('es-AR')}
-          </p>
-          {workout.endedAt && (
-            <p className="text-sm text-gray-600">
-              Fin: {new Date(workout.endedAt).toLocaleString('es-AR')}
-            </p>
-          )}
-        </div>
-
-        {timerActive && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4 text-center">
-            <p className="text-sm font-medium text-blue-900">Descanso</p>
-            <p className="text-3xl font-bold text-blue-600">{restTimer}s</p>
-          </div>
-        )}
-
-        {!isEnded && !showAddSet && (
-          <button
-            onClick={() => setShowAddSet(true)}
-            className="w-full py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium mb-4"
-            data-testid="add-set-button"
-          >
-            + Agregar Serie
-          </button>
-        )}
-
-        {showAddSet && (
-          <div className="bg-white rounded-lg shadow-md p-4 mb-4">
-            <h2 className="text-lg font-semibold mb-3">
-              {editingSetId ? 'Editar Serie' : 'Nueva Serie'}
-            </h2>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-sm font-medium mb-1">Ejercicio</label>
-                <select
-                  value={selectedExerciseId || ''}
-                  onChange={(e) => setSelectedExerciseId(parseInt(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  data-testid="exercise-select"
-                >
-                  <option value="">Seleccionar ejercicio</option>
-                  {exercises.map((ex) => (
-                    <option key={ex.id} value={ex.id}>
-                      {ex.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Repeticiones</label>
-                  <input
-                    type="number"
-                    value={reps}
-                    onChange={(e) => setReps(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                    min="1"
-                    data-testid="reps-input"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Peso (kg)</label>
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    value={weight}
-                    onChange={(e) => setWeight(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                    placeholder="80"
-                    data-testid="weight-input"
-                  />
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={handleAddOrUpdateSet}
-                  className="flex-1 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                  data-testid="save-set-button"
-                >
-                  {editingSetId ? 'Actualizar' : 'Guardar'}
-                </button>
-                <button
-                  onClick={resetForm}
-                  className="flex-1 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
-                >
-                  Cancelar
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div className="bg-white rounded-lg shadow-md p-4">
-          <h2 className="text-lg font-semibold mb-3">
-            Series ({workout.sets.length})
-          </h2>
-          {workout.sets.length === 0 ? (
-            <p className="text-gray-500 text-sm">No hay series registradas aún.</p>
-          ) : (
-            <div className="space-y-2">
-              {workout.sets.map((set) => {
-                const exercise = exercises.find((ex) => ex.id === set.exerciseId);
-                const isNewPR = isPR(set.exerciseId, set.weightKg);
-
-                return (
-                  <div
-                    key={set.id}
-                    className="flex items-center justify-between p-3 border border-gray-200 rounded-md"
-                    data-testid="workout-set"
-                  >
-                    <div className="flex-1">
-                      <p className="font-medium text-sm">
-                        {exercise?.name || 'Ejercicio desconocido'}
-                      </p>
-                      <p className="text-xs text-gray-600">
-                        {set.reps} reps × {formatWeightKg(set.weightKg)}
-                        {isNewPR && (
-                          <span className="ml-2 px-2 py-0.5 bg-yellow-100 text-yellow-800 text-xs rounded font-medium" data-testid="pr-badge">
-                            🏆 PR
-                          </span>
-                        )}
-                      </p>
-                    </div>
-                    {!isEnded && (
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleEditSet(set)}
-                          className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
-                        >
-                          Editar
-                        </button>
-                        <button
-                          onClick={() => handleDeleteSet(set.id)}
-                          className="px-3 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200"
-                        >
-                          Eliminar
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {showEndWorkout && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg p-6 max-w-md w-full">
-              <h2 className="text-xl font-bold mb-4">Finalizar Entrenamiento</h2>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Notas (opcional)</label>
-                  <textarea
-                    value={note}
-                    onChange={(e) => setNote(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                    rows={3}
-                    placeholder="¿Cómo te fue?"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">Estado de ánimo (opcional)</label>
-                  <div className="flex gap-2 justify-between">
-                    {[1, 2, 3, 4, 5].map((m) => (
-                      <button
-                        key={m}
-                        onClick={() => setMood(m)}
-                        className={`text-3xl p-2 rounded transition ${
-                          mood === m ? 'bg-blue-100 scale-110' : 'opacity-50 hover:opacity-100'
-                        }`}
-                      >
-                        {m === 1 && '😞'}
-                        {m === 2 && '😕'}
-                        {m === 3 && '😐'}
-                        {m === 4 && '😊'}
-                        {m === 5 && '😄'}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="flex gap-2 pt-4">
-                  <button
-                    onClick={handleEndWorkout}
-                    className="flex-1 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
-                    data-testid="confirm-end-workout"
-                  >
-                    Confirmar
-                  </button>
-                  <button
-                    onClick={() => setShowEndWorkout(false)}
-                    className="flex-1 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
+    <div className="mx-auto w-full max-w-4xl px-4 py-4">
+      <div className="mb-4 flex items-center justify-between">
+        <Link href="/dashboard" className="text-sm font-medium text-brand hover:underline">
+          ← Volver
+        </Link>
+        {!isEnded && (
+          <Button variant="success" onClick={() => setShowEndWorkout(true)}>
+            Finalizar
+          </Button>
         )}
       </div>
-    </main>
+
+      <Card className="mb-4 p-4">
+        <h1 className="mb-2 text-xl font-bold text-ink">
+          {isEnded ? 'Entrenamiento Finalizado' : 'Sesión Activa'}
+        </h1>
+        <p className="text-sm text-ink-muted">
+          Inicio: {new Date(workout.startedAt).toLocaleString('es-AR')}
+        </p>
+        {workout.endedAt && (
+          <p className="text-sm text-ink-muted">
+            Fin: {new Date(workout.endedAt).toLocaleString('es-AR')}
+          </p>
+        )}
+      </Card>
+
+      {timerActive && (
+        <Card tone="brand" elevated={false} className="mb-4 border border-brand p-4 text-center">
+          <p className="text-sm font-medium text-ink">Descanso</p>
+          <p className="text-3xl font-bold text-brand">{restTimer}s</p>
+        </Card>
+      )}
+
+      {!isEnded && !showAddSet && (
+        <Button
+          size="lg"
+          onClick={() => setShowAddSet(true)}
+          className="mb-4"
+          data-testid="add-set-button"
+        >
+          + Agregar Serie
+        </Button>
+      )}
+
+      {showAddSet && (
+        <Card className="mb-4 p-4">
+          <h2 className="mb-3 text-lg font-semibold text-ink">
+            {editingSetId ? 'Editar Serie' : 'Nueva Serie'}
+          </h2>
+          <div className="space-y-3">
+            <div>
+              <label htmlFor="exercise-select" className="mb-1 block text-sm font-medium text-ink">
+                Ejercicio
+              </label>
+              <select
+                id="exercise-select"
+                value={selectedExerciseId || ''}
+                onChange={(e) => setSelectedExerciseId(parseInt(e.target.value))}
+                className={fieldClassName()}
+                data-testid="exercise-select"
+              >
+                <option value="">Seleccionar ejercicio</option>
+                {exercises.map((ex) => (
+                  <option key={ex.id} value={ex.id}>
+                    {ex.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Input
+                id="reps-input"
+                label="Repeticiones"
+                type="number"
+                value={reps}
+                onChange={(e) => setReps(e.target.value)}
+                min="1"
+                data-testid="reps-input"
+              />
+              <Input
+                id="weight-input"
+                label="Peso (kg)"
+                type="text"
+                inputMode="decimal"
+                value={weight}
+                onChange={(e) => setWeight(e.target.value)}
+                placeholder="80"
+                data-testid="weight-input"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button className="flex-1" onClick={handleAddOrUpdateSet} data-testid="save-set-button">
+                {editingSetId ? 'Actualizar' : 'Guardar'}
+              </Button>
+              <Button variant="secondary" className="flex-1" onClick={resetForm}>
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      <Card className="p-4">
+        <h2 className="mb-3 text-lg font-semibold text-ink">Series ({workout.sets.length})</h2>
+        {workout.sets.length === 0 ? (
+          <EmptyState title={UI_COPY.emptySetsTitle} description={UI_COPY.emptySetsBody} />
+        ) : (
+          <div className="space-y-2">
+            {workout.sets.map((set) => {
+              const exercise = exercises.find((ex) => ex.id === set.exerciseId);
+              const isNewPR = isPR(set.exerciseId, set.weightKg);
+
+              return (
+                <div
+                  key={set.id}
+                  className="flex items-center justify-between rounded-md border border-line p-3"
+                  data-testid="workout-set"
+                >
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-ink">
+                      {exercise?.name || 'Ejercicio desconocido'}
+                    </p>
+                    <p className="text-xs text-ink-muted">
+                      {set.reps} reps × {formatWeightKg(set.weightKg)}
+                      {isNewPR && (
+                        <span
+                          className="ml-2 rounded-md bg-warning-muted px-2 py-0.5 text-xs font-medium text-warning"
+                          data-testid="pr-badge"
+                        >
+                          🏆 PR
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                  {!isEnded && (
+                    <div className="flex gap-2">
+                      <Button variant="secondary" size="sm" onClick={() => handleEditSet(set)}>
+                        Editar
+                      </Button>
+                      <Button variant="danger" size="sm" onClick={() => handleDeleteSet(set.id)}>
+                        Eliminar
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </Card>
+
+      {showEndWorkout && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="end-workout-title"
+        >
+          <Card className="w-full max-w-md p-6">
+            <h2 id="end-workout-title" className="mb-4 text-xl font-bold text-ink">
+              Finalizar Entrenamiento
+            </h2>
+            <div className="space-y-4">
+              <TextArea
+                id="workout-note"
+                label="Notas (opcional)"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                rows={3}
+                placeholder="¿Cómo te fue?"
+              />
+              <div>
+                <p className="mb-2 text-sm font-medium text-ink">Estado de ánimo (opcional)</p>
+                <div className="flex justify-between gap-2">
+                  {[1, 2, 3, 4, 5].map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setMood(m)}
+                      aria-pressed={mood === m}
+                      aria-label={`Estado de ánimo ${m}`}
+                      className={cn(
+                        'rounded-md p-2 text-3xl',
+                        mood === m ? 'bg-brand-muted' : 'opacity-50 hover:opacity-100',
+                      )}
+                    >
+                      {m === 1 && '😞'}
+                      {m === 2 && '😕'}
+                      {m === 3 && '😐'}
+                      {m === 4 && '😊'}
+                      {m === 5 && '😄'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex gap-2 pt-4">
+                <Button
+                  variant="success"
+                  className="flex-1"
+                  onClick={handleEndWorkout}
+                  data-testid="confirm-end-workout"
+                >
+                  Confirmar
+                </Button>
+                <Button variant="secondary" className="flex-1" onClick={() => setShowEndWorkout(false)}>
+                  Cancelar
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
+    </div>
   );
 }

@@ -22,13 +22,13 @@ function compileAppCssInChildProcess(): string {
 
 describe('cssContainsUtility', () => {
   it('matches a generated class selector', () => {
-    expect(cssContainsUtility('.bg-slate-900{background-color:#0f172a}', 'bg-slate-900')).toBe(
+    expect(cssContainsUtility('.bg-brand{background-color:#1f6b4a}', 'bg-brand')).toBe(
       true,
     );
   });
 
   it('does not match a missing utility', () => {
-    expect(cssContainsUtility('.flex{display:flex}', 'bg-slate-900')).toBe(false);
+    expect(cssContainsUtility('.flex{display:flex}', 'bg-brand')).toBe(false);
   });
 });
 
