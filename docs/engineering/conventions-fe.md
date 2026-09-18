@@ -17,9 +17,11 @@ Ver también `AGENTS.md` §§8–10 y ADR-002.
 
 ## Estilos
 
-- Una fuente de tokens (theme / CSS variables).
+- Una fuente de tokens: Tailwind v4 `@theme` en `app/globals.css`, espejado en `lib/ui/tokens.ts`.
+- Utilidades semánticas (`bg-brand`, `text-ink`, `bg-canvas`, `rounded-md`) — no hex suelto en páginas.
+- Primitivas en `components/ui/` (Button, Card, Input, Empty/Loading/Error) y shell en `components/shell/`.
 - Mobile-first; teclado numérico en inputs de peso/reps.
-- Copy `es-AR` centralizado (constantes o diccionario simple).
+- Copy `es-AR` centralizado (`lib/copy/ui.ts` y diccionarios de dominio).
 
 ## Anti-patrones
 

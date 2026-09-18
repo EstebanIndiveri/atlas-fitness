@@ -1,4 +1,6 @@
+import { ATLAS_COLOR } from '@/lib/ui/tokens';
+
 export const PWA_THEME = {
-  themeColor: '#0B1220',
-  backgroundColor: '#F9FAFB',
+  themeColor: ATLAS_COLOR.ink,
+  backgroundColor: ATLAS_COLOR.canvas,
 } as const;

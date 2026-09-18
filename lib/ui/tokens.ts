@@ -31,6 +31,13 @@ export const ATLAS_RADIUS = {
   full: '9999px',
 } as const;
 
+/** Computed px at 16px root — Playwright `toHaveCSS('border-radius')`. */
+export const ATLAS_RADIUS_PX = {
+  sm: '6px',
+  md: '8px',
+  lg: '12px',
+} as const;
+
 export const ATLAS_FONT = {
   sans: "ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
 } as const;

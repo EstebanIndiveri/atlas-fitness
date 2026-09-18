@@ -2,12 +2,15 @@ import { describe, expect, it } from '@jest/globals';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { ATLAS_COLOR, hexToRgb, hexToRgbCss } from './tokens';
+import { PWA_THEME } from '@/lib/pwa/theme';
 
 describe('ATLAS_COLOR', () => {
   it('keeps PWA theme ink and a warm canvas (not utilitarian gray)', () => {
     expect(ATLAS_COLOR.ink).toBe('#0B1220');
     expect(ATLAS_COLOR.canvas).toBe('#F3EEE4');
     expect(ATLAS_COLOR.canvas.toLowerCase()).not.toBe('#f9fafb');
+    expect(PWA_THEME.themeColor).toBe(ATLAS_COLOR.ink);
+    expect(PWA_THEME.backgroundColor).toBe(ATLAS_COLOR.canvas);
   });
 
   it('hexToRgbCss matches channel math', () => {

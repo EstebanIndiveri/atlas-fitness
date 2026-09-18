@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { expectCssColor, TW_SMOKE } from './tailwind-smoke';
+import { expectCssColor, ATLAS_SMOKE } from './tailwind-smoke';
 
 const TEST_USER = {
   name: 'E2E Test User',
@@ -33,10 +33,10 @@ test.describe('Authentication Flow', () => {
     await page.waitForResponse((resp) => resp.url().includes('/api/auth/me'));
     await expect(page.locator('[data-testid="welcome-message"]')).toBeVisible({ timeout: 10000 });
     await expect(page.locator('[data-testid="welcome-message"]')).toContainText(TEST_USER.name);
-    await expectCssColor(page.locator('main').first(), 'background-color', TW_SMOKE.gray50);
+    await expectCssColor(page.locator('main').first(), 'background-color', ATLAS_SMOKE.canvas);
     await expect(page.getByRole('button', { name: 'Cerrar sesión' })).toHaveCSS(
       'border-radius',
-      TW_SMOKE.roundedMd,
+      ATLAS_SMOKE.roundedMd,
     );
 
     // Logout
@@ -84,7 +84,7 @@ test.describe('Authentication Flow', () => {
     await page.click('button[type="submit"]');
 
     // Should show validation error
-    await expect(page.locator('.bg-red-50')).toBeVisible();
+    await expect(page.getByTestId('form-error')).toBeVisible();
   });
 
   test('should redirect logged-in user from login to dashboard', async ({ page }) => {
@@ -124,7 +124,7 @@ test.describe('Authentication Flow', () => {
     // Wait for either success (navigation to dashboard) or error
     await Promise.race([
       page.waitForURL('/dashboard', { timeout: 15000 }),
-      page.waitForSelector('.bg-red-50', { timeout: 15000 }),
+      page.waitForSelector('[data-testid="form-error"]', { timeout: 15000 }),
     ]);
 
     // If we're on dashboard, check welcome message

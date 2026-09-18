@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { Card } from '@/components/ui/Card';
+import { ErrorState, LoadingState } from '@/components/ui/states';
 import type { StreakStats } from '@/types/streak';
 
 function daysLabel(count: number): string {
@@ -33,50 +35,37 @@ export function StreakChip() {
 
   if (loading) {
     return (
-      <div
-        className="bg-white rounded-lg shadow-md p-4 mb-6"
-        data-testid="streak-chip"
-        aria-busy="true"
-      >
-        <div className="animate-pulse">
-          <div className="h-4 bg-gray-200 rounded w-1/3 mb-2"></div>
-          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-        </div>
-      </div>
+      <Card className="mb-6 p-4" data-testid="streak-chip" aria-busy="true">
+        <LoadingState compact />
+      </Card>
     );
   }
 
   if (error || !streak) {
     return (
-      <div
-        className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6"
-        data-testid="streak-chip"
-      >
-        <p className="text-red-800 text-sm">{error ?? 'No pudimos cargar tu racha'}</p>
+      <div className="mb-6" data-testid="streak-chip">
+        <ErrorState message={error ?? 'No pudimos cargar tu racha'} />
       </div>
     );
   }
 
   return (
-    <div
-      className="bg-white rounded-lg shadow-md p-4 mb-6"
-      data-testid="streak-chip"
-    >
-      <p className="text-sm font-semibold text-gray-900">
+    <Card className="mb-6 p-4" data-testid="streak-chip">
+      <p className="text-sm font-semibold text-ink">
         Racha actual:{' '}
         <span data-testid="current-streak">{streak.currentStreak}</span>{' '}
         {daysLabel(streak.currentStreak)}
       </p>
-      <p className="text-sm text-gray-600 mt-1">
+      <p className="mt-1 text-sm text-ink-muted">
         Mejor racha:{' '}
         <span data-testid="longest-streak">{streak.longestStreak}</span>{' '}
         {daysLabel(streak.longestStreak)}
       </p>
       {streak.currentStreak === 0 && (
-        <p className="text-xs text-gray-500 mt-2">
+        <p className="mt-2 text-xs text-ink-muted">
           Todavía no tenés racha. Entrená o registrá tu ánimo hoy.
         </p>
       )}
-    </div>
+    </Card>
   );
 }
