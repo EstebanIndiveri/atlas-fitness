@@ -7,7 +7,7 @@ import { listRoutines } from '@/lib/services/routines';
  */
 export async function GET(request: NextRequest) {
   try {
-    requireAuth(request);
+    await requireAuth(request);
     const routines = await listRoutines();
     return NextResponse.json(routines);
   } catch (error) {

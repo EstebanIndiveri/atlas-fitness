@@ -18,6 +18,9 @@ export interface AuthUser {
 
 export interface SessionData {
   userId: number;
+  sessionId: string;
+  iat: number;
+  exp: number;
 }
 
 export interface TelegramLinkCodeResponse {

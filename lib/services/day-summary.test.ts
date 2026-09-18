@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from '@jest/globals';
 import { db } from '@/lib/db/client';
 import {
+  sessions,
   botMessages,
   dailyCheckins,
   exercises,
@@ -33,6 +34,7 @@ describe('getDaySummary', () => {
     await db.delete(exercises);
     await db.delete(telegramLinkCodes);
     await db.delete(userStreaks);
+    await db.delete(sessions);
     await db.delete(users);
 
     const [user] = await db

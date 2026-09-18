@@ -5,7 +5,7 @@ import { AppError } from '@/types/errors';
 
 export async function GET(request: NextRequest) {
   try {
-    const session = requireAuth(request);
+    const session = await requireAuth(request);
 
     const user = await getUserById(session.userId);
 

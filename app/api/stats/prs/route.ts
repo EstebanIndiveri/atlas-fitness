@@ -7,7 +7,7 @@ import * as statsService from '@/lib/services/stats';
  */
 export async function GET(request: NextRequest) {
   try {
-    const session = requireAuth(request);
+    const session = await requireAuth(request);
     const prs = await statsService.getPersonalRecords(session.userId);
 
     return NextResponse.json(prs);

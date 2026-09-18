@@ -10,7 +10,7 @@ import * as workoutsService from '@/lib/services/workouts';
  */
 export async function GET(request: NextRequest) {
   try {
-    const session = requireAuth(request);
+    const session = await requireAuth(request);
     const workout = await workoutsService.getActiveWorkout(session.userId);
 
     return NextResponse.json(workout);

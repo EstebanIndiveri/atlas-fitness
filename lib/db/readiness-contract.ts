@@ -23,6 +23,12 @@ export const REQUIRED_SCHEMA: readonly RequiredTable[] = [
     ],
   },
   {
+    name: 'sessions',
+    columns: ['id', 'user_id', 'created_at', 'expires_at', 'revoked_at'],
+    primaryKey: ['id'],
+    indexes: [],
+  },
+  {
     name: 'exercises',
     columns: [
       'id',

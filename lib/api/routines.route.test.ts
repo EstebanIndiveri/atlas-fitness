@@ -4,9 +4,10 @@
 import { describe, it, expect, beforeEach } from '@jest/globals';
 import { NextRequest } from 'next/server';
 import { GET } from '@/app/api/routines/route';
-import { encodeSession, SESSION_COOKIE_NAME } from '@/lib/auth/session';
+import { issueSessionCookieHeader } from '@/lib/auth/session-store';
 import { db } from '@/lib/db/client';
 import {
+  sessions,
   botMessages,
   dailyCheckins,
   exercises,
@@ -20,8 +21,8 @@ import {
   workoutSets,
 } from '@/lib/db/schema';
 
-function authenticatedRequest(userId: number): NextRequest {
-  const cookie = `${SESSION_COOKIE_NAME}=${encodeSession({ userId })}`;
+async function authenticatedRequest(userId: number): Promise<NextRequest> {
+  const cookie = await issueSessionCookieHeader(userId);
   return new NextRequest('http://localhost:3000/api/routines', {
     method: 'GET',
     headers: { cookie },
@@ -42,6 +43,7 @@ describe('GET /api/routines', () => {
     await db.delete(botMessages);
     await db.delete(telegramLinkCodes);
     await db.delete(exercises);
+    await db.delete(sessions);
     await db.delete(users);
 
     const [user] = await db
@@ -82,7 +84,7 @@ describe('GET /api/routines', () => {
   });
 
   it('returns 200 with seeded routines for an authenticated user', async () => {
-    const response = await GET(authenticatedRequest(userId));
+    const response = await GET(await authenticatedRequest(userId));
     expect(response.status).toBe(200);
     const body = (await response.json()) as { name: string; exercises: unknown[] }[];
     expect(body).toHaveLength(1);

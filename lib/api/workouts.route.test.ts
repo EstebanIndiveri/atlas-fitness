@@ -4,10 +4,11 @@
 import { describe, it, expect, beforeEach } from '@jest/globals';
 import { NextRequest } from 'next/server';
 import { POST } from '@/app/api/workouts/route';
-import { encodeSession, SESSION_COOKIE_NAME } from '@/lib/auth/session';
+import { issueSessionCookieHeader } from '@/lib/auth/session-store';
 import * as workoutsService from '@/lib/services/workouts';
 import { db } from '@/lib/db/client';
 import {
+  sessions,
   users,
   workouts,
   workoutSets,
@@ -20,8 +21,8 @@ import {
   routineExercises,
 } from '@/lib/db/schema';
 
-function authenticatedRequest(userId: number, body?: unknown): NextRequest {
-  const cookie = `${SESSION_COOKIE_NAME}=${encodeSession({ userId })}`;
+async function authenticatedRequest(userId: number, body?: unknown): Promise<NextRequest> {
+  const cookie = await issueSessionCookieHeader(userId);
   return new NextRequest('http://localhost:3000/api/workouts', {
     method: 'POST',
     headers: { cookie, 'content-type': 'application/json' },
@@ -42,6 +43,7 @@ describe('POST /api/workouts', () => {
     await db.delete(telegramLinkCodes);
     await db.delete(routineExercises);
     await db.delete(routines);
+    await db.delete(sessions);
     await db.delete(users);
 
     const [user] = await db
@@ -56,7 +58,7 @@ describe('POST /api/workouts', () => {
   });
 
   it('creates a workout with HTTP 201', async () => {
-    const response = await POST(authenticatedRequest(testUserId, {}));
+    const response = await POST(await authenticatedRequest(testUserId, {}));
     const body = (await response.json()) as { id: number; endedAt: string | null };
 
     expect(response.status).toBe(201);
@@ -65,7 +67,7 @@ describe('POST /api/workouts', () => {
   });
 
   it('returns 400 VALIDATION for an invalid routineId body', async () => {
-    const response = await POST(authenticatedRequest(testUserId, { routineId: 'nope' }));
+    const response = await POST(await authenticatedRequest(testUserId, { routineId: 'nope' }));
     const body = (await response.json()) as { code: string };
 
     expect(response.status).toBe(400);
@@ -73,7 +75,7 @@ describe('POST /api/workouts', () => {
   });
 
   it('returns 400 VALIDATION when routineId does not exist', async () => {
-    const response = await POST(authenticatedRequest(testUserId, { routineId: 99999 }));
+    const response = await POST(await authenticatedRequest(testUserId, { routineId: 99999 }));
     const body = (await response.json()) as { code: string; message: string };
 
     expect(response.status).toBe(400);
@@ -84,7 +86,7 @@ describe('POST /api/workouts', () => {
   it('returns 409 CONFLICT when an active workout already exists', async () => {
     await workoutsService.createWorkout(testUserId);
 
-    const response = await POST(authenticatedRequest(testUserId, {}));
+    const response = await POST(await authenticatedRequest(testUserId, {}));
     const body = (await response.json()) as { code: string };
 
     expect(response.status).toBe(409);

@@ -19,7 +19,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string; setId: string }> }
 ) {
   try {
-    const session = requireAuth(request);
+    const session = await requireAuth(request);
     const { setId } = await params;
     const setIdNum = parseInt(setId);
 
@@ -56,7 +56,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string; setId: string }> }
 ) {
   try {
-    const session = requireAuth(request);
+    const session = await requireAuth(request);
     const { setId } = await params;
     const setIdNum = parseInt(setId);
 

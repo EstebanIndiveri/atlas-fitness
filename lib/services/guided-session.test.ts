@@ -4,6 +4,7 @@
 import { describe, it, expect, beforeEach } from '@jest/globals';
 import { db } from '@/lib/db/client';
 import {
+  sessions,
   botMessages,
   dailyCheckins,
   exercises,
@@ -38,7 +39,8 @@ async function wipe() {
   await db.delete(botMessages);
   await db.delete(telegramLinkCodes);
   await db.delete(exercises);
-  await db.delete(users);
+  await db.delete(sessions);
+    await db.delete(users);
 }
 
 describe('guided session helpers', () => {
