@@ -52,6 +52,8 @@ test.describe('Guided session (Epic-E Must)', () => {
     await expect(page.getByTestId('guided-exercise-name')).toHaveText('Press Banca');
     // Media region is always rendered (placeholder when catalog imageUrl is null).
     await expect(page.getByTestId('guided-exercise-image')).toBeVisible();
+    await expect(page.getByTestId('session-skip')).toBeVisible();
+    await expect(page.getByTestId('session-hold')).toBeVisible();
 
     await page.fill('[data-testid="guided-weight-input"]', '40');
     await page.click('[data-testid="complete-set-button"]');
