@@ -23,22 +23,36 @@ export interface RoutineSummary {
   description: string | null;
   kind: RoutineKind;
   restSeconds: number;
+<<<<<<< HEAD
   isSystem: boolean;
   exercises: RoutineExerciseItem[];
 }
 
 export interface RoutineExerciseWrite {
+=======
+  /** Present when BE includes catalog ownership on the DTO. */
+  isSystem?: boolean;
+  exercises: RoutineExerciseItem[];
+}
+
+export interface RoutineWriteExercise {
+>>>>>>> 6723674 (feat(fe): routine editor form with media preview)
   exerciseId: number;
   sortOrder: number;
   targetSets: number;
   targetReps: number;
 }
 
+<<<<<<< HEAD
 export interface CreateRoutineInput {
+=======
+export interface RoutineWriteInput {
+>>>>>>> 6723674 (feat(fe): routine editor form with media preview)
   name: string;
   description?: string | null;
   kind: RoutineKind;
   restSeconds?: number;
+<<<<<<< HEAD
   exercises: RoutineExerciseWrite[];
 }
 
@@ -48,6 +62,9 @@ export interface UpdateRoutineInput {
   kind?: RoutineKind;
   restSeconds?: number;
   exercises?: RoutineExerciseWrite[];
+=======
+  exercises: RoutineWriteExercise[];
+>>>>>>> 6723674 (feat(fe): routine editor form with media preview)
 }
 
 export type SuggestionSource = 'gemini' | 'fallback';

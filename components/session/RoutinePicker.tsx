@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { Button, buttonClassName } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { ROUTINE_COPY, ROUTINE_TEST_IDS } from '@/lib/copy/routines';
 import { SESSION_COPY } from '@/lib/copy/session';
 import type { RoutineSummary } from '@/types/routine';
 
@@ -26,12 +27,26 @@ export function RoutinePicker({
       <Card>
         <h2 className="text-lg font-semibold text-ink">{SESSION_COPY.emptyRoutinesTitle}</h2>
         <p className="mt-2 text-sm text-ink-muted">{SESSION_COPY.emptyRoutinesBody}</p>
+        <Link
+          href="/dashboard/routines"
+          className={buttonClassName({ variant: 'secondary', className: 'mt-3' })}
+          data-testid={ROUTINE_TEST_IDS.manageCta}
+        >
+          {ROUTINE_COPY.manageCta}
+        </Link>
       </Card>
     );
   }
 
   return (
     <div className="space-y-4">
+      <Link
+        href="/dashboard/routines"
+        className={buttonClassName({ variant: 'secondary' })}
+        data-testid={ROUTINE_TEST_IDS.manageCta}
+      >
+        {ROUTINE_COPY.manageCta}
+      </Link>
       {activeWorkoutId ? (
         <Card tone="warning" className="p-4">
           <p className="text-sm text-ink">{SESSION_COPY.activeExists}</p>
