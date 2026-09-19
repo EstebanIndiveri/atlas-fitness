@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, jest } from '@jest/globals';
 import { postWorkoutQueueAction, SessionQueueClientError } from './client';
 
+type FetchInit = { method?: string; headers?: Record<string, string>; body?: string };
+
 function jsonResponse(body: unknown, status = 200): Response {
   return {
     ok: status >= 200 && status < 300,
@@ -17,7 +19,7 @@ describe('postWorkoutQueueAction', () => {
   });
 
   it('POSTs a typed skip action with clientMutationId', async () => {
-    const fetchMock = jest.fn(async () =>
+    const fetchMock = jest.fn(async (_input: string, _init?: FetchInit) =>
       jsonResponse({
         action: 'skip',
         clientMutationId: 'abc',
@@ -44,7 +46,8 @@ describe('postWorkoutQueueAction', () => {
       clientMutationId: 'abc',
     });
 
-    expect(fetchMock).toHaveBeenCalledWith('/api/workouts/8/skip', {
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/workouts/8/skip');
+    expect(fetchMock.mock.calls[0]?.[1]).toEqual({
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ exerciseId: 10, clientMutationId: 'abc' }),

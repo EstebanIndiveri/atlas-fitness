@@ -7,6 +7,8 @@ import { useGuidedSession } from './useGuidedSession';
 import type { RoutineExerciseItem, RoutineSummary } from '@/types/routine';
 import type { WorkoutSet } from '@/lib/db/schema';
 
+type FetchInit = { method?: string; body?: string };
+
 function jsonResponse(body: unknown, status = 200): Response {
   return {
     ok: status >= 200 && status < 300,
@@ -86,6 +88,10 @@ function suggestion(nextExerciseId: number | null, extra: { isLast?: boolean } =
   };
 }
 
+function readMethod(init?: FetchInit): string {
+  return init?.method ?? 'GET';
+}
+
 describe('useGuidedSession skip/hold', () => {
   const originalFetch = global.fetch;
 
@@ -94,9 +100,9 @@ describe('useGuidedSession skip/hold', () => {
   });
 
   it('advances to the next exercise on skip and leaves finished sets untouched', async () => {
-    global.fetch = jest.fn(async (input, init) => {
+    global.fetch = jest.fn(async (input: string, init?: FetchInit) => {
       const url = String(input);
-      const method = (init?.method as string | undefined) ?? 'GET';
+      const method = readMethod(init);
       if (url === '/api/workouts/8' && method === 'GET') {
         return jsonResponse(workout);
       }
@@ -141,9 +147,9 @@ describe('useGuidedSession skip/hold', () => {
   });
 
   it('holds the current exercise so it reappears after the others', async () => {
-    global.fetch = jest.fn(async (input, init) => {
+    global.fetch = jest.fn(async (input: string, init?: FetchInit) => {
       const url = String(input);
-      const method = (init?.method as string | undefined) ?? 'GET';
+      const method = readMethod(init);
       if (url === '/api/workouts/8' && method === 'GET') {
         return jsonResponse(workout);
       }
@@ -215,9 +221,9 @@ describe('useGuidedSession skip/hold', () => {
   });
 
   it('shows a 400 error when the workout is not active and does not mutate sets', async () => {
-    global.fetch = jest.fn(async (input, init) => {
+    global.fetch = jest.fn(async (input: string, init?: FetchInit) => {
       const url = String(input);
-      const method = (init?.method as string | undefined) ?? 'GET';
+      const method = readMethod(init);
       if (url === '/api/workouts/8' && method === 'GET') {
         return jsonResponse(workout);
       }

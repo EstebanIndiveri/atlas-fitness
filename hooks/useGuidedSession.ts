@@ -31,7 +31,7 @@ interface WorkoutPayload {
 export function useGuidedSession(workoutId: string) {
   const [workout, setWorkout] = useState<WorkoutPayload | null>(null);
   const [routine, setRoutine] = useState<RoutineSummary | null>(null);
-  const [queue, setQueue] = useState<WorkoutQueueState>(emptyWorkoutQueue);
+  const [queueOverride, setQueueOverride] = useState<WorkoutQueueState | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -93,20 +93,17 @@ export function useGuidedSession(workoutId: string) {
     return completedExerciseIdsForRoutine(routine, workout.sets);
   }, [routine, workout]);
 
-  useEffect(() => {
+  const queue = useMemo(() => {
     if (!routine) {
-      return;
+      return emptyWorkoutQueue();
     }
-    const fromApi = workout ? parseWorkoutQueueState(workout.queue) : null;
-    setQueue((previous) =>
-      reconcileWorkoutQueue({
-        orderedExerciseIds: routine.exercises.map((item) => item.exerciseId),
-        completedExerciseIds: completedIds,
-        previous,
-        fromApi,
-      }),
-    );
-  }, [routine, workout, completedIds]);
+    return reconcileWorkoutQueue({
+      orderedExerciseIds: routine.exercises.map((item) => item.exerciseId),
+      completedExerciseIds: completedIds,
+      previous: queueOverride,
+      fromApi: workout ? parseWorkoutQueueState(workout.queue) : null,
+    });
+  }, [routine, workout, completedIds, queueOverride]);
 
   const current = useMemo(() => {
     if (!routine) return null;
@@ -160,7 +157,7 @@ export function useGuidedSession(workoutId: string) {
       const nextCount = updated.sets.filter((set) => set.exerciseId === current.exerciseId).length;
       let wentToClose = false;
       if (nextCount >= current.targetSets) {
-        setQueue((previous) => applyComplete(previous, current.exerciseId));
+        setQueueOverride((previous) => applyComplete(previous ?? queue, current.exerciseId));
         const nextRes = await fetch(`/api/workouts/${workout.id}/next-exercise`, {
           method: 'POST',
         });
@@ -181,7 +178,7 @@ export function useGuidedSession(workoutId: string) {
     } finally {
       setBusy(false);
     }
-  }, [workout, current, routine, weight, load, enterCloseIfNeeded]);
+  }, [workout, current, routine, weight, load, enterCloseIfNeeded, queue]);
 
   const runQueueAction = useCallback(
     async (action: 'skip' | 'hold') => {
@@ -199,7 +196,7 @@ export function useGuidedSession(workoutId: string) {
           exerciseId: current.exerciseId,
           clientMutationId: createClientMutationId(),
         });
-        setQueue(result.queue);
+        setQueueOverride(result.queue);
         setSuggestion(result.suggestion);
         if (result.queue.pendingExerciseIds.length === 0) {
           await enterCloseIfNeeded(workout.id, {
