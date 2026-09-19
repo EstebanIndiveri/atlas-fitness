@@ -12,7 +12,7 @@ Reglas de testing, seed data, y criterios de aceptación para Must v2.
 | **Log Session** | Registrar entreno (ejercicio/sets/reps/peso) | Atómico, soft delete, no TOCTOU |
 | **Tip Card** | Tip diario + Stories → CTA log | Fallback IA, visible, navegable |
 | **Streaks** | Racha días consecutivos (TZ Cordoba) | TZ `America/Argentina/Cordoba`, conteo correcto, nudge |
-| **Soft Delete** | Workouts, sets, exercises custom | Listados filtran `deleted_at IS NULL` |
+| **Soft Delete** | Workouts, sets, exercises custom, routines custom | Listados filtran `deleted_at IS NULL` |
 | **PR (max weight_kg)** | Peso récord por ejercicio | Decimal string en asserts, empate → más reciente, badge visible en UI |
 | **Sesión guiada** | Rutina seed → check sets → rest + cue → Gemini/fallback next → cierre | Fallback sin key, 200+null active, copy es-AR |
 

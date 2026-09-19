@@ -17,7 +17,13 @@ import {
   workouts,
   workoutSets,
 } from '@/lib/db/schema';
-import { getRoutineById, listRoutines } from '@/lib/services/routines';
+import {
+  createRoutine,
+  deleteRoutine,
+  getRoutineById,
+  listRoutines,
+  updateRoutine,
+} from '@/lib/services/routines';
 import { createWorkout } from '@/lib/services/workouts';
 import { AppError } from '@/types/errors';
 
@@ -201,6 +207,138 @@ describe('Routines service', () => {
     await expect(createWorkout(userId, foreign.id)).rejects.toMatchObject({
       code: 'VALIDATION',
       message: 'Rutina no válida',
+    });
+  });
+
+  it('creates, updates and soft-deletes own custom routines', async () => {
+    const created = await createRoutine(userId, {
+      name: 'Casa custom',
+      description: 'Mía',
+      kind: 'home',
+      restSeconds: 40,
+      exercises: [
+        { exerciseId: benchId, sortOrder: 0, targetSets: 3, targetReps: 10 },
+        { exerciseId: squatId, sortOrder: 1, targetSets: 4, targetReps: 8 },
+      ],
+    });
+
+    expect(created.isSystem).toBe(false);
+    expect(created.slug).toBe(`casa-custom-u${userId}`);
+    expect(created).not.toHaveProperty('userId');
+    expect(created.exercises.map((item) => item.exerciseName)).toEqual(['Press Banca', 'Sentadilla']);
+
+    const listed = await listRoutines(userId);
+    expect(listed.map((item) => item.slug).sort()).toEqual(['casa-custom-u' + userId, 'full-body-expres'].sort());
+
+    const updated = await updateRoutine(created.id, userId, {
+      name: 'Casa custom 2',
+      exercises: [{ exerciseId: squatId, sortOrder: 0, targetSets: 5, targetReps: 5 }],
+    });
+    expect(updated.name).toBe('Casa custom 2');
+    expect(updated.exercises).toHaveLength(1);
+    expect(updated.exercises[0].exerciseName).toBe('Sentadilla');
+
+    await deleteRoutine(created.id, userId);
+    await expect(getRoutineById(created.id, userId)).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    const afterDelete = await listRoutines(userId);
+    expect(afterDelete.map((item) => item.id)).not.toContain(created.id);
+  });
+
+  it('forbids mutating system routines and 404s foreign mutate', async () => {
+    const system = (await listRoutines(userId)).find((item) => item.isSystem);
+    expect(system).toBeDefined();
+    await expect(updateRoutine(system!.id, userId, { name: 'Hack' })).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+      message: 'No puedes modificar una rutina del sistema',
+    });
+    await expect(deleteRoutine(system!.id, userId)).rejects.toMatchObject({ code: 'FORBIDDEN' });
+
+    const [other] = await db
+      .insert(users)
+      .values({ name: 'Other Mutate', email: 'other-mutate-routines@test.com', passwordHash: 'hash' })
+      .returning();
+    const [foreign] = await db
+      .insert(routines)
+      .values({
+        slug: 'foreign-mutate-svc',
+        name: 'Ajena svc',
+        kind: 'gym',
+        restSeconds: 30,
+        isSystem: false,
+        userId: other.id,
+      })
+      .returning();
+
+    await expect(updateRoutine(foreign.id, userId, { name: 'Hack' })).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+    });
+    await expect(deleteRoutine(foreign.id, userId)).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+    });
+  });
+
+  it('rejects empty exercise lists and inaccessible exercise ids', async () => {
+    await expect(
+      createRoutine(userId, {
+        name: 'Vacia',
+        kind: 'gym',
+        exercises: [],
+      }),
+    ).rejects.toMatchObject({
+      code: 'VALIDATION',
+      message: 'La rutina debe incluir al menos un ejercicio',
+    });
+
+    await expect(
+      createRoutine(userId, {
+        name: 'Invalida',
+        kind: 'gym',
+        exercises: [{ exerciseId: 999999, sortOrder: 0, targetSets: 3, targetReps: 10 }],
+      }),
+    ).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+      message: 'Ejercicio no encontrado',
+    });
+
+    const [other] = await db
+      .insert(users)
+      .values({ name: 'Other Ex', email: 'other-ex-routines@test.com', passwordHash: 'hash' })
+      .returning();
+    const [foreignEx] = await db
+      .insert(exercises)
+      .values({
+        slug: 'foreign-ex-routine',
+        name: 'Ajeno',
+        muscleGroup: 'Biceps',
+        instructions: 'x',
+        isSystem: false,
+        userId: other.id,
+      })
+      .returning();
+
+    await expect(
+      createRoutine(userId, {
+        name: 'Robo',
+        kind: 'gym',
+        exercises: [{ exerciseId: foreignEx.id, sortOrder: 0, targetSets: 3, targetReps: 10 }],
+      }),
+    ).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+      message: 'Ejercicio no encontrado',
+    });
+
+    await expect(
+      createRoutine(userId, {
+        name: 'Orden repetido',
+        kind: 'gym',
+        exercises: [
+          { exerciseId: benchId, sortOrder: 1, targetSets: 3, targetReps: 10 },
+          { exerciseId: squatId, sortOrder: 1, targetSets: 3, targetReps: 8 },
+        ],
+      }),
+    ).rejects.toMatchObject({
+      code: 'VALIDATION',
+      message: 'El orden de los ejercicios no puede repetirse',
     });
   });
 });

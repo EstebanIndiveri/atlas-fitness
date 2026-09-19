@@ -132,6 +132,37 @@ describe('Exercises API ownership', () => {
     await expect(foreignRes.json()).resolves.toMatchObject({ code: 'NOT_FOUND' });
   });
 
+  it('POST/PATCH round-trip imageUrl and videoUrl on own custom', async () => {
+    const created = await POST(
+      await authed(ownerId, 'http://localhost:3000/api/exercises', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: 'Face Pull',
+          muscleGroup: 'Espalda',
+          instructions: 'Tirar',
+          imageUrl: 'https://cdn.example.com/face.png',
+          videoUrl: 'https://youtube.com/watch?v=face',
+        }),
+      }),
+    );
+    expect(created.status).toBe(201);
+    const createdBody = (await created.json()) as ExerciseCatalogItem;
+    expect(createdBody.imageUrl).toBe('https://cdn.example.com/face.png');
+    expect(createdBody.videoUrl).toBe('https://youtube.com/watch?v=face');
+
+    const patched = await PATCH(
+      await authed(ownerId, `http://localhost:3000/api/exercises/${createdBody.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ videoUrl: 'https://youtube.com/watch?v=face-v2' }),
+      }),
+      { params: Promise.resolve({ id: String(createdBody.id) }) },
+    );
+    expect(patched.status).toBe(200);
+    const updated = (await patched.json()) as ExerciseCatalogItem;
+    expect(updated.imageUrl).toBe('https://cdn.example.com/face.png');
+    expect(updated.videoUrl).toBe('https://youtube.com/watch?v=face-v2');
+  });
+
   it('POST creates own custom; PATCH/DELETE foreign are 404', async () => {
     const created = await POST(
       await authed(ownerId, 'http://localhost:3000/api/exercises', {

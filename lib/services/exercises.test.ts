@@ -138,6 +138,25 @@ describe('Exercises service ownership', () => {
     expect(listed.map((item) => item.slug)).not.toContain('face-pull');
   });
 
+  it('stores and updates imageUrl and videoUrl on custom exercises', async () => {
+    const created = await createExercise(ownerId, {
+      name: 'Pull Apart',
+      muscleGroup: 'Espalda',
+      instructions: 'Abrir',
+      imageUrl: 'https://cdn.example.com/pull.png',
+      videoUrl: 'https://youtube.com/watch?v=abc',
+    });
+    expect(created.imageUrl).toBe('https://cdn.example.com/pull.png');
+    expect(created.videoUrl).toBe('https://youtube.com/watch?v=abc');
+
+    const updated = await updateExercise(created.id, ownerId, {
+      imageUrl: 'https://cdn.example.com/pull-v2.png',
+      videoUrl: null,
+    });
+    expect(updated.imageUrl).toBe('https://cdn.example.com/pull-v2.png');
+    expect(updated.videoUrl).toBeNull();
+  });
+
   it('updates own custom and 404s foreign mutate', async () => {
     const updated = await updateExercise(ownCustomId, ownerId, { name: 'Curl propio' });
     expect(updated.name).toBe('Curl propio');
