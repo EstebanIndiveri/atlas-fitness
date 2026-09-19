@@ -156,6 +156,11 @@ describe('Workouts Service', () => {
 
       expect(result.id).toBe(workout.id);
       expect(result.sets).toEqual([]);
+      expect(result.queue).toEqual({
+        pendingExerciseIds: [],
+        skippedExerciseIds: [],
+        heldExerciseIds: [],
+      });
     });
 
     it('should throw NOT_FOUND if workout does not exist', async () => {

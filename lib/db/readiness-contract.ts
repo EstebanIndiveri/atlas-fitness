@@ -89,6 +89,7 @@ export const REQUIRED_SCHEMA: readonly RequiredTable[] = [
       'note',
       'mood',
       'deleted_at',
+      'queue_json',
     ],
     primaryKey: ['id'],
     indexes: [],
@@ -112,6 +113,25 @@ export const REQUIRED_SCHEMA: readonly RequiredTable[] = [
         columns: ['workout_id', 'set_index'],
         partial: true,
         predicate: 'deleted_at IS NULL',
+      },
+    ],
+  },
+  {
+    name: 'workout_queue_mutations',
+    columns: [
+      'id',
+      'workout_id',
+      'action',
+      'client_mutation_id',
+      'exercise_id',
+      'response_json',
+      'created_at',
+    ],
+    primaryKey: ['id'],
+    indexes: [
+      {
+        name: 'workout_queue_mutations_workout_action_client_unique',
+        columns: ['workout_id', 'action', 'client_mutation_id'],
       },
     ],
   },

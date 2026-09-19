@@ -118,6 +118,7 @@ export const workouts = sqliteTable(
     endedAt: integer('ended_at', { mode: 'timestamp' }),
     note: text('note'),
     mood: integer('mood'),
+    queueJson: text('queue_json'),
     deletedAt: integer('deleted_at', { mode: 'timestamp' }),
   },
   (table) => ({
@@ -152,6 +153,33 @@ export const workoutSets = sqliteTable(
       .on(table.workoutId, table.setIndex)
       .where(sql`${table.deletedAt} IS NULL`),
   })
+);
+
+/**
+ * Skip/hold idempotency — one row per workout + action + clientMutationId.
+ */
+export const workoutQueueMutations = sqliteTable(
+  'workout_queue_mutations',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    workoutId: integer('workout_id')
+      .notNull()
+      .references(() => workouts.id),
+    action: text('action').notNull(),
+    clientMutationId: text('client_mutation_id').notNull(),
+    exerciseId: integer('exercise_id').notNull(),
+    responseJson: text('response_json').notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (table) => ({
+    uniqueMutation: uniqueIndex('workout_queue_mutations_workout_action_client_unique').on(
+      table.workoutId,
+      table.action,
+      table.clientMutationId,
+    ),
+  }),
 );
 
 /**
@@ -289,6 +317,9 @@ export type NewWorkout = typeof workouts.$inferInsert;
 
 export type WorkoutSet = typeof workoutSets.$inferSelect;
 export type NewWorkoutSet = typeof workoutSets.$inferInsert;
+
+export type WorkoutQueueMutation = typeof workoutQueueMutations.$inferSelect;
+export type NewWorkoutQueueMutation = typeof workoutQueueMutations.$inferInsert;
 
 export type DailyTip = typeof dailyTips.$inferSelect;
 export type NewDailyTip = typeof dailyTips.$inferInsert;
