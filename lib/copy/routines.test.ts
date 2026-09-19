@@ -9,5 +9,6 @@ describe('ROUTINE_COPY', () => {
     expect(ROUTINE_COPY.mediaEmpty).toBe('Sin imagen');
     expect(ROUTINE_COPY.mediaUrlHint).toMatch(/https:\/\//);
     expect(ROUTINE_COPY.mediaUrlHint).not.toMatch(/http\(s\)/);
+    expect(ROUTINE_COPY.mediaUrlLengthHint).toMatch(/2048/);
   });
 });

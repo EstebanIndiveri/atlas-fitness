@@ -63,6 +63,7 @@ export const ROUTINE_COPY = {
   imageUrlLabel: 'URL de imagen',
   videoUrlLabel: 'URL de video',
   mediaUrlHint: 'Solo URLs https://. El servidor limita a 2048 caracteres; no hay subida de archivos.',
+  mediaUrlLengthHint: 'La URL de media no puede superar 2048 caracteres.',
   uploadLabel: 'Subir archivo',
   uploadDisabled:
     'La subida de archivos no está disponible. Pegá una URL en los campos de media o esperá el endpoint de upload.',
