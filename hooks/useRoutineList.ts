@@ -13,27 +13,35 @@ function asClientError(error: unknown): RoutineClientError {
 }
 
 export function useRoutineList() {
-  const [routines, setRoutines] = useState<RoutineSummary[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [routines, setRoutines] = useState<RoutineSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const list = await fetchRoutines();
-      setRoutines(list);
-      setError(null);
-    } catch (cause) {
-      setError(asClientError(cause).message);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const [requestId, setRequestId] = useState(0);
 
   useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      try {
+        const list = await fetchRoutines();
+        if (cancelled) return;
+        setRoutines(list);
+        setError(null);
+      } catch (cause) {
+        if (cancelled) return;
+        setError(asClientError(cause).message);
+      }
+    }
+
     void load();
-  }, [load]);
+    return () => {
+      cancelled = true;
+    };
+  }, [requestId]);
+
+  const reload = useCallback(() => {
+    setRequestId((current) => current + 1);
+  }, []);
 
   const remove = useCallback(async (id: number) => {
     if (typeof window !== 'undefined' && !window.confirm(ROUTINE_COPY.deleteConfirm)) {
@@ -42,7 +50,7 @@ export function useRoutineList() {
     setDeletingId(id);
     try {
       await deleteRoutine(id);
-      setRoutines((current) => current.filter((item) => item.id !== id));
+      setRoutines((current) => (current ?? []).filter((item) => item.id !== id));
       setError(null);
       return true;
     } catch (cause) {
@@ -53,5 +61,12 @@ export function useRoutineList() {
     }
   }, []);
 
-  return { routines, loading, error, deletingId, reload: load, remove };
+  return {
+    routines: routines ?? [],
+    loading: routines === null && error === null,
+    error,
+    deletingId,
+    reload,
+    remove,
+  };
 }

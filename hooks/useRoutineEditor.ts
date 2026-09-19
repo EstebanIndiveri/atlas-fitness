@@ -58,12 +58,13 @@ async function persistCustomMedia(
 }
 
 export function useRoutineEditor(mode: 'create' | 'edit', routineId?: number) {
+  const loadKey = `${mode}:${routineId ?? 'new'}`;
   const [draft, setDraft] = useState<RoutineDraft>(emptyDraft);
   const [catalog, setCatalog] = useState<ExerciseCatalogItem[]>([]);
   const [baselineMedia, setBaselineMedia] = useState<Map<number, MediaSnapshot>>(new Map());
   const [selectedExerciseId, setSelectedExerciseId] = useState<number | null>(null);
   const [duplicateMessage, setDuplicateMessage] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loadedKey, setLoadedKey] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
@@ -74,8 +75,6 @@ export function useRoutineEditor(mode: 'create' | 'edit', routineId?: number) {
     let cancelled = false;
 
     async function load() {
-      setLoading(true);
-      setNotFound(false);
       try {
         const [catalogItems, routine] = await Promise.all([
           fetchExercises(),
@@ -89,6 +88,7 @@ export function useRoutineEditor(mode: 'create' | 'edit', routineId?: number) {
         if (mode === 'edit') {
           if (!routine) {
             setNotFound(true);
+            setLoadedKey(loadKey);
             return;
           }
           setDraft(applyCatalogOwnership(draftFromRoutine(routine), catalogItems));
@@ -97,7 +97,9 @@ export function useRoutineEditor(mode: 'create' | 'edit', routineId?: number) {
           setDraft(emptyDraft());
           setReadOnly(false);
         }
+        setNotFound(false);
         setError(null);
+        setLoadedKey(loadKey);
       } catch (cause) {
         if (cancelled) return;
         const mapped = asClientError(cause);
@@ -107,8 +109,7 @@ export function useRoutineEditor(mode: 'create' | 'edit', routineId?: number) {
         } else {
           setError(mapped.message);
         }
-      } finally {
-        if (!cancelled) setLoading(false);
+        setLoadedKey(loadKey);
       }
     }
 
@@ -116,7 +117,7 @@ export function useRoutineEditor(mode: 'create' | 'edit', routineId?: number) {
     return () => {
       cancelled = true;
     };
-  }, [mode, routineId]);
+  }, [loadKey, mode, routineId]);
 
   const validation = useMemo(() => {
     if (!showErrors) {
@@ -185,10 +186,10 @@ export function useRoutineEditor(mode: 'create' | 'edit', routineId?: number) {
     setSelectedExerciseId,
     duplicateMessage,
     validation,
-    loading,
+    loading: loadedKey !== loadKey,
     busy,
     error,
-    notFound,
+    notFound: loadedKey === loadKey && notFound,
     readOnly,
     onMetaChange,
     onAddExercise,

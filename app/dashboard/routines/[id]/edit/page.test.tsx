@@ -1,11 +1,12 @@
 import { describe, expect, it, jest } from '@jest/globals';
 import { render, screen } from '@testing-library/react';
-import EditRoutinePage from './page';
 import { ROUTINE_COPY, ROUTINE_TEST_IDS } from '@/lib/copy/routines';
+
+const mockPush = jest.fn();
 
 jest.mock('next/navigation', () => ({
   useParams: () => ({ id: '404' }),
-  useRouter: () => ({ push: jest.fn() }),
+  useRouter: () => ({ push: mockPush }),
 }));
 
 jest.mock('@/hooks/useRoutineEditor', () => ({
@@ -31,7 +32,8 @@ jest.mock('@/hooks/useRoutineEditor', () => ({
 }));
 
 describe('EditRoutinePage', () => {
-  it('renders the not-found empty state without leaking ownership', () => {
+  it('renders the not-found empty state without leaking ownership', async () => {
+    const { default: EditRoutinePage } = await import('./page');
     render(<EditRoutinePage />);
     expect(screen.getByTestId(ROUTINE_TEST_IDS.notFound).textContent).toContain(ROUTINE_COPY.notFound);
     expect(screen.getByText(ROUTINE_COPY.notFoundBody)).toBeTruthy();

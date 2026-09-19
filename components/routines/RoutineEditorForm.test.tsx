@@ -87,7 +87,7 @@ describe('RoutineEditorForm', () => {
         onSubmit={jest.fn()}
       />,
     );
-    expect(screen.getByRole('alert').textContent).toContain(ROUTINE_COPY.notFound);
+    expect(screen.getByTestId('form-error').textContent).toContain(ROUTINE_COPY.notFound);
     expect(screen.getByText(ROUTINE_COPY.errorName)).toBeTruthy();
   });
 });
