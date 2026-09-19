@@ -19,6 +19,44 @@ import type {
 
 export { completedExerciseIdsForRoutine, isExerciseComplete } from '@/lib/session/progress';
 
+export async function suggestNextExerciseFromRemaining(
+  remaining: { id: number; name: string }[],
+  lastCompletedName: string | null,
+  deps: {
+    geminiFn?: typeof fetchGeminiNextExercise;
+  } = {},
+): Promise<NextExerciseSuggestion> {
+  if (remaining.length === 0) {
+    return {
+      source: 'fallback',
+      isLast: true,
+      nextExerciseId: null,
+      message: SESSION_COPY.lastExerciseDone,
+    };
+  }
+
+  const geminiFn = deps.geminiFn ?? fetchGeminiNextExercise;
+  let gemini: GeminiNextExercisePayload | null = null;
+  try {
+    gemini = await geminiFn({
+      completedExerciseName: lastCompletedName ?? remaining[0].name,
+      remaining,
+    });
+  } catch {
+    gemini = null;
+  }
+
+  const fallbackMessage =
+    remaining.length === 1 ? SESSION_COPY.lastExercise : SESSION_COPY.fallbackNext;
+
+  return resolveNextExerciseSuggestion({
+    orderedExerciseIds: remaining.map((item) => item.id),
+    completedExerciseIds: [],
+    gemini,
+    fallbackMessage,
+  });
+}
+
 export async function suggestNextExerciseForWorkout(
   workoutId: number,
   userId: number,
@@ -32,43 +70,21 @@ export async function suggestNextExerciseForWorkout(
   }
 
   const routine = await getRoutineById(workout.routineId, userId);
-  const orderedIds = routine.exercises.map((item) => item.exerciseId);
+  const remaining = workout.queue.pendingExerciseIds.flatMap((exerciseId) => {
+    const item = routine.exercises.find((exercise) => exercise.exerciseId === exerciseId);
+    return item ? [{ id: exerciseId, name: item.exerciseName }] : [];
+  });
+
   const completedIds = completedExerciseIdsForRoutine(routine, workout.sets);
-
-  const remaining = routine.exercises.filter((item) => !completedIds.includes(item.exerciseId));
-  if (remaining.length === 0) {
-    return {
-      source: 'fallback',
-      isLast: true,
-      nextExerciseId: null,
-      message: SESSION_COPY.lastExerciseDone,
-    };
-  }
-
   const lastCompleted = [...routine.exercises]
     .reverse()
     .find((item) => completedIds.includes(item.exerciseId));
 
-  const geminiFn = deps.geminiFn ?? fetchGeminiNextExercise;
-  let gemini: GeminiNextExercisePayload | null = null;
-  try {
-    gemini = await geminiFn({
-      completedExerciseName: lastCompleted?.exerciseName ?? remaining[0].exerciseName,
-      remaining: remaining.map((item) => ({ id: item.exerciseId, name: item.exerciseName })),
-    });
-  } catch {
-    gemini = null;
-  }
-
-  const fallbackMessage =
-    remaining.length === 1 ? SESSION_COPY.lastExercise : SESSION_COPY.fallbackNext;
-
-  return resolveNextExerciseSuggestion({
-    orderedExerciseIds: orderedIds,
-    completedExerciseIds: completedIds,
-    gemini,
-    fallbackMessage,
-  });
+  return suggestNextExerciseFromRemaining(
+    remaining,
+    lastCompleted?.exerciseName ?? null,
+    deps,
+  );
 }
 
 export async function getGuidedCloseSummary(
