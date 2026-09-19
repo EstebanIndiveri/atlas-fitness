@@ -3,12 +3,13 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { IosInstallHint } from '@/components/pwa/IosInstallHint';
-import { Button } from '@/components/ui/Button';
+import { Button, buttonClassName } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { ErrorState, LoadingState } from '@/components/ui/states';
+import { useLinkCode } from '@/hooks/useLinkCode';
+import { ROUTINE_COPY } from '@/lib/copy/routines';
 import { PWA_COPY } from '@/lib/pwa/copy';
 import { TELEGRAM_FE_COPY } from '@/lib/telegram/copy';
-import { useLinkCode } from '@/hooks/useLinkCode';
 import type { AuthUser } from '@/types/auth';
 
 export default function SettingsPage() {
@@ -62,6 +63,17 @@ export default function SettingsPage() {
         <h2 className="text-lg font-semibold text-ink">{PWA_COPY.settingsInstallHeading}</h2>
         <IosInstallHint forceVisible />
       </section>
+
+      <Card className="mt-6" data-testid="routines-settings">
+        <h2 className="text-lg font-semibold text-ink">{ROUTINE_COPY.listTitle}</h2>
+        <p className="mt-2 text-sm text-ink-muted">{ROUTINE_COPY.listSubtitle}</p>
+        <Link
+          href="/dashboard/routines"
+          className={buttonClassName({ className: 'mt-4' })}
+        >
+          {ROUTINE_COPY.manageCta}
+        </Link>
+      </Card>
 
       <Card className="mt-6" data-testid="telegram-settings">
         <h2 className="text-lg font-semibold text-ink">Telegram</h2>
