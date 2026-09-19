@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { GuidedExerciseCard } from '@/components/session/GuidedExerciseCard';
 import { RestTimer } from '@/components/session/RestTimer';
 import { SessionCloseScreen } from '@/components/session/SessionCloseScreen';
+import { PageContainer } from '@/components/shell/PageContainer';
 import { Card } from '@/components/ui/Card';
 import { ErrorState, LoadingState } from '@/components/ui/states';
 import { useGuidedSession } from '@/hooks/useGuidedSession';
@@ -45,21 +46,21 @@ export default function GuidedSessionPlayerPage() {
 
   if (session.error || !session.workout) {
     return (
-      <div className="px-4 py-section">
+      <PageContainer>
         <ErrorState message={SESSION_COPY.errorLoad} />
-      </div>
+      </PageContainer>
     );
   }
 
   if (!session.routine) {
     return (
-      <div className="px-4 py-section">
+      <PageContainer>
         <p className="text-ink">
           <Link href={`/dashboard/workout/${session.workout.id}`} className="text-brand hover:underline">
             Continuar Entrenamiento
           </Link>
         </p>
-      </div>
+      </PageContainer>
     );
   }
 
@@ -67,7 +68,7 @@ export default function GuidedSessionPlayerPage() {
   const showClose = session.phase === 'close' || ended;
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-4 py-4">
+    <PageContainer>
       <div className="mb-4">
         <Link href="/dashboard" className="text-sm font-medium text-brand hover:underline">
           ← Volver
@@ -114,6 +115,6 @@ export default function GuidedSessionPlayerPage() {
           )}
         </>
       )}
-    </div>
+    </PageContainer>
   );
 }

@@ -1,18 +1,25 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { Button, buttonClassName } from '@/components/ui/Button';
+import { HabitCtas } from '@/components/habit/HabitCtas';
 import { Card } from '@/components/ui/Card';
-import { ErrorState, LoadingState } from '@/components/ui/states';
+import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
+import { UI_COPY } from '@/lib/copy/ui';
 import { cn } from '@/lib/ui/cn';
-import type { DailyTip } from '@/lib/db/schema';
-import type { Workout } from '@/lib/db/schema';
+import type { DailyTip, Workout } from '@/lib/db/schema';
 
 interface TipCardProps {
   activeWorkout: Workout | null;
   onStartWorkout?: () => void;
 }
+
+const MOOD_EMOJIS = [
+  { value: 1, emoji: '😞', label: 'Mal' },
+  { value: 2, emoji: '😕', label: 'Regular' },
+  { value: 3, emoji: '😐', label: 'Normal' },
+  { value: 4, emoji: '😊', label: 'Bien' },
+  { value: 5, emoji: '😄', label: 'Excelente' },
+] as const;
 
 export function TipCard({ activeWorkout, onStartWorkout }: TipCardProps) {
   const [tip, setTip] = useState<DailyTip | null>(null);
@@ -70,60 +77,40 @@ export function TipCard({ activeWorkout, onStartWorkout }: TipCardProps) {
       }
     } catch (err) {
       console.error('Error al guardar el estado de ánimo:', err);
-      // Keep the mood selected in UI even if save fails
     } finally {
       setSavingMood(false);
     }
   };
 
-  if (loading) {
-    return (
-      <Card tone="brand" className="mb-6">
-        <LoadingState compact />
-      </Card>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="mb-6">
-        <ErrorState message={error} />
-      </div>
-    );
-  }
-
-  if (!tip) {
-    return null;
-  }
-
-  const moodEmojis = [
-    { value: 1, emoji: '😞', label: 'Mal' },
-    { value: 2, emoji: '😕', label: 'Regular' },
-    { value: 3, emoji: '😐', label: 'Normal' },
-    { value: 4, emoji: '😊', label: 'Bien' },
-    { value: 5, emoji: '😄', label: 'Excelente' },
-  ];
-
   return (
-    <Card tone="brand" className="mb-6" data-testid="tip-card">
-      <div className="mb-4">
-        <h2 className="mb-2 text-sm font-semibold text-ink">💡 Consejo del día</h2>
-        <p className="text-base leading-relaxed text-ink" data-testid="tip-body">
-          {tip.body}
-        </p>
-      </div>
+    <Card tone="brand" className="mb-6" data-testid="tip-card" aria-busy={loading}>
+      {loading ? <LoadingState compact /> : null}
+      {!loading && error ? <ErrorState message={error} /> : null}
+      {!loading && !error && !tip ? (
+        <EmptyState title={UI_COPY.emptyTipTitle} description={UI_COPY.emptyTipBody} />
+      ) : null}
+      {!loading && !error && tip ? (
+        <div className="mb-4">
+          <h2 className="mb-2 text-sm font-semibold text-ink">💡 {UI_COPY.tipOfDay}</h2>
+          <p className="text-base leading-relaxed text-ink" data-testid="tip-body">
+            {tip.body}
+          </p>
+        </div>
+      ) : null}
 
       <div className="mb-4">
-        <p className="mb-2 text-xs text-ink-muted">¿Cómo te sentís hoy?</p>
-        <div className="flex justify-center gap-2">
-          {moodEmojis.map(({ value, emoji, label }) => (
+        <p id="mood-today-label" className="mb-2 text-xs text-ink-muted">
+          {UI_COPY.moodToday}
+        </p>
+        <div className="flex justify-center gap-2" role="group" aria-labelledby="mood-today-label">
+          {MOOD_EMOJIS.map(({ value, emoji, label }) => (
             <button
               key={value}
               type="button"
               onClick={() => handleMoodSelect(value)}
               disabled={savingMood}
               className={cn(
-                'rounded-lg p-2 text-2xl',
+                'min-h-11 min-w-11 rounded-lg p-2 text-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
                 mood === value ? 'bg-surface ring-2 ring-brand' : 'hover:bg-surface',
                 savingMood && 'cursor-not-allowed opacity-50',
               )}
@@ -139,36 +126,7 @@ export function TipCard({ activeWorkout, onStartWorkout }: TipCardProps) {
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row">
-        {activeWorkout ? (
-          <Link
-            href={
-              activeWorkout.routineId
-                ? `/dashboard/session/${activeWorkout.id}`
-                : `/dashboard/workout/${activeWorkout.id}`
-            }
-            className={buttonClassName({ variant: 'success', className: 'flex-1 text-center' })}
-            data-testid="continue-workout-cta"
-          >
-            {activeWorkout.routineId ? 'Continuar sesión guiada' : 'Continuar Entrenamiento'}
-          </Link>
-        ) : (
-          <>
-            <Button
-              onClick={onStartWorkout}
-              className="flex-1"
-              data-testid="new-workout-button"
-            >
-              Empezar Entreno
-            </Button>
-            <Link
-              href="/dashboard/session"
-              className={buttonClassName({ variant: 'secondary', className: 'flex-1 text-center' })}
-              data-testid="guided-session-cta"
-            >
-              Sesión guiada
-            </Link>
-          </>
-        )}
+        <HabitCtas activeWorkout={activeWorkout} onStartWorkout={onStartWorkout} />
       </div>
     </Card>
   );

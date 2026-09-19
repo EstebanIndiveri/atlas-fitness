@@ -3,7 +3,7 @@
 Must increment on the Atlas Fitness PWA. FE-only; existing `/api/stats/streak`, workouts active, and tips. No new backend endpoints.
 
 **Branch:** `feature/ux-habito-mobile` → `develop`  
-**Status:** WIP draft, then Must implementation.
+**Status:** Must implementation on `feature/ux-habito-mobile`.
 
 ## Product bar (Must)
 

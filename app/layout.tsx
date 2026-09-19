@@ -24,6 +24,7 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: PWA_THEME.themeColor,
+  viewportFit: 'cover',
 };
 
 export default function RootLayout({

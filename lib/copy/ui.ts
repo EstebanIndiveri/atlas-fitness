@@ -4,6 +4,7 @@ export const UI_COPY = {
   brandShort: 'Atlas',
   skipToContent: 'Saltar al contenido',
   primaryNav: 'Principal',
+  tabNav: 'Pestañas',
   navHome: 'Inicio',
   navHistory: 'Historial',
   navSettings: 'Ajustes',
@@ -19,11 +20,20 @@ export const UI_COPY = {
   emptySetsBody: 'No hay series registradas aún.',
   startFirstWorkout: 'Iniciar tu primer entrenamiento',
   workoutNotFound: 'Entrenamiento no encontrado',
+  continueWorkout: 'Continuar Entrenamiento',
+  startWorkout: 'Empezar Entreno',
+  greeting: (name: string) => `Hola, ${name}`,
+  welcome: (name: string) => `Bienvenido, ${name}`,
+  tipOfDay: 'Consejo del día',
+  moodToday: '¿Cómo te sentís hoy?',
+  emptyTipTitle: 'Sin consejo hoy',
+  emptyTipBody: 'Podés entrenar igual y sumar a la racha.',
 } as const;
 
 export const UI_COPY_TEST_IDS = {
   appShell: 'app-shell',
   appHeader: 'app-header',
+  appBottomNav: 'app-bottom-nav',
   formError: 'form-error',
   homeLoginCta: 'home-login-cta',
 } as const;

@@ -7,6 +7,7 @@ import { TipCard } from '@/components/TipCard';
 import { StreakChip } from '@/components/StreakChip';
 import { TelegramLinkBanner } from '@/components/TelegramLinkBanner';
 import { InstallBanner } from '@/components/pwa/InstallBanner';
+import { PageContainer } from '@/components/shell/PageContainer';
 import { Card } from '@/components/ui/Card';
 import { EmptyState, LoadingState } from '@/components/ui/states';
 import { UI_COPY } from '@/lib/copy/ui';
@@ -76,25 +77,25 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-4 py-4 sm:px-6 sm:py-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-ink sm:text-3xl">{UI_COPY.brand}</h1>
+    <PageContainer>
+      <div className="mb-5">
+        <h1 className="text-title font-bold text-ink">{UI_COPY.greeting(user.name)}</h1>
         <p className="mt-1 text-sm text-ink-muted sm:text-base" data-testid="welcome-message">
-          Bienvenido, {user.name}
+          {UI_COPY.welcome(user.name)}
         </p>
       </div>
+
+      <StreakChip />
 
       <InstallBanner />
 
       {!user.telegramUserId && <TelegramLinkBanner />}
 
-      <StreakChip />
-
       <TipCard activeWorkout={activeWorkout} onStartWorkout={handleNewWorkout} />
 
       <Card>
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-ink">Historial Reciente</h2>
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold text-ink sm:text-xl">Historial Reciente</h2>
           <Link href="/dashboard/history" className="text-sm font-medium text-brand hover:underline">
             Ver todo
           </Link>
@@ -111,9 +112,9 @@ export default function DashboardPage() {
               <Link
                 key={workout.id}
                 href={`/dashboard/workout/${workout.id}`}
-                className="block rounded-md border border-line p-3 hover:bg-canvas"
+                className="block rounded-md border border-line p-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand hover:bg-canvas"
               >
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="text-sm font-medium text-ink">
                       {new Date(workout.startedAt).toLocaleDateString('es-AR', {
@@ -141,6 +142,6 @@ export default function DashboardPage() {
           </div>
         )}
       </Card>
-    </div>
+    </PageContainer>
   );
 }

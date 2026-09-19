@@ -31,5 +31,8 @@ describe('globals.css @theme', () => {
     expect(globalsCss).toContain(`--color-surface: ${ATLAS_COLOR.surface}`);
     expect(globalsCss).toContain('--radius-md:');
     expect(globalsCss).toContain('--font-sans:');
+    expect(globalsCss).toContain('@utility pt-safe');
+    expect(globalsCss).toContain('prefers-reduced-motion: reduce');
+    expect(globalsCss).toContain('.streak-pop');
   });
 });
