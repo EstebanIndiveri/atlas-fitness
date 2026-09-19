@@ -15,7 +15,7 @@ No file upload/S3. Media is URL fields on custom exercises.
 - [x] Spanish `AppError` messages
 - [x] Custom exercise `imageUrl` / `videoUrl` on existing POST/PATCH (no `/media` route)
 - [x] DTOs: no `userId`; `RoutineSummary` plus additive `isSystem`
-- [x] Tests: own CRUD; system mutate 403; foreign 404; invalid exerciseId; list = system + own; ownership regression; media URLs
+- [x] Tests: own CRUD; system mutate 403; foreign 404; invalid exerciseId; list = system + own; ownership regression; media URLs (`https://` only, max 2048)
 
 ## REST (FE contract)
 
@@ -63,6 +63,8 @@ Auth required on all routes.
 | Foreign routine | 404 | `NOT_FOUND` (`Rutina no encontrada`) |
 | Mutate system routine | 403 | `FORBIDDEN` (`No puedes modificar una rutina del sistema`) |
 | Slug already taken | 409 | `CONFLICT` |
+| Media URL not `https://` | 400 | `VALIDATION` (`La URL de media debe usar https://`) |
+| Media URL > 2048 chars | 400 | `VALIDATION` (`La URL de media no puede superar 2048 caracteres`) |
 
 Ownership unchanged: `isSystem \|\| userId === currentUser` (`lib/auth/ownership.ts`).
 
@@ -76,7 +78,7 @@ Custom exercise media stays on `POST /api/exercises` and `PATCH /api/exercises/[
 { "imageUrl": "https://…", "videoUrl": "https://…" }
 ```
 
-Nullable to clear. Invalid URL → 400. No dedicated `/media` route.
+Nullable or empty string clears the field. Non-empty values **must** be `https://` and ≤ 2048 characters. `http://`, `data:`, `javascript:`, and relative URLs → 400 `VALIDATION` (`La URL de media debe usar https://`). Too long → 400 (`La URL de media no puede superar 2048 caracteres`). No dedicated `/media` route. Routines only echo catalog media; they do not accept media write fields.
 
 ## Verify
 

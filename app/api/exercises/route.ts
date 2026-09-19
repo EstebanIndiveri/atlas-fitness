@@ -8,8 +8,8 @@ const createExerciseSchema = z.object({
   name: z.string().min(2),
   muscleGroup: z.string().min(2),
   instructions: z.string().min(1),
-  imageUrl: z.string().url().nullable().optional(),
-  videoUrl: z.string().url().nullable().optional(),
+  imageUrl: z.union([z.string(), z.null()]).optional(),
+  videoUrl: z.union([z.string(), z.null()]).optional(),
   slug: z
     .string()
     .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)

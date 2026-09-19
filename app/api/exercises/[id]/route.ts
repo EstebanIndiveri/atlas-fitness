@@ -8,8 +8,8 @@ const updateExerciseSchema = z.object({
   name: z.string().min(2).optional(),
   muscleGroup: z.string().min(2).optional(),
   instructions: z.string().min(1).optional(),
-  imageUrl: z.string().url().nullable().optional(),
-  videoUrl: z.string().url().nullable().optional(),
+  imageUrl: z.union([z.string(), z.null()]).optional(),
+  videoUrl: z.union([z.string(), z.null()]).optional(),
 });
 
 function parseExerciseId(id: string): number {

@@ -163,6 +163,88 @@ describe('Exercises API ownership', () => {
     expect(updated.videoUrl).toBe('https://youtube.com/watch?v=face-v2');
   });
 
+  it('rejects invalid media schemes and too-long URLs with 400', async () => {
+    const httpRes = await POST(
+      await authed(ownerId, 'http://localhost:3000/api/exercises', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: 'Http Media',
+          muscleGroup: 'Pecho',
+          instructions: 'x',
+          imageUrl: 'http://cdn.example.com/insecure.png',
+        }),
+      }),
+    );
+    expect(httpRes.status).toBe(400);
+    await expect(httpRes.json()).resolves.toMatchObject({
+      code: 'VALIDATION',
+      message: 'La URL de media debe usar https://',
+    });
+
+    const jsRes = await PATCH(
+      await authed(ownerId, `http://localhost:3000/api/exercises/${ownId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ videoUrl: 'javascript:alert(1)' }),
+      }),
+      { params: Promise.resolve({ id: String(ownId) }) },
+    );
+    expect(jsRes.status).toBe(400);
+    await expect(jsRes.json()).resolves.toMatchObject({
+      code: 'VALIDATION',
+      message: 'La URL de media debe usar https://',
+    });
+
+    const longRes = await PATCH(
+      await authed(ownerId, `http://localhost:3000/api/exercises/${ownId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ imageUrl: `https://example.com/${'a'.repeat(2048)}` }),
+      }),
+      { params: Promise.resolve({ id: String(ownId) }) },
+    );
+    expect(longRes.status).toBe(400);
+    await expect(longRes.json()).resolves.toMatchObject({
+      code: 'VALIDATION',
+      message: 'La URL de media no puede superar 2048 caracteres',
+    });
+  });
+
+  it('clears media when imageUrl or videoUrl is null or empty', async () => {
+    const seeded = await PATCH(
+      await authed(ownerId, `http://localhost:3000/api/exercises/${ownId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          imageUrl: 'https://cdn.example.com/own.png',
+          videoUrl: 'https://cdn.example.com/own.mp4',
+        }),
+      }),
+      { params: Promise.resolve({ id: String(ownId) }) },
+    );
+    expect(seeded.status).toBe(200);
+
+    const clearedNull = await PATCH(
+      await authed(ownerId, `http://localhost:3000/api/exercises/${ownId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ imageUrl: null }),
+      }),
+      { params: Promise.resolve({ id: String(ownId) }) },
+    );
+    expect(clearedNull.status).toBe(200);
+    const afterNull = (await clearedNull.json()) as ExerciseCatalogItem;
+    expect(afterNull.imageUrl).toBeNull();
+    expect(afterNull.videoUrl).toBe('https://cdn.example.com/own.mp4');
+
+    const clearedEmpty = await PATCH(
+      await authed(ownerId, `http://localhost:3000/api/exercises/${ownId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ videoUrl: '' }),
+      }),
+      { params: Promise.resolve({ id: String(ownId) }) },
+    );
+    expect(clearedEmpty.status).toBe(200);
+    const afterEmpty = (await clearedEmpty.json()) as ExerciseCatalogItem;
+    expect(afterEmpty.videoUrl).toBeNull();
+  });
+
   it('POST creates own custom; PATCH/DELETE foreign are 404', async () => {
     const created = await POST(
       await authed(ownerId, 'http://localhost:3000/api/exercises', {

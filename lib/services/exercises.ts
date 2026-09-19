@@ -7,6 +7,7 @@ import {
 import { db } from '@/lib/db/client';
 import { exercises, type Exercise } from '@/lib/db/schema';
 import { isUniqueConstraintError } from '@/lib/db/unique-error';
+import { normalizeMediaUrl } from '@/lib/validation/media-url';
 import { AppError } from '@/types/errors';
 import type { CreateExerciseInput, ExerciseCatalogItem, UpdateExerciseInput } from '@/types/exercise';
 
@@ -110,8 +111,8 @@ export async function createExercise(
         name,
         muscleGroup,
         instructions,
-        imageUrl: input.imageUrl ?? null,
-        videoUrl: input.videoUrl ?? null,
+        imageUrl: normalizeMediaUrl(input.imageUrl),
+        videoUrl: normalizeMediaUrl(input.videoUrl),
         isSystem: false,
         userId,
       })
@@ -162,8 +163,8 @@ export async function updateExercise(
     }
     updateData.instructions = instructions;
   }
-  if (input.imageUrl !== undefined) updateData.imageUrl = input.imageUrl;
-  if (input.videoUrl !== undefined) updateData.videoUrl = input.videoUrl;
+  if (input.imageUrl !== undefined) updateData.imageUrl = normalizeMediaUrl(input.imageUrl);
+  if (input.videoUrl !== undefined) updateData.videoUrl = normalizeMediaUrl(input.videoUrl);
 
   const [updated] = await db
     .update(exercises)

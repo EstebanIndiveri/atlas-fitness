@@ -157,6 +157,58 @@ describe('Exercises service ownership', () => {
     expect(updated.videoUrl).toBeNull();
   });
 
+  it('rejects invalid media URL schemes and too-long values', async () => {
+    await expect(
+      createExercise(ownerId, {
+        name: 'Http Media',
+        muscleGroup: 'Pecho',
+        instructions: 'x',
+        imageUrl: 'http://cdn.example.com/insecure.png',
+      }),
+    ).rejects.toMatchObject({
+      code: 'VALIDATION',
+      message: 'La URL de media debe usar https://',
+    });
+
+    await expect(
+      updateExercise(ownCustomId, ownerId, {
+        videoUrl: 'javascript:alert(1)',
+      }),
+    ).rejects.toMatchObject({
+      code: 'VALIDATION',
+      message: 'La URL de media debe usar https://',
+    });
+
+    await expect(
+      createExercise(ownerId, {
+        name: 'Long Media',
+        muscleGroup: 'Pecho',
+        instructions: 'x',
+        videoUrl: `https://example.com/${'a'.repeat(2048)}`,
+      }),
+    ).rejects.toMatchObject({
+      code: 'VALIDATION',
+      message: 'La URL de media no puede superar 2048 caracteres',
+    });
+  });
+
+  it('clears media when imageUrl or videoUrl is empty', async () => {
+    const created = await createExercise(ownerId, {
+      name: 'Clear Media',
+      muscleGroup: 'Pecho',
+      instructions: 'x',
+      imageUrl: 'https://cdn.example.com/keep.png',
+      videoUrl: 'https://cdn.example.com/keep.mp4',
+    });
+
+    const cleared = await updateExercise(created.id, ownerId, {
+      imageUrl: '',
+      videoUrl: '   ',
+    });
+    expect(cleared.imageUrl).toBeNull();
+    expect(cleared.videoUrl).toBeNull();
+  });
+
   it('updates own custom and 404s foreign mutate', async () => {
     const updated = await updateExercise(ownCustomId, ownerId, { name: 'Curl propio' });
     expect(updated.name).toBe('Curl propio');
