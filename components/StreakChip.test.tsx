@@ -1,16 +1,8 @@
-import { describe, expect, it, jest } from '@jest/globals';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, jest } from '@jest/globals';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { StreakChip, StreakChipView } from './StreakChip';
 import { STREAK_COPY } from '@/lib/copy/streak';
 import type { StreakStats } from '@/types/streak';
-
-jest.mock('@/hooks/useStreak', () => ({
-  useStreak: jest.fn(),
-}));
-
-import { useStreak } from '@/hooks/useStreak';
-
-const mockedUseStreak = jest.mocked(useStreak);
 
 function stats(overrides: Partial<StreakStats> = {}): StreakStats {
   return {
@@ -19,6 +11,14 @@ function stats(overrides: Partial<StreakStats> = {}): StreakStats {
     lastActiveDate: null,
     ...overrides,
   };
+}
+
+function jsonResponse(body: unknown, ok = true, status = 200): Response {
+  return {
+    ok,
+    status,
+    json: async () => body,
+  } as Response;
 }
 
 describe('StreakChipView', () => {
@@ -45,32 +45,38 @@ describe('StreakChipView', () => {
 });
 
 describe('StreakChip', () => {
+  const originalFetch = global.fetch;
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
   it('announces loading', () => {
-    mockedUseStreak.mockReturnValue({
-      streak: null,
-      loading: true,
-      error: null,
-      reload: jest.fn(async () => undefined),
-    });
+    global.fetch = jest.fn(() => new Promise<Response>(() => undefined)) as unknown as typeof fetch;
 
     render(<StreakChip />);
     expect(screen.getByTestId('streak-chip').getAttribute('aria-busy')).toBe('true');
     expect(screen.getByRole('status').textContent).toContain(STREAK_COPY.loading);
   });
 
-  it('offers a keyboard-accessible retry on error', () => {
-    const reload = jest.fn(async () => undefined);
-    mockedUseStreak.mockReturnValue({
-      streak: null,
-      loading: false,
-      error: STREAK_COPY.error,
-      reload,
-    });
+  it('offers a keyboard-accessible retry on error', async () => {
+    const fetchMock = jest
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse({}, false, 500))
+      .mockResolvedValueOnce(jsonResponse({ currentStreak: 0, longestStreak: 1, lastActiveDate: null }));
+    global.fetch = fetchMock as unknown as typeof fetch;
 
     render(<StreakChip />);
-    expect(screen.getByRole('alert').textContent).toContain(STREAK_COPY.error);
-    fireEvent.click(screen.getByTestId('streak-retry'));
-    expect(reload).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole('button', { name: STREAK_COPY.retry })).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByRole('alert').textContent).toContain(STREAK_COPY.error);
+    });
+
+    const retry = screen.getByRole('button', { name: STREAK_COPY.retry });
+    expect(retry).toBeTruthy();
+    fireEvent.click(retry);
+    await waitFor(() => {
+      expect(screen.getByTestId('current-streak').textContent).toBe('0');
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });

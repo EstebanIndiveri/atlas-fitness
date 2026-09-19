@@ -12,14 +12,16 @@ function jsonResponse(body: unknown, ok = true, status = 200): Response {
 }
 
 describe('useStreak', () => {
+  const originalFetch = global.fetch;
+
   afterEach(() => {
-    jest.restoreAllMocks();
+    global.fetch = originalFetch;
   });
 
   it('loads streak stats from GET /api/stats/streak', async () => {
-    jest.spyOn(global, 'fetch').mockResolvedValue(
+    global.fetch = jest.fn(async () =>
       jsonResponse({ currentStreak: 2, longestStreak: 5, lastActiveDate: '2026-09-18' }),
-    );
+    ) as unknown as typeof fetch;
 
     const { result } = renderHook(() => useStreak());
     expect(result.current.loading).toBe(true);
@@ -37,7 +39,9 @@ describe('useStreak', () => {
   });
 
   it('surfaces a Spanish error when the request fails', async () => {
-    jest.spyOn(global, 'fetch').mockResolvedValue(jsonResponse({ code: 'UNAUTHORIZED' }, false, 401));
+    global.fetch = jest.fn(async () =>
+      jsonResponse({ code: 'UNAUTHORIZED' }, false, 401),
+    ) as unknown as typeof fetch;
 
     const { result } = renderHook(() => useStreak());
     await waitFor(() => {
@@ -50,19 +54,24 @@ describe('useStreak', () => {
 
   it('retries after an error', async () => {
     const fetchMock = jest
-      .spyOn(global, 'fetch')
+      .fn<typeof fetch>()
       .mockResolvedValueOnce(jsonResponse({}, false, 500))
       .mockResolvedValueOnce(
         jsonResponse({ currentStreak: 0, longestStreak: 0, lastActiveDate: null }),
       );
+    global.fetch = fetchMock as unknown as typeof fetch;
 
     const { result } = renderHook(() => useStreak());
     await waitFor(() => {
       expect(result.current.error).toBe(STREAK_COPY.error);
     });
 
-    await act(async () => {
-      await result.current.reload();
+    act(() => {
+      result.current.reload();
+    });
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
     });
 
     expect(fetchMock).toHaveBeenCalledTimes(2);

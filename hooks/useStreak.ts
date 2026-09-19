@@ -20,31 +20,48 @@ export function useStreak() {
   const [streak, setStreak] = useState<StreakStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const reload = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetch('/api/stats/streak');
-      if (!response.ok) {
-        throw new Error(STREAK_COPY.error);
-      }
-      const data: unknown = await response.json();
-      if (!isStreakStats(data)) {
-        throw new Error(STREAK_COPY.error);
-      }
-      setStreak(data);
-    } catch (err) {
-      setStreak(null);
-      setError(err instanceof Error ? err.message : STREAK_COPY.error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const [requestId, setRequestId] = useState(0);
 
   useEffect(() => {
-    void reload();
-  }, [reload]);
+    let cancelled = false;
+
+    async function load() {
+      try {
+        const response = await fetch('/api/stats/streak');
+        if (!response.ok) {
+          throw new Error(STREAK_COPY.error);
+        }
+        const data: unknown = await response.json();
+        if (!isStreakStats(data)) {
+          throw new Error(STREAK_COPY.error);
+        }
+        if (!cancelled) {
+          setStreak(data);
+          setError(null);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setStreak(null);
+          setError(err instanceof Error ? err.message : STREAK_COPY.error);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [requestId]);
+
+  const reload = useCallback(() => {
+    setLoading(true);
+    setError(null);
+    setRequestId((current) => current + 1);
+  }, []);
 
   return { streak, loading, error, reload };
 }
