@@ -45,7 +45,7 @@ export function SetCheckList({
         })}
       </ol>
       {completedCount < targetSets ? (
-        <div className="space-y-3">
+        <div className="sticky bottom-app-cta z-20 space-y-3 rounded-lg bg-surface/95 p-3 shadow-card md:static md:bg-transparent md:p-0 md:shadow-none">
           <Input
             id="guided-weight"
             label={SESSION_COPY.weightLabel}
@@ -57,6 +57,7 @@ export function SetCheckList({
           />
           <Button
             size="lg"
+            className="min-h-12"
             onClick={onCompleteSet}
             disabled={busy || !weight.trim()}
             data-testid="complete-set-button"

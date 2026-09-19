@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { RoutinePicker } from '@/components/session/RoutinePicker';
+import { PageContainer } from '@/components/shell/PageContainer';
 import { ErrorState, LoadingState } from '@/components/ui/states';
 import { SESSION_COPY } from '@/lib/copy/session';
 import { parseActiveWorkoutResponse } from '@/lib/workouts/parse-active-workout-response';
@@ -63,8 +64,8 @@ export default function GuidedSessionPickerPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-4 py-4">
-      <h1 className="text-2xl font-bold text-ink">{SESSION_COPY.pickTitle}</h1>
+    <PageContainer>
+      <h1 className="text-title font-bold text-ink">{SESSION_COPY.pickTitle}</h1>
       <p className="mt-1 mb-4 text-sm text-ink-muted">{SESSION_COPY.pickSubtitle}</p>
       {error ? <ErrorState message={error} /> : null}
       <RoutinePicker
@@ -74,6 +75,6 @@ export default function GuidedSessionPickerPage() {
         activeWorkoutId={active?.id ?? null}
         activeIsGuided={Boolean(active?.routineId)}
       />
-    </div>
+    </PageContainer>
   );
 }

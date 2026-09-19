@@ -12,7 +12,10 @@ export const REQUIRED_APP_UTILITIES = [
   'rounded-lg',
   'bg-warning-muted',
   'min-h-screen',
+  'min-h-dvh',
   'shadow-card',
+  'pt-safe',
+  'pb-safe',
 ] as const;
 
 export type RequiredAppUtility = (typeof REQUIRED_APP_UTILITIES)[number];

@@ -1,5 +1,5 @@
 import { describe, expect, it, jest } from '@jest/globals';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { AppShell } from './AppShell';
 
 jest.mock('next/navigation', () => ({
@@ -19,15 +19,38 @@ describe('AppShell', () => {
     );
     expect(screen.getByTestId('app-header')).toBeTruthy();
     expect(screen.getByRole('navigation', { name: 'Principal' })).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Inicio' })).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Sesión' })).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Historial' })).toBeTruthy();
+    expect(screen.getByRole('navigation', { name: 'Pestañas' })).toBeTruthy();
+    expect(screen.getByTestId('app-bottom-nav')).toBeTruthy();
+
+    const headerNav = screen.getByRole('navigation', { name: 'Principal' });
+    expect(within(headerNav).getByRole('link', { name: 'Inicio' })).toBeTruthy();
+    expect(within(headerNav).getByRole('link', { name: 'Sesión' })).toBeTruthy();
+    expect(within(headerNav).getByRole('link', { name: 'Historial' })).toBeTruthy();
     expect(screen.getByTestId('settings-link').textContent).toBe('Ajustes');
+    expect(screen.getByTestId('bottom-nav-settings').textContent).toContain('Ajustes');
     expect(screen.getByRole('button', { name: 'Cerrar sesión' })).toBeTruthy();
     expect(screen.getByRole('main').id).toBe('contenido');
+    expect(screen.getByRole('main').className).toContain('pb-app-nav');
   });
 
-  it('renders public auth links without logout', () => {
+  it('keeps header nav for desktop and bottom tabs for the app variant', () => {
+    render(
+      <AppShell variant="app">
+        <p>Bienvenido</p>
+      </AppShell>,
+    );
+
+    const headerNav = screen.getByRole('navigation', { name: 'Principal' });
+    const tabNav = screen.getByRole('navigation', { name: 'Pestañas' });
+    expect(headerNav.className).toContain('hidden');
+    expect(headerNav.className).toContain('md:flex');
+    expect(tabNav.className).toContain('md:hidden');
+    expect(screen.getByTestId('app-header').className).toContain('pt-safe');
+    expect(screen.getByTestId('app-shell').className).toContain('px-safe');
+    expect(screen.getByTestId('app-shell').className).toContain('min-h-dvh');
+  });
+
+  it('renders public auth links without logout or bottom tabs', () => {
     render(
       <AppShell variant="public">
         <p>Landing</p>
@@ -37,5 +60,7 @@ describe('AppShell', () => {
     expect(screen.getByRole('link', { name: 'Iniciar sesión' })).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Crear cuenta' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Cerrar sesión' })).toBeNull();
+    expect(screen.queryByTestId('app-bottom-nav')).toBeNull();
+    expect(screen.queryByRole('navigation', { name: 'Pestañas' })).toBeNull();
   });
 });

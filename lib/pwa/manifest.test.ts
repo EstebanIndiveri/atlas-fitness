@@ -26,6 +26,11 @@ describe('atlasWebManifest', () => {
     expect(atlasWebManifest.background_color).toBe(PWA_THEME.backgroundColor);
   });
 
+  it('asks Next for viewport-fit cover so safe-area insets work on notched phones', () => {
+    const layout = readFileSync(join(process.cwd(), 'app', 'layout.tsx'), 'utf8');
+    expect(layout).toContain("viewportFit: 'cover'");
+  });
+
   it('lists 192 and 512 PNG icons with separate any and maskable purposes', () => {
     const icons = atlasWebManifest.icons ?? [];
     expect(icons).toEqual(
