@@ -27,7 +27,7 @@ test.describe('Routine editor (Must UI)', () => {
     await registerFreshUser(page);
   });
 
-  test('lists seeded routines and creates a draft with media empty + disabled upload', async ({ page }) => {
+  test('lists seeded routines and creates a custom routine', async ({ page }) => {
     await page.goto('/dashboard/routines');
     await expect(page.getByRole('heading', { name: 'Rutinas' })).toBeVisible();
     await expect(page.getByTestId('routine-editor-card').first()).toBeVisible();
@@ -51,8 +51,29 @@ test.describe('Routine editor (Must UI)', () => {
     await expect(page.getByTestId('routine-media-upload')).toBeDisabled();
     await expect(page.getByText(/subida de archivos no está disponible/i)).toBeVisible();
 
+    const created = page.waitForResponse(
+      (resp) =>
+        resp.url().includes('/api/routines') &&
+        resp.request().method() === 'POST' &&
+        resp.status() === 201,
+    );
     await page.getByTestId('routine-save').click();
-    await expect(page.getByRole('alert')).toBeVisible();
+    await created;
+    await page.waitForURL('**/dashboard/routines', { timeout: 10000 });
+    await expect(page.getByTestId('routine-editor-card').filter({ hasText: 'Empuje casa' })).toBeVisible();
+  });
+
+  test('system routine is read-only', async ({ page }) => {
+    await page.goto('/dashboard/routines');
+    await page
+      .getByTestId('routine-editor-card')
+      .filter({ hasText: 'Full body exprés' })
+      .getByRole('link', { name: 'Ver' })
+      .click();
+    await page.waitForURL(/\/dashboard\/routines\/\d+\/edit/);
+    await expect(page.getByTestId('routine-readonly-banner')).toBeVisible();
+    await expect(page.getByTestId('routine-save')).toBeDisabled();
+    await expect(page.getByTestId('routine-name-input')).toBeDisabled();
   });
 
   test('unknown routine id shows not-found without leaking other users', async ({ page }) => {

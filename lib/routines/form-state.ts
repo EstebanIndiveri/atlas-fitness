@@ -1,6 +1,7 @@
 import { ROUTINE_COPY } from '@/lib/copy/routines';
+import { isHttpsMediaUrl } from '@/lib/exercises/media';
 import type { ExerciseCatalogItem } from '@/types/exercise';
-import type { RoutineKind, RoutineSummary, RoutineWriteInput } from '@/types/routine';
+import type { CreateRoutineInput, RoutineKind, RoutineSummary } from '@/types/routine';
 
 export const DEFAULT_REST_SECONDS = 90;
 export const MIN_NAME_LENGTH = 2;
@@ -97,7 +98,7 @@ export function applyCatalogOwnership(
   };
 }
 
-export function toWritePayload(draft: RoutineDraft): RoutineWriteInput {
+export function toWritePayload(draft: RoutineDraft): CreateRoutineInput {
   return {
     name: draft.name.trim(),
     description: draft.description.trim() ? draft.description.trim() : null,
@@ -186,20 +187,11 @@ export function updateDraftExercise(
   };
 }
 
-export function isHttpUrl(value: string): boolean {
-  try {
-    const url = new URL(value);
-    return url.protocol === 'http:' || url.protocol === 'https:';
-  } catch {
-    return false;
-  }
-}
-
 function optionalUrlError(value: string | null): string | undefined {
   if (value === null || value.trim() === '') {
     return undefined;
   }
-  return isHttpUrl(value.trim()) ? undefined : ROUTINE_COPY.mediaUrlHint;
+  return isHttpsMediaUrl(value.trim()) ? undefined : ROUTINE_COPY.mediaUrlHint;
 }
 
 export function validateDraft(draft: RoutineDraft): DraftValidation {

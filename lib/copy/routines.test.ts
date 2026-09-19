@@ -7,7 +7,7 @@ describe('ROUTINE_COPY', () => {
     expect(ROUTINE_COPY.createCta).toBe('Nueva rutina');
     expect(ROUTINE_COPY.notFound).toBe('Rutina no encontrada');
     expect(ROUTINE_COPY.mediaEmpty).toBe('Sin imagen');
-    expect(ROUTINE_COPY.uploadDisabled).toMatch(/subida de archivos no está disponible/i);
-    expect(ROUTINE_COPY.errorWriteUnavailable).toMatch(/POST\/PATCH \/api\/routines/);
+    expect(ROUTINE_COPY.mediaUrlHint).toMatch(/https:\/\//);
+    expect(ROUTINE_COPY.mediaUrlHint).not.toMatch(/http\(s\)/);
   });
 });

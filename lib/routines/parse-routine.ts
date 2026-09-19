@@ -80,19 +80,19 @@ export function parseRoutineSummary(value: unknown): RoutineSummary | null {
   }
 
   const restSeconds = asNumber(value.restSeconds) ?? 90;
-  const summary: RoutineSummary = {
+  if (typeof value.isSystem !== 'boolean') {
+    return null;
+  }
+  return {
     id,
     slug: value.slug,
     name: value.name,
     description: asNullableString(value.description),
     kind: asKind(value.kind),
     restSeconds,
+    isSystem: value.isSystem,
     exercises,
   };
-  if (typeof value.isSystem === 'boolean') {
-    summary.isSystem = value.isSystem;
-  }
-  return summary;
 }
 
 export function parseRoutineList(value: unknown): RoutineSummary[] | null {

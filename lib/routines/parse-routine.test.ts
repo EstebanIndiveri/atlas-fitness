@@ -2,7 +2,7 @@ import { describe, expect, it } from '@jest/globals';
 import { parseExerciseCatalog, parseRoutineList, parseRoutineSummary } from './parse-routine';
 
 describe('parseRoutineSummary', () => {
-  it('accepts current GET DTOs without isSystem and optional media', () => {
+  it('requires isSystem and keeps optional media URLs', () => {
     const parsed = parseRoutineSummary({
       id: 1,
       slug: 'full-body-expres',
@@ -10,6 +10,7 @@ describe('parseRoutineSummary', () => {
       description: null,
       kind: 'gym',
       restSeconds: 45,
+      isSystem: true,
       exercises: [
         {
           id: 9,
@@ -27,8 +28,22 @@ describe('parseRoutineSummary', () => {
       ],
     });
     expect(parsed?.name).toBe('Full body exprés');
-    expect(parsed?.isSystem).toBeUndefined();
+    expect(parsed?.isSystem).toBe(true);
     expect(parsed?.exercises[0]?.videoUrl).toBe('https://example.com/v');
+  });
+
+  it('rejects a DTO missing required isSystem', () => {
+    expect(
+      parseRoutineSummary({
+        id: 1,
+        slug: 'own',
+        name: 'Mía',
+        description: 'x',
+        kind: 'home',
+        restSeconds: 30,
+        exercises: [],
+      }),
+    ).toBeNull();
   });
 
   it('keeps isSystem when BE sends it', () => {

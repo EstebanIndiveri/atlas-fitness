@@ -62,7 +62,7 @@ export const ROUTINE_COPY = {
   seeVideo: 'Ver video',
   imageUrlLabel: 'URL de imagen',
   videoUrlLabel: 'URL de video',
-  mediaUrlHint: 'Solo URLs http(s). El alta de archivos no está disponible.',
+  mediaUrlHint: 'Solo URLs https://. El servidor limita a 2048 caracteres; no hay subida de archivos.',
   uploadLabel: 'Subir archivo',
   uploadDisabled:
     'La subida de archivos no está disponible. Pegá una URL en los campos de media o esperá el endpoint de upload.',

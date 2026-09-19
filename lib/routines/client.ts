@@ -7,7 +7,7 @@ import {
   parseRoutineSummary,
 } from '@/lib/routines/parse-routine';
 import type { ExerciseCatalogItem, UpdateExerciseInput } from '@/types/exercise';
-import type { RoutineSummary, RoutineWriteInput } from '@/types/routine';
+import type { CreateRoutineInput, RoutineSummary, UpdateRoutineInput } from '@/types/routine';
 
 export class RoutineClientError extends Error {
   constructor(
@@ -62,7 +62,7 @@ export async function fetchRoutine(id: number): Promise<RoutineSummary> {
   return parsed;
 }
 
-export async function createRoutine(input: RoutineWriteInput): Promise<RoutineSummary> {
+export async function createRoutine(input: CreateRoutineInput): Promise<RoutineSummary> {
   const response = await fetch('/api/routines', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -78,7 +78,7 @@ export async function createRoutine(input: RoutineWriteInput): Promise<RoutineSu
   return parsed;
 }
 
-export async function updateRoutine(id: number, input: RoutineWriteInput): Promise<RoutineSummary> {
+export async function updateRoutine(id: number, input: UpdateRoutineInput): Promise<RoutineSummary> {
   const response = await fetch(`/api/routines/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },

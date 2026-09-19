@@ -108,4 +108,17 @@ describe('routine form state', () => {
       targetReps: ROUTINE_COPY.errorReps,
     });
   });
+
+  it('rejects http media URLs (https-only scheme gate)', () => {
+    const seeded = draftFromRoutine(routine);
+    const withCatalog = applyCatalogOwnership(seeded, [bench]);
+    const invalidMedia = updateDraftExercise(withCatalog, withCatalog.exercises[0]!.clientId, {
+      imageUrl: 'http://cdn.example/insecure.png',
+    });
+    const mediaResult = validateDraft({ ...invalidMedia, name: 'Empuje' });
+    expect(mediaResult.ok).toBe(false);
+    expect(mediaResult.items[withCatalog.exercises[0]!.clientId]?.imageUrl).toBe(
+      ROUTINE_COPY.mediaUrlHint,
+    );
+  });
 });
