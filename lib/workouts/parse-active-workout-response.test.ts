@@ -11,6 +11,7 @@ const sampleWorkout = {
   mood: null,
   deletedAt: null,
   routineId: null,
+  queueJson: null,
 } satisfies Workout;
 
 describe('parseActiveWorkoutResponse', () => {
