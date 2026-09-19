@@ -1,5 +1,5 @@
 import { ROUTINE_COPY } from '@/lib/copy/routines';
-import { isHttpsMediaUrl } from '@/lib/exercises/media';
+import { MEDIA_URL_MAX_LENGTH, isValidClientMediaUrl } from '@/lib/exercises/media';
 import type { ExerciseCatalogItem } from '@/types/exercise';
 import type { CreateRoutineInput, RoutineKind, RoutineSummary } from '@/types/routine';
 
@@ -191,7 +191,11 @@ function optionalUrlError(value: string | null): string | undefined {
   if (value === null || value.trim() === '') {
     return undefined;
   }
-  return isHttpsMediaUrl(value.trim()) ? undefined : ROUTINE_COPY.mediaUrlHint;
+  const trimmed = value.trim();
+  if (trimmed.length > MEDIA_URL_MAX_LENGTH) {
+    return ROUTINE_COPY.mediaUrlLengthHint;
+  }
+  return isValidClientMediaUrl(trimmed) ? undefined : ROUTINE_COPY.mediaUrlHint;
 }
 
 export function validateDraft(draft: RoutineDraft): DraftValidation {

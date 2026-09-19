@@ -11,6 +11,7 @@ import {
   validateDraft,
 } from './form-state';
 import { ROUTINE_COPY } from '@/lib/copy/routines';
+import { MEDIA_URL_MAX_LENGTH } from '@/lib/validation/media-url';
 import type { ExerciseCatalogItem } from '@/types/exercise';
 import type { RoutineSummary } from '@/types/routine';
 
@@ -120,5 +121,33 @@ describe('routine form state', () => {
     expect(mediaResult.items[withCatalog.exercises[0]!.clientId]?.imageUrl).toBe(
       ROUTINE_COPY.mediaUrlHint,
     );
+  });
+
+  it('rejects media URLs longer than 2048 characters', () => {
+    const seeded = draftFromRoutine(routine);
+    const withCatalog = applyCatalogOwnership(seeded, [bench]);
+    const tooLong = `https://cdn.example/${'a'.repeat(MEDIA_URL_MAX_LENGTH)}`;
+    expect(tooLong.length).toBeGreaterThan(MEDIA_URL_MAX_LENGTH);
+    const invalidMedia = updateDraftExercise(withCatalog, withCatalog.exercises[0]!.clientId, {
+      imageUrl: tooLong,
+    });
+    const mediaResult = validateDraft({ ...invalidMedia, name: 'Empuje' });
+    expect(mediaResult.ok).toBe(false);
+    expect(mediaResult.items[withCatalog.exercises[0]!.clientId]?.imageUrl).toBe(
+      ROUTINE_COPY.mediaUrlLengthHint,
+    );
+  });
+
+  it('accepts https media URLs within 2048 characters', () => {
+    const seeded = draftFromRoutine(routine);
+    const withCatalog = applyCatalogOwnership(seeded, [bench]);
+    const validMedia = updateDraftExercise(withCatalog, withCatalog.exercises[0]!.clientId, {
+      imageUrl: 'https://cdn.example/ok.png',
+      videoUrl: 'https://cdn.example/ok.mp4',
+    });
+    const mediaResult = validateDraft({ ...validMedia, name: 'Empuje' });
+    expect(mediaResult.ok).toBe(true);
+    expect(mediaResult.items[withCatalog.exercises[0]!.clientId]?.imageUrl).toBeUndefined();
+    expect(mediaResult.items[withCatalog.exercises[0]!.clientId]?.videoUrl).toBeUndefined();
   });
 });
