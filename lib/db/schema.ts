@@ -64,7 +64,7 @@ export const exercises = sqliteTable('exercises', {
 });
 
 /**
- * Routines table — seed (and later user) templates for guided sessions.
+ * Routines table — system seed and user-custom templates for guided sessions.
  */
 export const routines = sqliteTable('routines', {
   id: integer('id').primaryKey({ autoIncrement: true }),

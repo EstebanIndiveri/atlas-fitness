@@ -23,7 +23,31 @@ export interface RoutineSummary {
   description: string | null;
   kind: RoutineKind;
   restSeconds: number;
+  isSystem: boolean;
   exercises: RoutineExerciseItem[];
+}
+
+export interface RoutineExerciseWrite {
+  exerciseId: number;
+  sortOrder: number;
+  targetSets: number;
+  targetReps: number;
+}
+
+export interface CreateRoutineInput {
+  name: string;
+  description?: string | null;
+  kind: RoutineKind;
+  restSeconds?: number;
+  exercises: RoutineExerciseWrite[];
+}
+
+export interface UpdateRoutineInput {
+  name?: string;
+  description?: string | null;
+  kind?: RoutineKind;
+  restSeconds?: number;
+  exercises?: RoutineExerciseWrite[];
 }
 
 export type SuggestionSource = 'gemini' | 'fallback';
