@@ -225,6 +225,8 @@ export const postWorkoutFeedback = sqliteTable(
   }),
 );
 
+
+
 /**
  * Workout sets table — individual sets within workouts
  * weight_kg stored as text to preserve decimal precision
@@ -371,6 +373,56 @@ export const dailyCheckins = sqliteTable(
 );
 
 /**
+ * Coach recommendations — traceable adaptation previews and user decisions.
+ *
+ * Idempotency key: `workout_id + result_json`. The same generated recommendation
+ * for the same workout returns the existing row, so decision transitions are never
+ * reset; a future materially different generation for the workout can be stored separately.
+ */
+export const coachRecommendations = sqliteTable(
+  'coach_recommendations',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id),
+    workoutId: integer('workout_id')
+      .notNull()
+      .references(() => workouts.id),
+    dailyCheckInId: integer('daily_checkin_id').references(() => dailyCheckins.id),
+    contextSnapshotJson: text('context_snapshot_json'),
+    source: text('source').notNull(),
+    resultJson: text('result_json').notNull(),
+    decision: text('decision').notNull().default('pending'),
+    decidedAt: integer('decided_at', { mode: 'timestamp' }),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .default(sql`(unixepoch())`),
+    updatedAt: integer('updated_at', { mode: 'timestamp' })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (table) => ({
+    uniqueWorkoutResult: uniqueIndex('coach_recommendations_workout_result_unique').on(
+      table.workoutId,
+      table.resultJson,
+    ),
+    userWorkoutIdx: index('coach_recommendations_user_workout_idx').on(
+      table.userId,
+      table.workoutId,
+    ),
+    sourceValue: check(
+      'coach_recommendations_source_check',
+      sql`${table.source} IN ('ai', 'deterministic')`,
+    ),
+    decisionValue: check(
+      'coach_recommendations_decision_check',
+      sql`${table.decision} IN ('pending', 'accepted', 'rejected')`,
+    ),
+  }),
+);
+
+/**
  * Streak nudges table — idempotent log of "streak at risk" intents.
  * Unique (user_id, local_date, kind) so the same-day cron cannot duplicate.
  * Telegram delivery is out of scope; this stores intent / audit only.
@@ -427,6 +479,9 @@ export type NewWorkout = typeof workouts.$inferInsert;
 
 export type PostWorkoutFeedback = typeof postWorkoutFeedback.$inferSelect;
 export type NewPostWorkoutFeedback = typeof postWorkoutFeedback.$inferInsert;
+
+export type CoachRecommendation = typeof coachRecommendations.$inferSelect;
+export type NewCoachRecommendation = typeof coachRecommendations.$inferInsert;
 
 export type WorkoutSet = typeof workoutSets.$inferSelect;
 export type NewWorkoutSet = typeof workoutSets.$inferInsert;
