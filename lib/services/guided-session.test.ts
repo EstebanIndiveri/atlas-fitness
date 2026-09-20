@@ -193,6 +193,98 @@ describe('suggestNextExerciseForWorkout', () => {
 });
 
 describe('getGuidedCloseSummary', () => {
+  it('computes close stats from timestamps and completed non-deleted sets with decimal precision', async () => {
+    await wipe();
+    const [user] = await db
+      .insert(users)
+      .values({ name: 'Stats', email: 'stats@test.com', passwordHash: 'hash' })
+      .returning();
+    const [bench] = await db
+      .insert(exercises)
+      .values({
+        slug: 'bench-stats',
+        name: 'Press Banca',
+        muscleGroup: 'Pecho',
+        instructions: 'x',
+        isSystem: true,
+      })
+      .returning();
+    const [workout] = await db
+      .insert(workouts)
+      .values({
+        userId: user.id,
+        startedAt: new Date('2026-09-20T12:00:00.000Z'),
+        endedAt: new Date('2026-09-20T12:47:30.000Z'),
+      })
+      .returning();
+
+    await db.insert(workoutSets).values([
+      {
+        workoutId: workout.id,
+        exerciseId: bench.id,
+        setIndex: 1,
+        reps: 3,
+        weightKg: '0.10',
+        completed: true,
+      },
+      {
+        workoutId: workout.id,
+        exerciseId: bench.id,
+        setIndex: 2,
+        reps: 2,
+        weightKg: '0.20',
+        completed: true,
+      },
+      {
+        workoutId: workout.id,
+        exerciseId: bench.id,
+        setIndex: 3,
+        reps: 5,
+        weightKg: '100',
+        completed: false,
+      },
+      {
+        workoutId: workout.id,
+        exerciseId: bench.id,
+        setIndex: 4,
+        reps: 5,
+        weightKg: '100',
+        completed: true,
+        deletedAt: new Date('2026-09-20T12:10:00.000Z'),
+      },
+    ]);
+
+    const summary = await getGuidedCloseSummary(workout.id, user.id);
+
+    expect(summary.stats).toEqual({
+      durationMinutes: 48,
+      completedSets: 2,
+      totalVolumeKg: '0.7',
+    });
+  });
+
+  it('omits close duration when the workout has not been ended yet', async () => {
+    await wipe();
+    const [user] = await db
+      .insert(users)
+      .values({ name: 'Open', email: 'open@test.com', passwordHash: 'hash' })
+      .returning();
+    const [workout] = await db
+      .insert(workouts)
+      .values({
+        userId: user.id,
+        startedAt: new Date('2026-09-20T12:00:00.000Z'),
+        endedAt: null,
+      })
+      .returning();
+
+    const summary = await getGuidedCloseSummary(workout.id, user.id);
+
+    expect(summary.stats.durationMinutes).toBeNull();
+    expect(summary.stats.completedSets).toBe(0);
+    expect(summary.stats.totalVolumeKg).toBe('0');
+  });
+
   it('compares max weight vs the last ended session of the same exercise', async () => {
     await wipe();
     const [user] = await db

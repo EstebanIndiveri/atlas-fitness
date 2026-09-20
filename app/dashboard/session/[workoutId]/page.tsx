@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { GuidedExerciseCard } from '@/components/session/GuidedExerciseCard';
+import { GuidedSessionHeader } from '@/components/session/GuidedSessionHeader';
 import { RestTimer } from '@/components/session/RestTimer';
 import { SessionCloseScreen } from '@/components/session/SessionCloseScreen';
 import { SessionQueueActions } from '@/components/session/SessionQueueActions';
@@ -81,19 +82,29 @@ export default function GuidedSessionPlayerPage() {
 
   const ended = Boolean(session.workout.endedAt);
   const showClose = session.phase === 'close' || ended;
+  const currentExerciseIndex = session.current
+    ? session.routine.exercises.findIndex(
+        (exercise) => exercise.exerciseId === session.current?.exerciseId,
+      )
+    : -1;
+  const currentIndex = currentExerciseIndex >= 0 ? currentExerciseIndex + 1 : null;
+  const muscleGroups = Array.from(
+    new Set(session.routine.exercises.map((exercise) => exercise.muscleGroup)),
+  ).filter((muscleGroup) => muscleGroup.trim().length > 0);
 
   return (
     <PageContainer>
-      <div className="mb-4">
-        <Link href="/dashboard" className="text-sm font-medium text-brand hover:underline">
-          ← Volver
-        </Link>
-        <h1 className="mt-2 text-xl font-bold text-ink">{session.routine.name}</h1>
-      </div>
+      <GuidedSessionHeader
+        routineName={session.routine.name}
+        currentIndex={currentIndex}
+        totalExercises={session.routine.exercises.length}
+        muscleGroup={session.current?.muscleGroup ?? null}
+      />
 
       {showClose ? (
         <SessionCloseScreen
           summary={session.summary}
+          muscleGroups={muscleGroups}
           mood={session.mood}
           onMood={session.setMood}
           onSave={() => void handleSaveAndClose()}

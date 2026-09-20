@@ -61,4 +61,16 @@ describe('GuidedExerciseCard', () => {
     expect(media.getAttribute('src')).toBe('https://cdn.example/bench.png');
     expect(media.getAttribute('alt')).toBe('Press Banca');
   });
+
+  it('shows completed set progress using real current counts', () => {
+    render(
+      <GuidedExerciseCard
+        exercise={exercise({ targetSets: 3, targetReps: 8 })}
+        {...cardProps}
+        completedCount={1}
+      />,
+    );
+
+    expect(screen.getByText('1 de 3 series')).toBeTruthy();
+  });
 });

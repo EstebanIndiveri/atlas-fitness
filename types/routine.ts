@@ -70,9 +70,16 @@ export interface ExerciseImprovement {
   direction: ImprovementDirection;
 }
 
+export interface GuidedCloseStats {
+  durationMinutes: number | null;
+  completedSets: number;
+  totalVolumeKg: string;
+}
+
 export interface GuidedCloseSummary {
   streak: StreakStats;
   improvements: ExerciseImprovement[];
+  stats: GuidedCloseStats;
 }
 
 export interface GeminiNextExercisePayload {
