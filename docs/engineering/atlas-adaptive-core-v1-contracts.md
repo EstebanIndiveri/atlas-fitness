@@ -17,6 +17,18 @@
 - `docs/architecture/ADR-004-sessions.md`: distingue sesión de auth (`sessions`) de sesión guiada de entrenamiento (`workouts`); Adaptive Core no debe crear una tabla paralela llamada `sessions` para workouts.
 - `docs/engineering/session-skip-hold.md`: documento esperado para el contrato de cola Skip/Hold. En el snapshot `origin/develop` usado para este consenso no está presente; el handoff sí fija el contrato esperado: `lib/session/queue.ts`, `types/session-queue.ts`, `clientMutationId`, concurrencia e idempotencia. Este documento asume que Track A entrega esa cola y no permite un mecanismo paralelo.
 
+### 0.1 As-built deltas (gobiernan sobre los sketches ilustrativos)
+
+Este documento se escribió como propuesta previa a la implementación. La capa de datos V1 ya fue implementada y mergeada en `develop` y, donde el código difiere de los sketches de más abajo, **manda el código**. Deltas relevantes:
+
+- **Tabla de asignaciones:** el sketch la llama `training_plan_assignments`; lo shipeado es **`scheduled_routines`** (PR #38). `training_plans` incluye además `name` e `is_active` (índice único parcial de un plan activo por usuario).
+- **`dayOfWeek`:** **0..6, 0=Sunday..6=Saturday** (`Date.getDay()`), no ISO 1..7. Ver §11.5.
+- **Check-in:** un único service `recordDailyCheckIn` (upsert por `(userId, localDate)`, `energy`/`note` nullable, actualiza streaks). El viejo `upsertDailyCheckin`/`daily-checkins.ts` queda consolidado en él.
+- **Resolver de hoy:** `resolveTodayScheduledRoutine(userId, now?)` devuelve la unión discriminada `TodayScheduledRoutineResult` (`no_plan | rest_day | workout | routine_missing`); es la fuente de verdad del estado "today" (los `TodayWorkoutState` de más abajo son la vista de producto derivada).
+- **CoachRecommendation:** persistida (PR #41), con idempotencia y máquina de estados `pending → accepted | rejected`.
+
+Las decisiones de producto que faltaban se resolvieron en §11.
+
 ## 1. Principios de contrato V1
 
 1. **Datos reales únicamente.** Todo valor visible debe tener fuente explícita.
@@ -181,7 +193,7 @@ TrainingPlan V1 es solo asignación semanal:
 }
 ```
 
-`dayOfWeek` usa ISO-8601: lunes `1`, martes `2`, miércoles `3`, jueves `4`, viernes `5`, sábado `6`, domingo `7`.
+`dayOfWeek` usa la convención JS `Date.getDay()`: domingo `0`, lunes `1`, martes `2`, miércoles `3`, jueves `4`, viernes `5`, sábado `6`. Es la convención shipeada (`scheduled_routines`, PR #38) y se calcula server-side en Córdoba. (El sketch previo con ISO 1..7 quedó superado; ver §0 y §11.)
 
 **Won't V1:** periodización, mesociclos, microciclos, deload, volumen por grupo muscular, progresión automática, objetivos por fase. Eso es V2.
 
@@ -317,7 +329,7 @@ interface StartTodayWorkoutResponse {
 ### 4.5 Algoritmo “today’s workout”
 
 1. Calcular `localDate = cordobaLocalDate(now)` server-side.
-2. Calcular `dayOfWeek` ISO en Córdoba desde el mismo instante.
+2. Calcular `dayOfWeek` (0..6, `getDay()`) en Córdoba desde el mismo instante.
 3. Cargar el plan activo `training_plans.deleted_at IS NULL` del usuario.
    - Si no existe: `state = 'no_plan'`, `canStart = false`, `reason = 'Todavía no tenés un plan.'`.
 4. Buscar assignment para `dayOfWeek`.
@@ -336,8 +348,8 @@ interface StartTodayWorkoutResponse {
 
 Errores específicos:
 
-- `TRAINING_PLAN_EMPTY`: `PUT` con array vacío si PO decide exigir al menos un día. Recomendación: permitir array vacío como plan con 7 días de descanso solo si UI lo representa; si no, rechazar.
-- `INVALID_DAY_OF_WEEK`: `dayOfWeek` fuera de 1..7.
+- `TRAINING_PLAN_EMPTY` / `VALIDATION`: `PUT`/`POST` con array vacío se **rechaza** (decisión PO §11.3). Un plan exige ≥1 día asignado; no existe el plan implícito de "7 días de descanso".
+- `INVALID_DAY_OF_WEEK`: `dayOfWeek` fuera de 0..6.
 - `ROUTINE_UNAVAILABLE`: routineId inexistente, ajeno o soft-deleted.
 - `WORKOUT_ALREADY_COMPLETED_TODAY`: `POST /start` sin `allowDoubleSession` cuando ya completó hoy.
 - `ACTIVE_WORKOUT_EXISTS`: ya hay workout abierto.
@@ -753,14 +765,16 @@ These states are part of the API contract so FE tests do not depend on copy infe
 - Coach chat as product surface. Coach V1 is contextual recommendation + explainable action.
 - Parallel queue/mutation mechanism outside Skip/Hold.
 
-## 11. Open questions for PO/Arch
+## 11. Resolved decisions (PO/Arch)
 
-1. `docs/engineering/session-skip-hold.md` is referenced by the task and handoff but absent in current `origin/develop`; confirm final queue type names before implementation.
-2. Should `DailyCheckIn` be upsert (recommended) or create-only with `CHECKIN_ALREADY_EXISTS`?
-3. Should a TrainingPlan with zero assignments be valid as “all rest days”, or should V1 reject it with `TRAINING_PLAN_EMPTY`?
-4. Is double session a first-class CTA in V1, or only an explicit secondary action after `completed_today`?
-5. Confirm ISO `dayOfWeek` (1 Monday..7 Sunday) for DB/API, to avoid JS `Date.getDay()` ambiguity.
-6. Confirm discomfort taxonomy is sufficient for V1 and not interpreted as medical advice.
-7. Should `post_workout_feedback` be required to close a workout, or optional prompt after close?
-8. Should mood-only check-ins continue updating `user_streaks`, or should streak remain workout-only once weekly consistency ships?
-9. Confirm whether Coach preview should require an already-created workout/queue, or may preview from routine before `POST /workouts` creates the active session.
+These questions were resolved by the PO with Architecture supervision. They govern implementation; the illustrative sketches above are superseded by §0 "As-built deltas" and by the shipped code where they diverge.
+
+1. **Queue types** — Skip/Hold shipped (BE PR #30, FE PR #29). Queue type names are those in `lib/session/queue.ts` on `develop`; use them, not the `docs/engineering/session-skip-hold.md` draft names.
+2. **DailyCheckIn = upsert.** Single service `recordDailyCheckIn` upserts by `(userId, localDate)` in Córdoba time. `energy` and `note` are optional/nullable (DATA HONESTY: store `NULL` when not provided, never a fabricated default). No `CHECKIN_ALREADY_EXISTS`.
+3. **Empty TrainingPlan is rejected** with `VALIDATION` ("El plan debe tener al menos un día asignado"). A plan needs ≥1 day assignment; there is no implicit "all rest days" plan.
+4. **Double session** is an explicit secondary action after `completed_today`, not a primary CTA. `POST /start` only creates on `ready`, or on `completed_today` with an explicit `allowDoubleSession` flag.
+5. **`dayOfWeek` is 0..6, 0=Sunday..6=Saturday (JS `Date.getDay()`).** This is the shipped convention (PR #38, table `scheduled_routines`). It is always computed server-side in Córdoba (`lib/time/cordoba.ts`), never from the client, so the `getDay()` ambiguity is avoided by construction. The earlier ISO 1..7 proposal is NOT used.
+6. **Discomfort taxonomy** is sufficient for V1 and is presented as self-reported context for adaptation, never as medical advice.
+7. **`post_workout_feedback` is optional** — an after-close prompt, never required to close a workout.
+8. **Mood/check-in updates `user_streaks`.** The consolidated `recordDailyCheckIn` calls `updateStreakFromActivity`, preserving the prior mood-based streak behavior (no regression).
+9. **Coach preview may run from the routine before a workout exists.** Preview does not require an already-created workout/queue; `POST /workouts` creating the active session is a separate, later step. The recommendation is persisted (PR #41) and its acceptance is explicit and traceable.
