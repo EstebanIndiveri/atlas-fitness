@@ -1,13 +1,42 @@
-import { describe, expect, it, jest } from '@jest/globals';
-import { render, screen, within } from '@testing-library/react';
+import { beforeEach, describe, expect, it, jest } from '@jest/globals';
+import { act, render, screen, within } from '@testing-library/react';
 import { AppShell } from './AppShell';
+import type { BeforeInstallPromptEvent } from '@/types/pwa';
+
+class DeferredInstallEvent extends Event implements BeforeInstallPromptEvent {
+  readonly platforms = ['web'];
+  readonly userChoice = Promise.resolve({ outcome: 'dismissed' as const, platform: 'web' });
+  readonly prompt = jest.fn<() => Promise<void>>().mockResolvedValue(undefined);
+}
+
+function installMatchMedia(): void {
+  Object.defineProperty(window, 'matchMedia', {
+    configurable: true,
+    writable: true,
+    value: jest.fn((query: string): MediaQueryList => ({
+      matches: query === '(display-mode: standalone)' ? false : false,
+      media: query,
+      onchange: null,
+      addEventListener: jest.fn<MediaQueryList['addEventListener']>(),
+      removeEventListener: jest.fn<MediaQueryList['removeEventListener']>(),
+      addListener: jest.fn(),
+      removeListener: jest.fn(),
+      dispatchEvent: jest.fn(() => true),
+    })),
+  });
+}
 
 jest.mock('next/navigation', () => ({
   usePathname: () => '/dashboard',
 }));
 
 describe('AppShell', () => {
-  it('renders skip link, header and main landmark for the app variant', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    installMatchMedia();
+  });
+
+  it('renders skip link, header, install prompt mount and main landmark for the app variant', async () => {
     render(
       <AppShell variant="app">
         <p>Bienvenido</p>
@@ -33,6 +62,12 @@ describe('AppShell', () => {
     expect(screen.getByRole('button', { name: 'Cerrar sesión' })).toBeTruthy();
     expect(screen.getByRole('main').id).toBe('contenido');
     expect(screen.getByRole('main').className).toContain('pb-app-nav');
+
+    act(() => {
+      window.dispatchEvent(new DeferredInstallEvent('beforeinstallprompt'));
+    });
+
+    expect(await screen.findByTestId('app-install-prompt')).toBeTruthy();
   });
 
   it('keeps header nav for desktop and bottom tabs for the app variant', () => {

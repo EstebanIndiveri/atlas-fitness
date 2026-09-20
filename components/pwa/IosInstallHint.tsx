@@ -23,9 +23,9 @@ export function IosInstallHint({ forceVisible = false }: IosInstallHintProps) {
       className="rounded-lg border border-line bg-surface p-4 shadow-card"
       data-testid="ios-install-hint"
     >
-      <h2 className="text-sm font-semibold text-ink">{PWA_COPY.iosTitle}</h2>
-      <p className="mt-1 text-sm text-ink">{PWA_COPY.iosBody}</p>
-      <ol className="mt-3 list-decimal space-y-1 pl-5 text-sm text-ink-muted">
+      <h2 className="text-base font-semibold text-ink">{PWA_COPY.iosTitle}</h2>
+      <p className="mt-1 text-base text-ink">{PWA_COPY.iosBody}</p>
+      <ol className="mt-3 list-decimal space-y-1 pl-5 text-base text-ink-muted">
         <li>{PWA_COPY.iosStepShare}</li>
         <li>{PWA_COPY.iosStepAdd}</li>
         <li>{PWA_COPY.iosStepConfirm}</li>

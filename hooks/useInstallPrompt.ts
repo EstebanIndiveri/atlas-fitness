@@ -6,6 +6,7 @@ import {
   isStandaloneDisplay,
   shouldShowInstallBanner,
 } from '@/lib/pwa/installability';
+import { isInstallDismissed, markInstallDismissed } from '@/lib/pwa/install-dismissal';
 import type { BeforeInstallPromptEvent, NavigatorStandalone } from '@/types/pwa';
 
 function subscribeStandalone(onStoreChange: () => void): () => void {
@@ -36,7 +37,7 @@ function getClientFalse(): boolean {
 
 export function useInstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [dismissed, setDismissed] = useState(false);
+  const [dismissed, setDismissed] = useState(isInstallDismissed);
 
   const isStandalone = useSyncExternalStore(
     subscribeStandalone,
@@ -66,19 +67,26 @@ export function useInstallPrompt() {
     if (!deferredPrompt) {
       return;
     }
-    await deferredPrompt.prompt();
-    await deferredPrompt.userChoice;
-    setDeferredPrompt(null);
+    try {
+      await deferredPrompt.prompt();
+      await deferredPrompt.userChoice;
+    } catch {
+      // The saved prompt can be stale/already consumed (e.g. InvalidStateError);
+      // drop it below so the card resets instead of leaking a rejected promise.
+    } finally {
+      setDeferredPrompt(null);
+    }
   }, [deferredPrompt]);
 
   const dismiss = useCallback(() => {
+    markInstallDismissed();
     setDismissed(true);
   }, []);
 
   return {
     isIos,
     isStandalone,
-    showIosHint: isIos && !isStandalone,
+    showIosHint: !dismissed && isIos && !isStandalone,
     canInstall:
       !dismissed &&
       shouldShowInstallBanner({
