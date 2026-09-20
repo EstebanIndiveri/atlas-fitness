@@ -3,7 +3,6 @@ import { motivatorForSet, formatImprovement, SESSION_COPY } from './session';
 
 describe('SESSION_COPY', () => {
   it('uses es-AR product copy for the guided flow', () => {
-    expect(SESSION_COPY.pickTitle).toBe('Elegí una rutina');
     expect(SESSION_COPY.completeSet).toBe('Completar serie');
     expect(SESSION_COPY.skipExercise).toBe('Saltar');
     expect(SESSION_COPY.holdExercise).toBe('Posponer');

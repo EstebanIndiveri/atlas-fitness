@@ -1,80 +1,63 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { RoutinePicker } from '@/components/session/RoutinePicker';
+import Link from 'next/link';
+
+import { NewRoutineActions } from '@/components/training/NewRoutineActions';
+import { MyRoutinesList } from '@/components/training/MyRoutinesList';
+import { TrainingTodayHero } from '@/components/training/TrainingTodayHero';
 import { PageContainer } from '@/components/shell/PageContainer';
 import { ErrorState, LoadingState } from '@/components/ui/states';
-import { SESSION_COPY } from '@/lib/copy/session';
-import { parseActiveWorkoutResponse } from '@/lib/workouts/parse-active-workout-response';
-import type { Workout } from '@/lib/db/schema';
-import type { RoutineSummary } from '@/types/routine';
+import { ROUTINE_TEST_IDS } from '@/lib/copy/routines';
+import { UI_COPY } from '@/lib/copy/ui';
+import { useTrainingLanding } from '@/hooks/useTrainingLanding';
 
+/**
+ * Entrenar landing screen for today's plan and guided routine starts.
+ *
+ * @returns Client page composed from data-honest training sections.
+ * @throws Does not throw; hook errors render as UI state.
+ * @example
+ * <GuidedSessionPickerPage />
+ */
 export default function GuidedSessionPickerPage() {
-  const router = useRouter();
-  const [routines, setRoutines] = useState<RoutineSummary[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [startingId, setStartingId] = useState<number | null>(null);
-  const [active, setActive] = useState<Workout | null>(null);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [routinesRes, activeRes] = await Promise.all([
-          fetch('/api/routines'),
-          fetch('/api/workouts/active'),
-        ]);
-        if (!routinesRes.ok) {
-          throw new Error('routines');
-        }
-        setRoutines((await routinesRes.json()) as RoutineSummary[]);
-        const activeBody: unknown = activeRes.ok ? await activeRes.json() : null;
-        setActive(parseActiveWorkoutResponse(activeRes.ok, activeBody));
-      } catch {
-        setError(SESSION_COPY.errorLoad);
-      } finally {
-        setLoading(false);
-      }
-    };
-    void fetchData();
-  }, []);
-
-  const startRoutine = async (routineId: number) => {
-    setStartingId(routineId);
-    try {
-      const response = await fetch('/api/workouts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ routineId }),
-      });
-      if (!response.ok) {
-        throw new Error('start');
-      }
-      const workout = (await response.json()) as { id: number };
-      router.push(`/dashboard/session/${workout.id}`);
-    } catch {
-      setError(SESSION_COPY.errorLoad);
-      setStartingId(null);
-    }
-  };
-
-  if (loading) {
-    return <LoadingState />;
-  }
+  const { today, routines, activeWorkout, loading, error, starting, start } = useTrainingLanding();
 
   return (
-    <PageContainer>
-      <h1 className="text-title font-bold text-ink">{SESSION_COPY.pickTitle}</h1>
-      <p className="mt-1 mb-4 text-sm text-ink-muted">{SESSION_COPY.pickSubtitle}</p>
+    <PageContainer className="space-y-6">
+      <header className="flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-title font-bold text-ink">{UI_COPY.training.title}</h1>
+        </div>
+        <Link
+          href="/dashboard/routines"
+          className="text-sm font-medium text-brand hover:underline"
+          data-testid={ROUTINE_TEST_IDS.manageCta}
+        >
+          {UI_COPY.training.managePlan}
+        </Link>
+      </header>
+
+      {loading ? <LoadingState /> : null}
       {error ? <ErrorState message={error} /> : null}
-      <RoutinePicker
-        routines={routines}
-        startingId={startingId}
-        onStart={(id) => void startRoutine(id)}
-        activeWorkoutId={active?.id ?? null}
-        activeIsGuided={Boolean(active?.routineId)}
-      />
+      {!loading && !error && today ? (
+        <TrainingTodayHero
+          today={today}
+          activeWorkout={activeWorkout}
+          starting={starting}
+          onStart={(routineId) => void start(routineId)}
+        />
+      ) : null}
+      {!loading && !error ? (
+        <>
+          <NewRoutineActions />
+          <MyRoutinesList
+            routines={routines}
+            activeWorkout={activeWorkout}
+            starting={starting}
+            onStart={(routineId) => void start(routineId)}
+          />
+        </>
+      ) : null}
     </PageContainer>
   );
 }
