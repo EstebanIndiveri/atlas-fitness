@@ -4,12 +4,15 @@ import { db } from '@/lib/db/client';
 import { routines, workouts, workoutSets } from '@/lib/db/schema';
 import { isSqliteBusyError, isUniqueConstraintError } from '@/lib/db/unique-error';
 import { updateStreakFromActivity } from '@/lib/services/streaks';
+import { resolveWorkoutQueueState } from '@/lib/services/workout-queue';
 import { AppError } from '@/types/errors';
 import type { Workout, WorkoutSet } from '@/lib/db/schema';
+import type { WorkoutQueueState } from '@/types/session-queue';
 
-export interface WorkoutWithSets extends Workout {
+export type WorkoutWithSets = Omit<Workout, 'queueJson'> & {
   sets: WorkoutSet[];
-}
+  queue: WorkoutQueueState;
+};
 
 export interface UpdateWorkoutInput {
   endedAt?: Date;
@@ -121,9 +124,18 @@ export async function getWorkoutById(
     orderBy: (workoutSets, { asc }) => [asc(workoutSets.setIndex)],
   });
 
-  return {
-    ...workout,
+  const { queueJson, ...rest } = workout;
+  const queue = await resolveWorkoutQueueState({
+    userId,
+    routineId: workout.routineId,
     sets,
+    storedQueueJson: queueJson,
+  });
+
+  return {
+    ...rest,
+    sets,
+    queue,
   };
 }
 
