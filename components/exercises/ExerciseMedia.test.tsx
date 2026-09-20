@@ -45,7 +45,7 @@ describe('ExerciseMedia', () => {
     },
   );
 
-  it('renders image and video link when URLs exist', () => {
+  it('renders image and an in-app video player for direct video files', () => {
     render(
       <ExerciseMedia
         name="Press Banca"
@@ -60,8 +60,48 @@ describe('ExerciseMedia', () => {
     expect(screen.getByTestId('routine-exercise-media').getAttribute('src')).toBe(
       'https://cdn.example/bench.png',
     );
-    expect(screen.getByTestId('routine-exercise-video').getAttribute('href')).toBe(
-      'https://cdn.example/bench.mp4',
+    const video = screen.getByTestId('routine-exercise-video');
+    expect(video.tagName).toBe('VIDEO');
+    expect(video.getAttribute('src')).toBe('https://cdn.example/bench.mp4');
+    expect(video.getAttribute('controls')).not.toBeNull();
+  });
+
+  it('embeds a privacy-friendly iframe for YouTube videos instead of an external link', () => {
+    render(
+      <ExerciseMedia
+        name="Sentadilla"
+        imageUrl={null}
+        videoUrl="https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+        emptyLabel="Sin imagen"
+        videoLabel="Ver video"
+        imageTestId="routine-exercise-media"
+        videoTestId="routine-exercise-video"
+      />,
     );
+    const video = screen.getByTestId('routine-exercise-video');
+    expect(video.tagName).toBe('IFRAME');
+    expect(video.getAttribute('src')).toBe(
+      'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ',
+    );
+    expect(video.getAttribute('title')).toBe('Ver video');
+  });
+
+  it('treats youtube search links as a missing video', () => {
+    render(
+      <ExerciseMedia
+        name="Sentadilla"
+        imageUrl={null}
+        videoUrl="https://www.youtube.com/results?search_query=sentadilla"
+        emptyLabel="Sin imagen"
+        videoLabel="Ver video"
+        videoEmptyLabel="Sin video"
+        imageTestId="routine-exercise-media"
+        videoTestId="routine-exercise-video"
+        showVideoEmpty
+      />,
+    );
+    const video = screen.getByTestId('routine-exercise-video');
+    expect(video.tagName).toBe('P');
+    expect(video.textContent).toBe('Sin video');
   });
 });

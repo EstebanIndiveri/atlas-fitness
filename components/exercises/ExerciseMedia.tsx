@@ -1,4 +1,4 @@
-import { resolvedMediaUrl } from '@/lib/exercises/media';
+import { resolvedExerciseVideo, resolvedMediaUrl } from '@/lib/exercises/media';
 import { cn } from '@/lib/ui/cn';
 
 type ExerciseMediaProps = {
@@ -27,7 +27,7 @@ export function ExerciseMedia({
   className,
 }: ExerciseMediaProps) {
   const imageSrc = resolvedMediaUrl(imageUrl);
-  const videoSrc = resolvedMediaUrl(videoUrl ?? null);
+  const video = resolvedExerciseVideo(videoUrl ?? null);
 
   return (
     <div className={cn('space-y-2', className)}>
@@ -50,16 +50,36 @@ export function ExerciseMedia({
         </div>
       )}
 
-      {videoSrc ? (
-        <a
-          href={videoSrc}
-          className="inline-block text-sm font-medium text-brand hover:underline"
-          target="_blank"
-          rel="noreferrer"
-          data-testid={videoTestId}
-        >
-          {videoLabel}
-        </a>
+      {video ? (
+        video.kind === 'youtube' ? (
+          <div
+            className="relative w-full overflow-hidden rounded-md bg-black"
+            style={{ aspectRatio: '16 / 9' }}
+          >
+            <iframe
+              src={video.embedUrl}
+              title={videoLabel}
+              className="absolute inset-0 h-full w-full"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen
+              loading="lazy"
+              referrerPolicy="strict-origin-when-cross-origin"
+              data-testid={videoTestId}
+            />
+          </div>
+        ) : (
+          <video
+            src={video.src}
+            controls
+            preload="metadata"
+            playsInline
+            className="w-full rounded-md bg-black"
+            aria-label={videoLabel}
+            data-testid={videoTestId}
+          >
+            {videoLabel}
+          </video>
+        )
       ) : showVideoEmpty ? (
         <p className="text-sm text-ink-muted" data-testid={videoTestId}>
           {videoEmptyLabel}
