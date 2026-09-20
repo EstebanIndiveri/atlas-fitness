@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
+import { OnboardingWelcome } from '@/components/onboarding/OnboardingWelcome';
 import { PageContainer } from '@/components/shell/PageContainer';
 import { CoachAtlasCard } from '@/components/today/CoachAtlasCard';
 import { MoodEnergyCheckIn } from '@/components/today/MoodEnergyCheckIn';
@@ -102,6 +103,7 @@ export default function TodayPage() {
   return (
     <PageContainer className="space-y-6">
       <TodayHeader name={userName} />
+      <OnboardingWelcome />
       <MoodEnergyCheckIn />
       <TodayWorkoutHero
         onStartWorkout={handleStartWorkout}
