@@ -115,4 +115,24 @@ describe('reconcileWorkoutQueue', () => {
     expect(reconciled).toEqual(fromApi);
     expect(reconciled).not.toBe(fromApi);
   });
+
+  it('prefers the local override over a stale API queue (fresh action result wins)', () => {
+    const previous = applySkip(
+      buildWorkoutQueue({ orderedExerciseIds: ORDERED, completedExerciseIds: [] }),
+      10,
+    );
+    const staleFromApi = {
+      pendingExerciseIds: [10, 20, 30],
+      skippedExerciseIds: [],
+      heldExerciseIds: [],
+    };
+    const reconciled = reconcileWorkoutQueue({
+      orderedExerciseIds: ORDERED,
+      completedExerciseIds: [],
+      previous,
+      fromApi: staleFromApi,
+    });
+    expect(reconciled.pendingExerciseIds).toEqual([20, 30]);
+    expect(reconciled.skippedExerciseIds).toEqual([10]);
+  });
 });

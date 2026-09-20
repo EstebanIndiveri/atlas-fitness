@@ -27,7 +27,9 @@ export function buildWorkoutQueue(args: {
 }
 
 /**
- * After a reload, keep skip/hold order unless the API already persisted `queue`.
+ * After a reload, restore skip/hold order. The local override (freshest action
+ * result) takes precedence; the persisted API queue only seeds the base when
+ * there is no local override yet (first load / reload).
  */
 export function reconcileWorkoutQueue(args: {
   orderedExerciseIds: readonly number[];
@@ -35,22 +37,20 @@ export function reconcileWorkoutQueue(args: {
   previous: WorkoutQueueState | null;
   fromApi?: WorkoutQueueState | null;
 }): WorkoutQueueState {
-  if (args.fromApi) {
-    return cloneQueue(args.fromApi);
-  }
+  const base = args.previous ?? args.fromApi ?? null;
 
   const completed = new Set(args.completedExerciseIds);
-  const skipped = (args.previous?.skippedExerciseIds ?? []).filter((id) => !completed.has(id));
+  const skipped = (base?.skippedExerciseIds ?? []).filter((id) => !completed.has(id));
   const skippedSet = new Set(skipped);
   const remaining = args.orderedExerciseIds.filter(
     (id) => !completed.has(id) && !skippedSet.has(id),
   );
-  const previousPending = args.previous?.pendingExerciseIds ?? [];
+  const previousPending = base?.pendingExerciseIds ?? [];
   const pending = [
     ...previousPending.filter((id) => remaining.includes(id)),
     ...remaining.filter((id) => !previousPending.includes(id)),
   ];
-  const held = (args.previous?.heldExerciseIds ?? []).filter((id) => pending.includes(id));
+  const held = (base?.heldExerciseIds ?? []).filter((id) => pending.includes(id));
 
   return {
     pendingExerciseIds: pending,
@@ -90,6 +90,28 @@ export function applyComplete(queue: WorkoutQueueState, exerciseId: number): Wor
     skippedExerciseIds: [...queue.skippedExerciseIds],
     heldExerciseIds: queue.heldExerciseIds.filter((id) => id !== exerciseId),
   };
+}
+
+export function queueItemsFromRoutine(
+  exercises: readonly { exerciseId: number; exerciseName: string }[],
+  queue: WorkoutQueueState,
+  currentExerciseId: number | null,
+): { exerciseId: number; name: string; current: boolean; held: boolean }[] {
+  const held = new Set(queue.heldExerciseIds);
+  return queue.pendingExerciseIds.flatMap((exerciseId) => {
+    const item = exercises.find((exercise) => exercise.exerciseId === exerciseId);
+    if (!item) {
+      return [];
+    }
+    return [
+      {
+        exerciseId,
+        name: item.exerciseName,
+        current: currentExerciseId === exerciseId,
+        held: held.has(exerciseId),
+      },
+    ];
+  });
 }
 
 export function selectQueuedExercise<T extends { exerciseId: number }>(
