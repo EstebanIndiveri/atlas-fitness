@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
 import { MetricValue } from '@/components/ui/MetricValue';
+import { TopographicTexture } from '@/components/today/TopographicTexture';
 import { fetchRoutineDetail } from '@/lib/api/routine-detail';
 import { cn } from '@/lib/ui/cn';
 import { useToday } from '@/hooks/useToday';
@@ -115,8 +116,9 @@ export function TodayWorkoutHero({
       const routine = detailState.status === 'loaded' && detailState.routine.id === today.routineId ? detailState.routine : null;
       const metrics = routine ? buildMetrics(routine) : null;
       return (
-        <Card tone="brand" className="space-y-6 rounded-xl p-5 sm:p-7">
-          <div className="flex items-start justify-between gap-3">
+        <Card tone="brand" className="relative space-y-6 overflow-hidden rounded-xl p-5 sm:p-7">
+          <TopographicTexture className="text-brand opacity-[0.06]" />
+          <div className="relative flex items-start justify-between gap-3">
             <div className="flex items-center gap-2 text-xs font-semibold tracking-[0.18em] text-brand">
               <span className="h-2.5 w-2.5 rounded-full bg-success" aria-hidden="true" />
               <span>{COPY.eyebrow}</span>
@@ -124,7 +126,7 @@ export function TodayWorkoutHero({
             {routine ? <KindPill kind={routine.kind} /> : null}
           </div>
 
-          <div className="space-y-2">
+          <div className="relative space-y-2">
             <h2 className="font-serif text-3xl font-semibold leading-tight tracking-[-0.03em] text-ink sm:text-4xl">
               {today.routineName}
             </h2>
@@ -134,7 +136,7 @@ export function TodayWorkoutHero({
           </div>
 
           {detailState.status === 'loading' ? (
-            <p className="text-sm text-ink-muted" role="status">{COPY.routineDetailLoading}</p>
+            <p className="relative text-sm text-ink-muted" role="status">{COPY.routineDetailLoading}</p>
           ) : null}
           {detailState.status === 'error' ? (
             <RetryableError
@@ -145,7 +147,7 @@ export function TodayWorkoutHero({
           ) : null}
           {metrics ? <StatsRow exercises={metrics.exercises} series={metrics.series} minutes={metrics.minutes} /> : null}
 
-          <div className="space-y-3">
+          <div className="relative space-y-3">
             <Button size="lg" onClick={onStartWorkout}>{COPY.start}</Button>
             <Button size="lg" variant="secondary" onClick={onAdapt}>{COPY.adapt}</Button>
           </div>
@@ -181,20 +183,46 @@ function KindPill({ kind }: { kind: RoutineDetail['kind'] }) {
   );
 }
 
+const STAT_ICON = {
+  clock: 'M12 7v5l3 2 M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z',
+  dumbbell: 'M6.5 9v6 M17.5 9v6 M4 10.5v3 M20 10.5v3 M6.5 12h11',
+  series: 'M4 7h16 M4 12h16 M4 17h16',
+} as const;
+
+function StatIcon({ path }: { path: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4 text-brand"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d={path} />
+    </svg>
+  );
+}
+
 function StatsRow({ exercises, series, minutes }: { exercises: number; series: number; minutes: number }) {
   const items = [
-    { icon: '⏱', value: `${minutes} min`, label: 'Duración estimada' },
-    { icon: '◎', value: `${exercises} ejercicios`, label: 'Ejercicios' },
-    { icon: '≋', value: `${series} series`, label: 'Series' },
+    { icon: STAT_ICON.clock, value: `${minutes} min`, label: 'Duración estimada' },
+    { icon: STAT_ICON.dumbbell, value: `${exercises} ejercicios`, label: 'Ejercicios' },
+    { icon: STAT_ICON.series, value: `${series} series`, label: 'Series' },
   ];
 
   return (
-    <div className="grid grid-cols-3 gap-2">
+    <div className="relative flex items-center gap-4 text-sm text-ink">
       {items.map((item) => (
-        <div key={item.label} className="rounded-lg bg-surface/70 p-3 text-center ring-1 ring-line/70">
-          <span className="block text-base" aria-hidden="true">{item.icon}</span>
-          <MetricValue metric={metric(item.value, 'atlas_computed')} label={item.label} className="justify-center text-sm" />
-          <span className="mt-1 block text-[0.68rem] uppercase tracking-[0.12em] text-ink-muted">{item.label}</span>
+        <div key={item.label} className="flex items-center gap-1.5">
+          <StatIcon path={item.icon} />
+          <MetricValue
+            metric={metric(item.value, 'atlas_computed')}
+            label={item.label}
+            className="font-medium"
+          />
         </div>
       ))}
     </div>

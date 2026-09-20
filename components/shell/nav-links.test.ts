@@ -1,5 +1,16 @@
 import { describe, expect, it } from '@jest/globals';
-import { bottomNavTestId, isCurrentPath } from './nav-links';
+import { APP_NAV_LINKS, bottomNavTestId, isCurrentPath } from './nav-links';
+
+describe('APP_NAV_LINKS', () => {
+  it('exposes the four mockup tabs mapped to real routes', () => {
+    expect(APP_NAV_LINKS.map((link) => [link.label, link.href, link.tabId])).toEqual([
+      ['Hoy', '/dashboard/today', 'today'],
+      ['Entrenar', '/dashboard/session', 'session'],
+      ['Progreso', '/dashboard/history', 'progress'],
+      ['Perfil', '/dashboard/settings', 'profile'],
+    ]);
+  });
+});
 
 describe('isCurrentPath', () => {
   it('treats dashboard home as exact match only', () => {
@@ -16,6 +27,6 @@ describe('isCurrentPath', () => {
 
 describe('bottomNavTestId', () => {
   it('prefixes tab ids for the mobile bar', () => {
-    expect(bottomNavTestId('settings')).toBe('bottom-nav-settings');
+    expect(bottomNavTestId('profile')).toBe('bottom-nav-profile');
   });
 });

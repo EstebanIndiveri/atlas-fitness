@@ -35,6 +35,7 @@ describe('TodayWeekCard', () => {
     expect(screen.getByRole('heading', { name: 'Esta semana' })).toBeTruthy();
     expect(screen.getByTestId('current-streak').textContent).toBe('5');
     expect(screen.getByText('Progreso semanal en camino')).toBeTruthy();
+    expect(screen.getByRole('list', { name: 'Días de la semana' })).toBeTruthy();
   });
 
   it('never fabricates a weekly plan completion percentage', () => {

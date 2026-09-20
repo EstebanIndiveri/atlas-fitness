@@ -23,11 +23,13 @@ describe('AppShell', () => {
     expect(screen.getByTestId('app-bottom-nav')).toBeTruthy();
 
     const headerNav = screen.getByRole('navigation', { name: 'Principal' });
-    expect(within(headerNav).getByRole('link', { name: 'Inicio' })).toBeTruthy();
-    expect(within(headerNav).getByRole('link', { name: 'Sesión' })).toBeTruthy();
-    expect(within(headerNav).getByRole('link', { name: 'Historial' })).toBeTruthy();
-    expect(screen.getByTestId('settings-link').textContent).toBe('Ajustes');
-    expect(screen.getByTestId('bottom-nav-settings').textContent).toContain('Ajustes');
+    expect(within(headerNav).getByRole('link', { name: 'Hoy' })).toBeTruthy();
+    expect(within(headerNav).getByRole('link', { name: 'Entrenar' })).toBeTruthy();
+    expect(within(headerNav).getByRole('link', { name: 'Progreso' })).toBeTruthy();
+    expect(screen.getByTestId('profile-link').textContent).toBe('Perfil');
+    expect(screen.getByTestId('bottom-nav-profile').textContent).toContain('Perfil');
+    expect(screen.getByRole('button', { name: 'Notificaciones' })).toBeTruthy();
+    expect((screen.getByTestId('notifications-button') as HTMLButtonElement).disabled).toBe(true);
     expect(screen.getByRole('button', { name: 'Cerrar sesión' })).toBeTruthy();
     expect(screen.getByRole('main').id).toBe('contenido');
     expect(screen.getByRole('main').className).toContain('pb-app-nav');

@@ -59,6 +59,8 @@ describe('MoodEnergyCheckIn', () => {
     expect(screen.getByRole('radio', { name: 'Normal' })).toBeTruthy();
     expect(screen.getByRole('radio', { name: 'Bien' })).toBeTruthy();
     expect(screen.getByRole('radio', { name: 'Excelente' })).toBeTruthy();
+    expect(screen.getByRole('radio', { name: 'Bien' }).querySelector('svg')).toBeTruthy();
+    expect(screen.getByRole('radio', { name: 'Mal' }).textContent).not.toContain('😞');
     expect(screen.getByRole('button', { name: 'Seleccionar energía Baja' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Seleccionar energía Media' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Seleccionar energía Alta' })).toBeTruthy();

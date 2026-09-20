@@ -4,6 +4,7 @@ import { useRef, useState, type KeyboardEvent } from 'react';
 
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { MoodFace } from '@/components/today/MoodFace';
 import { ErrorState, LoadingState } from '@/components/ui/states';
 import { useDailyCheckin } from '@/hooks/useDailyCheckin';
 import { MOOD_EMOJIS } from '@/lib/copy/session';
@@ -128,7 +129,7 @@ export function MoodEnergyCheckIn() {
             role="radiogroup"
             aria-label={CHECKIN_COPY.moodGroupLabel}
           >
-            {MOOD_EMOJIS.map(({ value, emoji, label }) => {
+            {MOOD_EMOJIS.map(({ value, label }) => {
               const active = selectedMood === value;
               return (
                 <button
@@ -151,7 +152,7 @@ export function MoodEnergyCheckIn() {
                   )}
                   data-testid={`mood-${value}`}
                 >
-                  <span className="text-2xl leading-none" aria-hidden="true">{emoji}</span>
+                  <MoodFace value={value} className={active ? 'text-brand' : 'text-ink-muted'} />
                   <span className="text-[0.68rem] font-medium leading-tight text-ink">{label}</span>
                   {active ? (
                     <span className="absolute -right-1 -top-1 grid size-5 place-items-center rounded-full bg-brand text-[0.65rem] font-bold text-white" aria-hidden="true">

@@ -7,12 +7,10 @@ import { cn } from '@/lib/ui/cn';
 import { APP_NAV_LINKS, bottomNavTestId, isCurrentPath } from './nav-links';
 
 const TAB_ICON: Record<(typeof APP_NAV_LINKS)[number]['tabId'], string> = {
-  home: 'M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1z',
   today: 'M7 3v3 M17 3v3 M4 8h16 M5 6h14a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z M9 13l2 2 4-4',
-  session: 'M5 6h14v12H5z M9 3h6v3H9z M8 11h8 M8 15h5',
-  history: 'M12 7v5l3 2 M21 12a9 9 0 1 1-2.6-6.3',
-  settings:
-    'M12 8.5A3.5 3.5 0 1 0 12 15.5 3.5 3.5 0 0 0 12 8.5z M19.4 13a7.7 7.7 0 0 0 .1-2l2-1.5-2-3.5-2.4 1a7.6 7.6 0 0 0-1.7-1L15 3h-6l-.4 2.5a7.6 7.6 0 0 0-1.7 1L6.5 6 4.5 9.5 6.5 11a7.7 7.7 0 0 0 .1 2l-2 1.5 2 3.5 2.4-1a7.6 7.6 0 0 0 1.7 1L9 21h6l.4-2.5a7.6 7.6 0 0 0 1.7-1l2.4 1 2-3.5z',
+  session: 'M6.5 9v6 M17.5 9v6 M4 10.5v3 M20 10.5v3 M6.5 12h11',
+  progress: 'M4 19V5 M4 19h16 M8 16v-4 M12 16V8 M16 16v-7',
+  profile: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z M5 20a7 7 0 0 1 14 0',
 };
 
 export function AppBottomNav() {
@@ -24,7 +22,7 @@ export function AppBottomNav() {
       data-testid={UI_COPY_TEST_IDS.appBottomNav}
       className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 pb-safe md:hidden"
     >
-      <ul className="grid grid-cols-5">
+      <ul className="grid grid-cols-4">
         {APP_NAV_LINKS.map((link) => {
           const current = isCurrentPath(pathname, link.href);
           return (
