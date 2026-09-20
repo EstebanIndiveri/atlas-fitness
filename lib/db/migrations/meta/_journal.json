@@ -99,6 +99,13 @@
       "when": 1789923600000,
       "tag": "0013_coach_recommendations",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1789884675417,
+      "tag": "0014_habit_logs",
+      "breakpoints": true
     }
   ]
 }

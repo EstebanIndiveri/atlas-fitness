@@ -188,6 +188,17 @@ export const REQUIRED_SCHEMA: readonly RequiredTable[] = [
       },
     ],
   },
+  {
+    name: 'habit_logs',
+    columns: ['id', 'user_id', 'local_date', 'habit_key', 'done', 'created_at', 'updated_at'],
+    primaryKey: ['id'],
+    indexes: [
+      {
+        name: 'habit_logs_user_id_local_date_habit_key_unique',
+        columns: ['user_id', 'local_date', 'habit_key'],
+      },
+    ],
+  },
 ];
 
 export const REQUIRED_TABLES = REQUIRED_SCHEMA.map(({ name }) => name);
