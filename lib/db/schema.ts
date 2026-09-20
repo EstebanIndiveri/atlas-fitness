@@ -79,6 +79,61 @@ export const routines = sqliteTable('routines', {
 });
 
 /**
+ * Training plans — V1 simple weekly routine schedule.
+ * `day_of_week` in scheduled_routines uses 0=Sunday, 1=Monday, ..., 6=Saturday.
+ */
+export const trainingPlans = sqliteTable(
+  'training_plans',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id),
+    name: text('name').notNull(),
+    isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .default(sql`(unixepoch())`),
+    updatedAt: integer('updated_at', { mode: 'timestamp' })
+      .notNull()
+      .default(sql`(unixepoch())`),
+    deletedAt: integer('deleted_at', { mode: 'timestamp' }),
+  },
+  (table) => ({
+    uniqueActiveUserPlan: uniqueIndex('training_plans_user_id_active_unique')
+      .on(table.userId)
+      .where(sql`${table.isActive} = 1 AND ${table.deletedAt} IS NULL`),
+  }),
+);
+
+export const scheduledRoutines = sqliteTable(
+  'scheduled_routines',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    trainingPlanId: integer('training_plan_id')
+      .notNull()
+      .references(() => trainingPlans.id),
+    dayOfWeek: integer('day_of_week').notNull(),
+    routineId: integer('routine_id')
+      .notNull()
+      .references(() => routines.id),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (table) => ({
+    uniquePlanDay: uniqueIndex('scheduled_routines_plan_day_unique').on(
+      table.trainingPlanId,
+      table.dayOfWeek,
+    ),
+    dayOfWeekRange: check(
+      'scheduled_routines_day_of_week_check',
+      sql`${table.dayOfWeek} BETWEEN 0 AND 6`,
+    ),
+  }),
+);
+
+/**
  * Routine exercises — ordered target sets/reps for a routine.
  */
 export const routineExercises = sqliteTable(
@@ -316,6 +371,12 @@ export type NewExercise = typeof exercises.$inferInsert;
 
 export type Routine = typeof routines.$inferSelect;
 export type NewRoutine = typeof routines.$inferInsert;
+
+export type TrainingPlan = typeof trainingPlans.$inferSelect;
+export type NewTrainingPlan = typeof trainingPlans.$inferInsert;
+
+export type ScheduledRoutine = typeof scheduledRoutines.$inferSelect;
+export type NewScheduledRoutine = typeof scheduledRoutines.$inferInsert;
 
 export type RoutineExercise = typeof routineExercises.$inferSelect;
 export type NewRoutineExercise = typeof routineExercises.$inferInsert;
