@@ -35,24 +35,15 @@ export function MetricValue({
   showSource = false,
   className,
 }: MetricValueProps) {
-  const sourceId = showSource ? sourceDescriptionId(label, metricValue.source) : undefined;
-
   return (
     <span className={cn('inline-flex items-baseline gap-2', className)}>
-      <span aria-describedby={sourceId} className="font-medium text-ink">
+      <span className="font-medium text-ink">
         {label ? <span className="sr-only">{label}: </span> : null}
         {metricValue.value}
       </span>
       {showSource ? (
-        <span id={sourceId} className="text-xs text-ink-muted">
-          {MetricSourceLabel[metricValue.source]}
-        </span>
+        <span className="text-xs text-ink-muted">{MetricSourceLabel[metricValue.source]}</span>
       ) : null}
     </span>
   );
-}
-
-function sourceDescriptionId(label: string | undefined, source: Metric<ReactNode>['source']): string {
-  const base = label ? label.toLowerCase().replace(/[^a-z0-9]+/g, '-') : 'metric';
-  return `${base.replace(/^-|-$/g, '') || 'metric'}-${source}-source`;
 }

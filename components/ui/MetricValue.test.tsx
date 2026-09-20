@@ -19,15 +19,23 @@ describe('MetricValue', () => {
     expect(screen.getByText('Sugerencia de Atlas')).not.toBeNull();
   });
 
-  it('associates the shown source with the visible value for accessibility', () => {
+  it('renders the shown source as visible text adjacent to the value', () => {
     render(<MetricValue metric={metric('100 kg', 'external_integration')} label="Peso" showSource />);
 
     const value = screen.getByText('100 kg');
-    const sourceId = value.getAttribute('aria-describedby');
-
     expect(value.textContent).toContain('100 kg');
-    expect(sourceId).toBeTruthy();
-    expect(document.getElementById(sourceId ?? '')?.textContent).toBe('Integración');
+    expect(screen.getByText('Integración')).not.toBeNull();
+  });
+
+  it('does not emit duplicate DOM ids when the same label and source repeat', () => {
+    const { container } = render(
+      <>
+        <MetricValue metric={metric('5', 'user_input')} label="Series" showSource />
+        <MetricValue metric={metric('5', 'user_input')} label="Series" showSource />
+      </>,
+    );
+    const ids = Array.from(container.querySelectorAll('[id]')).map((el) => el.id);
+    expect(new Set(ids).size).toBe(ids.length);
   });
 });
 
