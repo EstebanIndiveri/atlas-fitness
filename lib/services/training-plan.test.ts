@@ -8,6 +8,7 @@ import {
   createTrainingPlan,
   resolveTodayScheduledRoutine,
 } from '@/lib/services/training-plan';
+import { AppError } from '@/types/errors';
 
 describe('TrainingPlan adaptive service', () => {
   let userId: number;
@@ -146,6 +147,27 @@ describe('TrainingPlan adaptive service', () => {
       localDate: '2026-09-15',
       dayOfWeek: 2,
       routineId,
+    });
+  });
+
+  it('rejects empty schedule with typed validation errors', async () => {
+    const input = {
+      userId,
+      name: 'Plan sin días',
+      schedule: [],
+    };
+    let caughtError: unknown;
+
+    try {
+      await createTrainingPlan(input);
+    } catch (error) {
+      caughtError = error;
+    }
+
+    expect(caughtError).toBeInstanceOf(AppError);
+    expect(caughtError).toMatchObject({
+      code: 'VALIDATION',
+      message: 'El plan debe tener al menos un día asignado',
     });
   });
 
