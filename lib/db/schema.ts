@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { sqliteTable, text, integer, uniqueIndex, index } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, uniqueIndex, index, check } from 'drizzle-orm/sqlite-core';
 
 /**
  * Users table — authentication and profile
@@ -240,8 +240,9 @@ export const userStreaks = sqliteTable('user_streaks', {
 });
 
 /**
- * Daily checkins table — mood tracking separate from tips
+ * Daily checkins table — explicit mood/energy tracking separate from tips
  * One checkin per user per local date (America/Argentina/Cordoba)
+ * `energy` is nullable for legacy mood-only rows; do not backfill defaults.
  */
 export const dailyCheckins = sqliteTable(
   'daily_checkins',
@@ -252,6 +253,8 @@ export const dailyCheckins = sqliteTable(
       .references(() => users.id),
     localDate: text('local_date').notNull(),
     mood: integer('mood').notNull(),
+    energy: text('energy'),
+    note: text('note'),
     createdAt: integer('created_at', { mode: 'timestamp' })
       .notNull()
       .default(sql`(unixepoch())`),
@@ -263,6 +266,10 @@ export const dailyCheckins = sqliteTable(
     uniqueUserDate: uniqueIndex('daily_checkins_user_id_local_date_unique').on(
       table.userId,
       table.localDate
+    ),
+    energyValue: check(
+      'daily_checkins_energy_value_check',
+      sql`${table.energy} IS NULL OR ${table.energy} IN ('low', 'medium', 'high')`
     ),
   })
 );
