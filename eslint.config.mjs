@@ -51,6 +51,8 @@ export default [
       'out/**',
       'build/**',
       'dist/**',
+      '.worktrees/**',
+      '**/.worktrees/**',
       'playwright-report/**',
       'test-results/**',
       'public/sw.js',
