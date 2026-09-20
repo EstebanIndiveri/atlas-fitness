@@ -120,6 +120,13 @@
       "when": 1789934400000,
       "tag": "0016_scheduled_routines_note",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1789938000000,
+      "tag": "0017_habit_logs_amount",
+      "breakpoints": true
     }
   ]
 }

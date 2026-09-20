@@ -454,8 +454,10 @@ export const streakNudges = sqliteTable(
 /**
  * Habit logs — one row per user, per Córdoba local date, per habit.
  *
- * Every row is inherently `source: user_input` (a manual completion toggle);
- * no targets, counts, or progress ratios are fabricated (DATA HONESTY RULE).
+ * Every row is inherently `source: user_input` (a manual completion toggle, plus
+ * an optional user-entered quantitative `amount` such as hydration liters as a
+ * decimal string); no targets, ratios, or progress percentages are fabricated
+ * (DATA HONESTY RULE).
  * Unique (user_id, local_date, habit_key) so daily toggles upsert idempotently.
  */
 export const habitLogs = sqliteTable(
@@ -468,6 +470,7 @@ export const habitLogs = sqliteTable(
     localDate: text('local_date').notNull(),
     habitKey: text('habit_key').notNull(),
     done: integer('done', { mode: 'boolean' }).notNull().default(true),
+    amount: text('amount'),
     createdAt: integer('created_at', { mode: 'timestamp' })
       .notNull()
       .default(sql`(unixepoch())`),

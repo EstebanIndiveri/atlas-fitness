@@ -7,6 +7,7 @@ import type { HabitKey } from '@/types/habit';
 export type HabitLogInput = {
   habitKey: HabitKey;
   done: boolean;
+  amount?: string;
 };
 
 export type HabitLogResponse = Omit<HabitLog, 'createdAt' | 'updatedAt'> & {
@@ -117,12 +118,14 @@ function parseHabitLogResponse(value: unknown): HabitLogResponse | null {
     return null;
   }
 
+  const amount = parseNullableAmount(value.amount);
   if (
     !isInteger(value.id) ||
     !isInteger(value.userId) ||
     typeof value.localDate !== 'string' ||
     !isHabitKey(value.habitKey) ||
     typeof value.done !== 'boolean' ||
+    amount === INVALID_AMOUNT ||
     typeof value.createdAt !== 'string' ||
     typeof value.updatedAt !== 'string'
   ) {
@@ -135,9 +138,19 @@ function parseHabitLogResponse(value: unknown): HabitLogResponse | null {
     localDate: value.localDate,
     habitKey: value.habitKey,
     done: value.done,
+    amount,
     createdAt: value.createdAt,
     updatedAt: value.updatedAt,
   };
+}
+
+const INVALID_AMOUNT = Symbol('invalid-amount');
+
+function parseNullableAmount(value: unknown): string | null | typeof INVALID_AMOUNT {
+  if (value === undefined || value === null) {
+    return null;
+  }
+  return typeof value === 'string' ? value : INVALID_AMOUNT;
 }
 
 function isInteger(value: unknown): value is number {

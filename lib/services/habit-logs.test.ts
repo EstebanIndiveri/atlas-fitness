@@ -103,4 +103,42 @@ describe('HabitLogs service', () => {
       setHabitLog({ userId: 0, habitKey: 'walk', done: true, now: MIDDAY_UTC }),
     ).rejects.toBeInstanceOf(AppError);
   });
+
+  it('persists a normalized quantitative amount for a quantitative habit', async () => {
+    const log = await setHabitLog({
+      userId,
+      habitKey: 'hydration',
+      done: true,
+      amount: '1.50',
+      now: MIDDAY_UTC,
+    });
+
+    expect(log.amount).toBe('1.5');
+    expect(log.done).toBe(true);
+  });
+
+  it('clears the amount when a quantitative habit is toggled off', async () => {
+    await setHabitLog({ userId, habitKey: 'hydration', done: true, amount: '1', now: MIDDAY_UTC });
+    const cleared = await setHabitLog({
+      userId,
+      habitKey: 'hydration',
+      done: false,
+      now: MIDDAY_UTC,
+    });
+
+    expect(cleared.done).toBe(false);
+    expect(cleared.amount).toBeNull();
+  });
+
+  it('rejects an out-of-range hydration amount', async () => {
+    await expect(
+      setHabitLog({ userId, habitKey: 'hydration', done: true, amount: '999', now: MIDDAY_UTC }),
+    ).rejects.toBeInstanceOf(AppError);
+  });
+
+  it('rejects an amount on a non-quantitative habit', async () => {
+    await expect(
+      setHabitLog({ userId, habitKey: 'walk', done: true, amount: '1', now: MIDDAY_UTC }),
+    ).rejects.toBeInstanceOf(AppError);
+  });
 });

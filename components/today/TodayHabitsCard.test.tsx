@@ -14,18 +14,27 @@ const useHabits = jest.mocked(useHabitsHook);
 
 function mockHabits(overrides: Partial<ReturnType<typeof useHabitsHook>> = {}) {
   const toggle = jest.fn<ReturnType<typeof useHabitsHook>['toggle']>().mockResolvedValue(undefined);
+  const addAmount = jest
+    .fn<ReturnType<typeof useHabitsHook>['addAmount']>()
+    .mockResolvedValue(undefined);
+  const clearAmount = jest
+    .fn<ReturnType<typeof useHabitsHook>['clearAmount']>()
+    .mockResolvedValue(undefined);
   const reload = jest.fn<ReturnType<typeof useHabitsHook>['reload']>();
   const value: ReturnType<typeof useHabitsHook> = {
     doneByKey: { hydration: false, walk: false, mobility: false, sleep: false },
+    amountByKey: { hydration: null, walk: null, mobility: null, sleep: null },
     loading: false,
     saving: false,
     error: null,
     reload,
     toggle,
+    addAmount,
+    clearAmount,
     ...overrides,
   };
   useHabits.mockReturnValue(value);
-  return { toggle, reload };
+  return { toggle, reload, addAmount, clearAmount };
 }
 
 describe('TodayHabitsCard', () => {
@@ -33,18 +42,31 @@ describe('TodayHabitsCard', () => {
     jest.clearAllMocks();
   });
 
-  it('renders the heading and one checkbox per catalog habit reflecting done state', () => {
+  it('renders the heading and one checkbox per boolean catalog habit', () => {
     mockHabits({ doneByKey: { hydration: true, walk: false, mobility: false, sleep: false } });
     render(<TodayHabitsCard />);
 
     expect(screen.getByRole('heading', { name: 'Hábitos de hoy' })).toBeTruthy();
-    expect(screen.getAllByRole('checkbox')).toHaveLength(4);
-    expect(screen.getByRole('checkbox', { name: /Hidratación/ }).getAttribute('aria-checked')).toBe(
-      'true',
-    );
+    expect(screen.getAllByRole('checkbox')).toHaveLength(3);
     expect(screen.getByRole('checkbox', { name: /Caminar/ }).getAttribute('aria-checked')).toBe(
       'false',
     );
+  });
+
+  it('renders a quantitative stepper for hydration and reports the real amount', () => {
+    mockHabits({ amountByKey: { hydration: '1.5', walk: null, mobility: null, sleep: null } });
+    render(<TodayHabitsCard />);
+
+    expect(screen.queryByRole('checkbox', { name: /Hidratación/ })).toBeNull();
+    expect(screen.getByText('1,5 L')).toBeTruthy();
+  });
+
+  it('adds a hydration step through the hook when the add button is pressed', () => {
+    const { addAmount } = mockHabits();
+    render(<TodayHabitsCard />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Sumar 0,25 L Hidratación/ }));
+    expect(addAmount).toHaveBeenCalledWith('hydration');
   });
 
   it('toggles a habit through the hook when a row is activated', () => {

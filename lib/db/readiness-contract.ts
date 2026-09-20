@@ -190,7 +190,7 @@ export const REQUIRED_SCHEMA: readonly RequiredTable[] = [
   },
   {
     name: 'habit_logs',
-    columns: ['id', 'user_id', 'local_date', 'habit_key', 'done', 'created_at', 'updated_at'],
+    columns: ['id', 'user_id', 'local_date', 'habit_key', 'done', 'amount', 'created_at', 'updated_at'],
     primaryKey: ['id'],
     indexes: [
       {

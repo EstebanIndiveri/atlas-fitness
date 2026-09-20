@@ -19,6 +19,7 @@ const habitRow = {
   localDate: '2026-09-20',
   habitKey: 'hydration',
   done: true,
+  amount: '1.5',
   createdAt: '2026-09-20T12:00:00.000Z',
   updatedAt: '2026-09-20T12:00:00.000Z',
 } as const;
@@ -41,6 +42,17 @@ describe('habits client', () => {
     global.fetch = jest.fn(async () => jsonResponse([])) as unknown as typeof fetch;
 
     await expect(fetchTodayHabitLogs()).resolves.toEqual([]);
+  });
+
+  it('coerces a missing amount to null and rejects a non-string amount', async () => {
+    const { amount: _amount, ...withoutAmount } = habitRow;
+    global.fetch = jest.fn(async () => jsonResponse([withoutAmount])) as unknown as typeof fetch;
+    await expect(fetchTodayHabitLogs()).resolves.toEqual([{ ...withoutAmount, amount: null }]);
+
+    global.fetch = jest.fn(async () =>
+      jsonResponse([{ ...habitRow, amount: 1.5 }]),
+    ) as unknown as typeof fetch;
+    await expect(fetchTodayHabitLogs()).rejects.toBeInstanceOf(HabitLogClientError);
   });
 
   it('upserts a habit and returns the API payload unchanged', async () => {
