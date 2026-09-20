@@ -185,6 +185,47 @@ export const workouts = sqliteTable(
 );
 
 /**
+ * Post-workout feedback — explicit user input collected after a completed workout.
+ */
+export const postWorkoutFeedback = sqliteTable(
+  'post_workout_feedback',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id),
+    workoutId: integer('workout_id')
+      .notNull()
+      .references(() => workouts.id),
+    localDate: text('local_date').notNull(),
+    effort: integer('effort').notNull(),
+    sensation: text('sensation').notNull(),
+    discomfortJson: text('discomfort_json').notNull(),
+    note: text('note'),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .default(sql`(unixepoch())`),
+    updatedAt: integer('updated_at', { mode: 'timestamp' })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (table) => ({
+    uniqueWorkoutFeedback: uniqueIndex('post_workout_feedback_workout_id_unique').on(
+      table.workoutId,
+    ),
+    userDateIdx: index('post_workout_feedback_user_local_date_idx').on(
+      table.userId,
+      table.localDate,
+    ),
+    effortRange: check('post_workout_feedback_effort_check', sql`${table.effort} BETWEEN 1 AND 10`),
+    sensationValue: check(
+      'post_workout_feedback_sensation_check',
+      sql`${table.sensation} IN ('great', 'good', 'neutral', 'hard', 'bad')`,
+    ),
+  }),
+);
+
+/**
  * Workout sets table — individual sets within workouts
  * weight_kg stored as text to preserve decimal precision
  */
@@ -383,6 +424,9 @@ export type NewRoutineExercise = typeof routineExercises.$inferInsert;
 
 export type Workout = typeof workouts.$inferSelect;
 export type NewWorkout = typeof workouts.$inferInsert;
+
+export type PostWorkoutFeedback = typeof postWorkoutFeedback.$inferSelect;
+export type NewPostWorkoutFeedback = typeof postWorkoutFeedback.$inferInsert;
 
 export type WorkoutSet = typeof workoutSets.$inferSelect;
 export type NewWorkoutSet = typeof workoutSets.$inferInsert;

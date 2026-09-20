@@ -85,6 +85,13 @@
       "when": 1789913712000,
       "tag": "0011_training_plans",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1789920000000,
+      "tag": "0012_post_workout_feedback",
+      "breakpoints": true
     }
   ]
 }
