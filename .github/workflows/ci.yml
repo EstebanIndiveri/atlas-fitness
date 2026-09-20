@@ -1,0 +1,98 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop]
+
+jobs:
+  lint-and-test:
+    name: Lint, Typecheck, and Test
+    runs-on: ubuntu-latest
+
+    env:
+      SESSION_SECRET: ci-atlas-session-secret-9f3a7c1e5b8d2a4c6e0f1b3d5a7c9e2f
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Run TypeScript typecheck
+        run: npm run typecheck
+
+      - name: Run Jest unit tests
+        run: npm test
+        env:
+          # Jest setup isolates a unique /tmp DB and refuses local.db / Turso URLs.
+          SESSION_SECRET: ci-atlas-session-secret-9f3a7c1e5b8d2a4c6e0f1b3d5a7c9e2f
+
+      - name: Build Next.js app
+        run: npm run build
+        env:
+          SESSION_SECRET: ci-atlas-session-secret-9f3a7c1e5b8d2a4c6e0f1b3d5a7c9e2f
+
+  playwright:
+    name: Playwright E2E Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run database migrations
+        run: npm run db:migrate
+        env:
+          TURSO_DATABASE_URL: file:./local.db
+
+      - name: Seed database with QA user
+        run: npm run db:seed:qa
+        env:
+          NODE_ENV: test
+          TURSO_DATABASE_URL: file:./local.db
+
+      - name: Build Next.js app
+        run: npm run build
+        env:
+          TURSO_DATABASE_URL: file:./local.db
+          SESSION_SECRET: ci-atlas-session-secret-9f3a7c1e5b8d2a4c6e0f1b3d5a7c9e2f
+
+      - name: Run Playwright tests
+        run: npm run test:e2e
+        env:
+          TURSO_DATABASE_URL: file:./local.db
+          SESSION_SECRET: ci-atlas-session-secret-9f3a7c1e5b8d2a4c6e0f1b3d5a7c9e2f
+          CRON_SECRET: test-secret-for-e2e
+          TELEGRAM_WEBHOOK_SECRET: ci-telegram-webhook-secret-not-prod
+
+      - name: Upload Playwright Report
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30

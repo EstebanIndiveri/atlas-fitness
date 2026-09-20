@@ -51,3 +51,7 @@ PO Scrum prioriza; Arquitectura vela por límites técnicos (`AGENTS.md`).
 9. PWA manifest + Playwright Must suite
 
 Detalle de contratos: ver brief Backend en el informe unificado PO / issues cuando existan.
+
+## Handoffs
+
+- [`handoff-atlas-adaptive-core.md`](./handoff-atlas-adaptive-core.md) — dirección de producto Atlas Adaptive Core V1: visión, DATA HONESTY RULE, roadmap dos tracks, MoSCoW V1, DoD y brief para agentes.

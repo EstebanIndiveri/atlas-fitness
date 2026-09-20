@@ -1,0 +1,132 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1789622272903,
+      "tag": "0000_shiny_hellfire_club",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1789622272904,
+      "tag": "0001_add_workout_sets_unique_constraint",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1789655820806,
+      "tag": "0002_whole_donald_blake",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1789662000000,
+      "tag": "0003_streak_nudges",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1789670000000,
+      "tag": "0004_routines",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1789758600000,
+      "tag": "0005_active_workout_unique",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1789848000000,
+      "tag": "0006_sessions",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1789852800000,
+      "tag": "0007_rate_limit_buckets",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1789900800000,
+      "tag": "0008_workout_queue",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1789904400000,
+      "tag": "0009_workout_queue_version",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1789910112000,
+      "tag": "0010_daily_checkins_energy_note",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1789913712000,
+      "tag": "0011_training_plans",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1789920000000,
+      "tag": "0012_post_workout_feedback",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1789923600000,
+      "tag": "0013_coach_recommendations",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1789927200000,
+      "tag": "0014_habit_logs",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "6",
+      "when": 1789930800000,
+      "tag": "0015_training_plans_goal",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "6",
+      "when": 1789934400000,
+      "tag": "0016_scheduled_routines_note",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1789938000000,
+      "tag": "0017_habit_logs_amount",
+      "breakpoints": true
+    }
+  ]
+}

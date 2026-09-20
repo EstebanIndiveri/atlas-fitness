@@ -1,0 +1,118 @@
+@import "tailwindcss";
+@config "../tailwind.config.ts";
+@source "../app";
+@source "../components";
+
+/* HU-B design tokens — keep hex in sync with lib/ui/tokens.ts */
+@theme {
+  --color-ink: #0B1220;
+  --color-ink-muted: #445064;
+  --color-canvas: #F3EEE4;
+  --color-surface: #FFFDF8;
+  --color-line: #D9D1C3;
+  --color-brand: #1F6B4A;
+  --color-brand-hover: #17563B;
+  --color-brand-muted: #D7EDE3;
+  --color-brand-foreground: #FFFFFF;
+  --color-danger: #B42318;
+  --color-danger-muted: #FCEBEA;
+  --color-danger-foreground: #FFFFFF;
+  --color-success: #1F6B4A;
+  --color-success-foreground: #FFFFFF;
+  --color-warning: #9A3412;
+  --color-warning-muted: #FEF3C7;
+  --color-warning-foreground: #FFFFFF;
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  --text-display: 2rem;
+  --text-display--line-height: 1.15;
+  --text-display--font-weight: 700;
+  --text-title: 1.5rem;
+  --text-title--line-height: 1.25;
+  --text-title--font-weight: 600;
+  --text-body: 1rem;
+  --text-body--line-height: 1.5;
+  --text-caption: 0.875rem;
+  --text-caption--line-height: 1.4;
+
+  --spacing-page: 1rem;
+  --spacing-section: 1.5rem;
+  --spacing-stack: 1rem;
+
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+
+  --shadow-card: 0 1px 2px rgb(11 18 32 / 0.06), 0 8px 24px rgb(11 18 32 / 0.06);
+}
+
+:root {
+  --foreground-rgb: 11, 18, 32;
+  --background-rgb: 243, 238, 228;
+}
+
+body {
+  color: var(--color-ink);
+  background: var(--color-canvas);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@utility pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@utility px-safe {
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
+@utility pb-app-nav {
+  padding-bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
+}
+
+@utility bottom-app-cta {
+  bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
+}
+
+@media (width >= 768px) {
+  .pb-app-nav {
+    padding-bottom: 0;
+  }
+
+  .bottom-app-cta {
+    bottom: auto;
+  }
+}
+
+@keyframes streak-pop {
+  0% {
+    transform: scale(0.92);
+    opacity: 0.72;
+  }
+  60% {
+    transform: scale(1.06);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.streak-pop {
+  animation: streak-pop 520ms ease-out 1;
+  transform-origin: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .streak-pop {
+    animation: none;
+  }
+}

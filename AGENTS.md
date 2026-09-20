@@ -155,6 +155,20 @@ Sin imports circulares. Sin dead imports.
 - `docs/architecture/ADR-001-system-stack.md`
 - `docs/architecture/ADR-002-client-channels.md`
 - `docs/architecture/ADR-001b-habit-motivation.md`
+- `docs/architecture/ADR-004-sessions.md`
+- `docs/architecture/ADR-003-gemini-guided-session.md`
+- `docs/architecture/ADR-005-ownership-catalog.md`
 - `docs/backlog/README.md`
 - `docs/engineering/conventions-fe.md`
 - `docs/engineering/conventions-be.md`
+- `docs/engineering/local-dev.md`
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
