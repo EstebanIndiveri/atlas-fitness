@@ -17,6 +17,7 @@ export type TodayScheduledRoutineResult =
       localDate: string;
       dayOfWeek: TrainingPlanDayOfWeek;
       trainingPlanId: number;
+      planGoal: string | null;
     }
   | {
       kind: 'workout';
@@ -26,6 +27,7 @@ export type TodayScheduledRoutineResult =
       scheduledRoutineId: number;
       routineId: number;
       routineName: string;
+      planGoal: string | null;
     }
   | {
       kind: 'routine_missing';
@@ -34,6 +36,7 @@ export type TodayScheduledRoutineResult =
       trainingPlanId: number;
       scheduledRoutineId: number;
       routineId: number;
+      planGoal: string | null;
     };
 
 export interface CreateTrainingPlanResult {
@@ -54,6 +57,7 @@ const dayOfWeekSchema = z.union([
 const createTrainingPlanSchema = z.object({
   userId: z.number().int().positive(),
   name: z.string().trim().min(1).max(120),
+  goal: z.string().trim().min(1).max(60).optional(),
   schedule: z
     .array(
       z.object({
@@ -167,6 +171,7 @@ export async function createTrainingPlan(input: unknown): Promise<CreateTraining
       .values({
         userId: validInput.userId,
         name: validInput.name,
+        goal: validInput.goal ?? null,
         isActive: true,
         updatedAt: now,
       })
@@ -216,7 +221,7 @@ export async function resolveTodayScheduledRoutine(
   });
 
   if (!scheduled) {
-    return { kind: 'rest_day', localDate, dayOfWeek, trainingPlanId: plan.id };
+    return { kind: 'rest_day', localDate, dayOfWeek, trainingPlanId: plan.id, planGoal: plan.goal };
   }
 
   const routine = await db.query.routines.findFirst({
@@ -235,6 +240,7 @@ export async function resolveTodayScheduledRoutine(
       trainingPlanId: plan.id,
       scheduledRoutineId: scheduled.id,
       routineId: scheduled.routineId,
+      planGoal: plan.goal,
     };
   }
 
@@ -246,5 +252,6 @@ export async function resolveTodayScheduledRoutine(
     scheduledRoutineId: scheduled.id,
     routineId: routine.id,
     routineName: routine.name,
+    planGoal: plan.goal,
   };
 }

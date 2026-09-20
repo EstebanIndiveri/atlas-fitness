@@ -73,6 +73,7 @@ function resultFor(userId: number): CreateTrainingPlanResult {
     id: 11,
     userId,
     name: 'Semana base',
+    goal: null,
     isActive: true,
     createdAt: new Date('2026-09-19T12:00:00.000Z'),
     updatedAt: new Date('2026-09-19T12:00:00.000Z'),

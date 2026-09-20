@@ -40,6 +40,7 @@ const COPY = {
   routineDetailError: 'No se pudo cargar el detalle de la rutina.',
   gym: 'Gimnasio',
   home: 'Casa',
+  goalLabel: 'Objetivo del plan',
 };
 
 /**
@@ -123,7 +124,10 @@ export function TodayWorkoutHero({
               <span className="h-2.5 w-2.5 rounded-full bg-success" aria-hidden="true" />
               <span>{COPY.eyebrow}</span>
             </div>
-            {routine ? <KindPill kind={routine.kind} /> : null}
+            <div className="flex items-center gap-2">
+              {today.planGoal ? <GoalPill goal={today.planGoal} /> : null}
+              {routine ? <KindPill kind={routine.kind} /> : null}
+            </div>
           </div>
 
           <div className="relative space-y-2">
@@ -179,6 +183,17 @@ function KindPill({ kind }: { kind: RoutineDetail['kind'] }) {
   return (
     <span className="rounded-full bg-surface/80 px-3 py-1 text-xs font-medium text-ink ring-1 ring-line">
       {kind === 'gym' ? COPY.gym : COPY.home}
+    </span>
+  );
+}
+
+function GoalPill({ goal }: { goal: string }) {
+  return (
+    <span
+      className="rounded-full bg-brand/12 px-3 py-1 text-xs font-semibold text-brand ring-1 ring-brand/30"
+      aria-label={`${COPY.goalLabel}: ${goal}`}
+    >
+      {goal}
     </span>
   );
 }

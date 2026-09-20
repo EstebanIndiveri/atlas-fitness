@@ -47,7 +47,7 @@ function useTodayState(today: TodayResponse | null, overrides: { loading?: boole
   });
 }
 
-function workoutToday(): TodayResponse {
+function workoutToday(planGoal: string | null = null): TodayResponse {
   return {
     kind: 'workout',
     localDate: '2026-09-20',
@@ -56,6 +56,7 @@ function workoutToday(): TodayResponse {
     scheduledRoutineId: 2,
     routineId: 7,
     routineName: 'Empuje y torso superior',
+    planGoal,
   };
 }
 
@@ -130,6 +131,26 @@ describe('TodayWorkoutHero', () => {
     expect(screen.getByText('Gimnasio')).toBeTruthy();
   });
 
+  it('renders the plan goal pill only when the plan has a goal', async () => {
+    useTodayState(workoutToday('Hipertrofia'));
+    mockFetchRoutineDetail.mockResolvedValue(routineDetail());
+
+    await renderHero();
+
+    expect(await screen.findByText('Hipertrofia')).toBeTruthy();
+    expect(screen.getByLabelText('Objetivo del plan: Hipertrofia')).toBeTruthy();
+  });
+
+  it('omits the plan goal pill when the plan has no goal', async () => {
+    useTodayState(workoutToday(null));
+    mockFetchRoutineDetail.mockResolvedValue(routineDetail());
+
+    await renderHero();
+
+    await screen.findByRole('heading', { name: 'Empuje y torso superior' });
+    expect(screen.queryByLabelText(/Objetivo del plan/)).toBeNull();
+  });
+
   it('calls start and adapt actions from workout buttons', async () => {
     const onStartWorkout = jest.fn();
     const onAdapt = jest.fn();
@@ -168,7 +189,7 @@ describe('TodayWorkoutHero', () => {
   });
 
   it('renders rest day without workout stats', async () => {
-    useTodayState({ kind: 'rest_day', localDate: '2026-09-20', dayOfWeek: 0, trainingPlanId: 1 });
+    useTodayState({ kind: 'rest_day', localDate: '2026-09-20', dayOfWeek: 0, trainingPlanId: 1, planGoal: null });
 
     await renderHero();
 
@@ -186,6 +207,7 @@ describe('TodayWorkoutHero', () => {
         trainingPlanId: 1,
         scheduledRoutineId: 2,
         routineId: 7,
+        planGoal: null,
       },
       { reload },
     );
