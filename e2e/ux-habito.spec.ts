@@ -17,13 +17,13 @@ async function registerFreshUser(page: import('@playwright/test').Page): Promise
   await page.waitForResponse(
     (resp) => resp.url().includes('/api/auth/register') && resp.status() === 201,
   );
-  await page.waitForURL('/dashboard', { timeout: 15000 });
+  await page.waitForURL('/dashboard/today', { timeout: 15000 });
 }
 
 test.describe('UX hábito — mobile 390px', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
-  test('app shell uses bottom tabs, streak chip, and habit CTAs', async ({ page }) => {
+  test('app shell uses bottom tabs, streak chip, and golden-path workout entry', async ({ page }) => {
     await registerFreshUser(page);
 
     await expect(page.getByTestId('welcome-message')).toBeVisible({ timeout: 10000 });
@@ -39,12 +39,11 @@ test.describe('UX hábito — mobile 390px', () => {
     await expect(page.getByTestId('current-streak')).toHaveText('0');
     await expect(page.getByTestId('longest-streak')).toHaveText('0');
     await expect(page.getByText('Todavía no tenés racha')).toBeVisible();
-    await expect(page.getByTestId('new-workout-button')).toBeVisible();
-    await expect(page.getByTestId('guided-session-cta')).toBeVisible();
 
     await page.getByTestId('bottom-nav-session').click();
     await page.waitForURL('**/dashboard/session', { timeout: 10000 });
     await expect(page.getByRole('heading', { name: 'Entrenar' })).toBeVisible();
+    await expect(page.getByTestId('start-routine').first()).toBeVisible({ timeout: 10000 });
     await expect(page.getByTestId('app-bottom-nav')).toBeVisible();
   });
 });

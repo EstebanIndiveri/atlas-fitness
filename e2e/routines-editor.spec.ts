@@ -17,7 +17,7 @@ async function registerFreshUser(page: import('@playwright/test').Page): Promise
   await page.waitForResponse(
     (resp) => resp.url().includes('/api/auth/register') && resp.status() === 201,
   );
-  await page.waitForURL('/dashboard', { timeout: 15000 });
+  await page.waitForURL('/dashboard/today', { timeout: 15000 });
 }
 
 test.describe('Routine editor (Must UI)', () => {

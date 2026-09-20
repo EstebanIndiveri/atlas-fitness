@@ -188,7 +188,7 @@ export default function WorkoutSessionPage() {
       });
 
       if (response.ok) {
-        router.push('/dashboard');
+        router.push('/dashboard/today');
       }
     } catch (error) {
       console.error('Error ending workout:', error);
@@ -231,7 +231,7 @@ export default function WorkoutSessionPage() {
   return (
     <div className="mx-auto w-full max-w-4xl px-4 py-4">
       <div className="mb-4 flex items-center justify-between">
-        <Link href="/dashboard" className="text-sm font-medium text-brand hover:underline">
+        <Link href="/dashboard/today" className="text-sm font-medium text-brand hover:underline">
           ← Volver
         </Link>
         {!isEnded && (

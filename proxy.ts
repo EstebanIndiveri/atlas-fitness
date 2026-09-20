@@ -31,8 +31,8 @@ export function proxy(request: NextRequest) {
   // Auth pages - redirect to dashboard if already authenticated
   if (pathname === '/login' || pathname === '/register') {
     if (session && session.userId) {
-      // Already authenticated, redirect to dashboard
-      const dashboardUrl = new URL('/dashboard', request.url);
+      // Already authenticated, redirect to the golden-path home
+      const dashboardUrl = new URL('/dashboard/today', request.url);
       return NextResponse.redirect(dashboardUrl);
     }
   }
