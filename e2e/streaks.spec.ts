@@ -43,7 +43,7 @@ async function registerFreshUser(page: import('@playwright/test').Page) {
   await page.waitForResponse(
     (resp) => resp.url().includes('/api/auth/register') && resp.status() === 201
   );
-  await page.waitForURL('/dashboard', { timeout: 15000 });
+  await page.waitForURL('/dashboard/today', { timeout: 15000 });
   await expect(page.getByTestId('streak-chip')).toBeVisible({ timeout: 10000 });
   await expect(page.getByTestId('current-streak')).toBeVisible({ timeout: 10000 });
 }
@@ -56,21 +56,18 @@ test.describe('Streaks + nudges', () => {
     await expect(page.getByTestId('current-streak')).toHaveText('0');
     await expect(page.getByTestId('longest-streak')).toHaveText('0');
 
-    await expect(page.getByTestId('new-workout-button')).toBeVisible({ timeout: 10000 });
-    await page.click('[data-testid="new-workout-button"]');
-    await page.waitForResponse(
-      (resp) => resp.url().includes('/api/workouts') && resp.status() === 201
-    );
-    await expect(page.locator('h1:has-text("Sesión Activa")')).toBeVisible({ timeout: 10000 });
+    // Complete a workout end-to-end via the API (golden path removed the legacy
+    // dashboard "new workout" CTA; streak logic is what we assert here).
+    const created = await page.request.post('/api/workouts');
+    expect(created.status()).toBe(201);
+    const workout = (await created.json()) as { id: number };
+    const ended = await page.request.patch(`/api/workouts/${workout.id}`, {
+      data: { endedAt: new Date().toISOString() },
+    });
+    expect(ended.status()).toBe(200);
 
-    await page.click('button:has-text("Finalizar")');
-    await page.waitForSelector('h2:has-text("Finalizar Entrenamiento")');
-    await page.click('[data-testid="confirm-end-workout"]');
-    await page.waitForResponse(
-      (resp) => resp.url().includes('/api/workouts/') && resp.status() === 200
-    );
-    await page.waitForURL('/dashboard', { timeout: 10000 });
-
+    // The Today home reflects the updated streak after reloading.
+    await page.goto('/dashboard/today');
     await expect(page.getByTestId('current-streak')).toHaveText('1', { timeout: 10000 });
     await expect(page.getByTestId('longest-streak')).toHaveText('1');
   });

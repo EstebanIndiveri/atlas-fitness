@@ -9,6 +9,7 @@ describe('TodayHeader', () => {
   it('greets the user by name and shows the subtitle', () => {
     render(<TodayHeader name="Esteban" now={FIXED} />);
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Hola, Esteban');
+    expect(screen.getByTestId('welcome-message').textContent).toBe('Hola, Esteban');
     expect(screen.getByText('¿Cómo venís hoy?')).toBeTruthy();
   });
 

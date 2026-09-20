@@ -38,7 +38,7 @@ export function RecentSessionsCard({ sessions }: RecentSessionsCardProps) {
           title={UI_COPY.emptyWorkoutsTitle}
           description={UI_COPY.emptyWorkoutsBody}
           action={
-            <Link href="/dashboard" className={buttonClassName({ variant: 'primary' })}>
+            <Link href="/dashboard/today" className={buttonClassName({ variant: 'primary' })}>
               {UI_COPY.startFirstWorkout}
             </Link>
           }

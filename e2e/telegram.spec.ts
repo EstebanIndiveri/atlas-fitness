@@ -20,7 +20,7 @@ async function registerAndLandOnDashboard(page: import('@playwright/test').Page)
   await page.waitForResponse(
     (resp) => resp.url().includes('/api/auth/register') && resp.status() === 201
   );
-  await page.waitForURL('/dashboard', { timeout: 15000 });
+  await page.waitForURL('/dashboard/today', { timeout: 15000 });
   await page.waitForResponse((resp) => resp.url().includes('/api/auth/me'));
   await expect(page.locator('[data-testid="welcome-message"]')).toBeVisible({ timeout: 10000 });
   return user;
@@ -30,11 +30,8 @@ test.describe('Telegram link + webhook', () => {
   test('settings link-code flow and home banner when unlinked', async ({ page }) => {
     await registerAndLandOnDashboard(page);
 
-    await expect(page.getByTestId('telegram-link-banner')).toBeVisible();
-    await expect(page.getByTestId('telegram-link-banner')).toContainText('Vinculá Telegram');
-
-    await page.getByTestId('telegram-link-banner-cta').click();
-    await page.waitForURL('**/dashboard/settings', { timeout: 10000 });
+    // Telegram linking now lives in settings (the legacy home banner was removed).
+    await page.goto('/dashboard/settings');
     await expect(page.getByTestId('telegram-unlinked-status')).toBeVisible();
 
     const codeResponse = page.waitForResponse(
@@ -93,8 +90,9 @@ test.describe('Telegram link + webhook', () => {
     const meBody = await me.json();
     expect(meBody.telegramUserId).toBe(String(telegramUserId));
 
-    await page.goto('/dashboard');
-    await expect(page.getByTestId('telegram-link-banner')).toHaveCount(0);
+    // Settings reflects the linked account (legacy home banner removed).
+    await page.goto('/dashboard/settings');
+    await expect(page.getByTestId('telegram-unlinked-status')).toHaveCount(0);
 
     const logId = updateId + 1;
     const logUpdate = {

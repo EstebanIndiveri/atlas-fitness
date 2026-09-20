@@ -31,7 +31,7 @@ describe('RecentSessionsCard', () => {
 
     expect(screen.getByRole('heading', { name: 'Todavía no hay entrenos' })).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Iniciar tu primer entrenamiento' }).getAttribute('href')).toBe(
-      '/dashboard',
+      '/dashboard/today',
     );
   });
 
