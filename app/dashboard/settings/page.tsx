@@ -1,14 +1,18 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
+
 import { IosInstallHint } from '@/components/pwa/IosInstallHint';
+import { ProfileHeaderCard } from '@/components/profile/ProfileHeaderCard';
+import { SettingsRow } from '@/components/profile/SettingsRow';
+import { SettingsSection } from '@/components/profile/SettingsSection';
 import { LogoutButton } from '@/components/shell/AppNav';
-import { Button, buttonClassName } from '@/components/ui/Button';
+import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { ErrorState, LoadingState } from '@/components/ui/states';
 import { useLinkCode } from '@/hooks/useLinkCode';
-import { ROUTINE_COPY } from '@/lib/copy/routines';
+import { APP_VERSION } from '@/lib/app/version';
+import { UI_COPY } from '@/lib/copy/ui';
 import { PWA_COPY } from '@/lib/pwa/copy';
 import { TELEGRAM_FE_COPY } from '@/lib/telegram/copy';
 import type { AuthUser } from '@/types/auth';
@@ -54,58 +58,62 @@ export default function SettingsPage() {
   const linked = Boolean(user.telegramUserId);
 
   return (
-    <div className="mx-auto w-full max-w-lg px-4 py-4 sm:px-6 sm:py-6">
-      <Link href="/dashboard" className="text-sm font-medium text-brand hover:underline">
-        {TELEGRAM_FE_COPY.settingsBack}
-      </Link>
-      <h1 className="mt-4 text-2xl font-bold text-ink">{TELEGRAM_FE_COPY.settingsTitle}</h1>
+    <div className="mx-auto w-full max-w-lg space-y-5 px-4 py-4 sm:px-6 sm:py-6">
+      <header>
+        <h1 className="font-serif text-3xl font-semibold tracking-[-0.03em] text-ink sm:text-4xl">
+          {UI_COPY.profileTitle}
+        </h1>
+      </header>
 
-      <section className="mt-6 space-y-3" data-testid="pwa-install-settings">
-        <h2 className="text-lg font-semibold text-ink">{PWA_COPY.settingsInstallHeading}</h2>
-        <IosInstallHint forceVisible />
-      </section>
+      <ProfileHeaderCard user={user} />
 
-      <Card className="mt-6" data-testid="routines-settings">
-        <h2 className="text-lg font-semibold text-ink">{ROUTINE_COPY.listTitle}</h2>
-        <p className="mt-2 text-sm text-ink-muted">{ROUTINE_COPY.listSubtitle}</p>
-        <Link
+      <SettingsSection title={UI_COPY.profileMiAtlasTitle}>
+        <SettingsRow
+          title={UI_COPY.profileRoutinesTitle}
+          description={UI_COPY.profileRoutinesDescription}
           href="/dashboard/routines"
-          className={buttonClassName({ className: 'mt-4' })}
-        >
-          {ROUTINE_COPY.manageCta}
-        </Link>
-      </Card>
+          testId="routines-settings"
+        />
+        <SettingsRow
+          title={UI_COPY.profileHabitsTitle}
+          description={UI_COPY.profileHabitsDescription}
+          href="/dashboard/today"
+        />
+      </SettingsSection>
 
-      <Card className="mt-6" data-testid="telegram-settings">
-        <h2 className="text-lg font-semibold text-ink">Telegram</h2>
-        {linked ? (
-          <p className="mt-2 text-sm text-ink" data-testid="telegram-linked-status">
-            {TELEGRAM_FE_COPY.linked}
-          </p>
-        ) : (
-          <p className="mt-2 text-sm text-ink" data-testid="telegram-unlinked-status">
-            {TELEGRAM_FE_COPY.unlinked}
-          </p>
-        )}
+      <Card data-testid="telegram-settings" className="space-y-4">
+        <div>
+          <h2 className="text-lg font-semibold text-ink">
+            {UI_COPY.profileIntegrationsTitle} — {UI_COPY.profileTelegramTitle}
+          </h2>
+          {linked ? (
+            <p className="mt-2 text-sm text-ink" data-testid="telegram-linked-status">
+              {TELEGRAM_FE_COPY.linked}
+            </p>
+          ) : (
+            <p className="mt-2 text-sm text-ink" data-testid="telegram-unlinked-status">
+              {TELEGRAM_FE_COPY.unlinked}
+            </p>
+          )}
+        </div>
 
         <Button
           type="button"
           onClick={() => void requestCode()}
           disabled={loading}
-          className="mt-4"
           data-testid="generate-link-code"
         >
           {loading ? TELEGRAM_FE_COPY.generating : TELEGRAM_FE_COPY.generateCode}
         </Button>
 
         {error && (
-          <p className="mt-3 text-sm text-danger" data-testid="link-code-error">
+          <p className="text-sm text-danger" data-testid="link-code-error">
             {error}
           </p>
         )}
 
         {code && (
-          <div className="mt-4 rounded-md border border-line bg-canvas p-4">
+          <div className="rounded-md border border-line bg-canvas p-4">
             <p className="text-xs uppercase tracking-wide text-ink-muted">
               {TELEGRAM_FE_COPY.codeLabel}
             </p>
@@ -117,16 +125,34 @@ export default function SettingsPage() {
             </p>
             <p className="mt-2 text-sm text-ink-muted">{TELEGRAM_FE_COPY.codeHint}</p>
             <p className="mt-1 text-xs text-ink-muted" data-testid="telegram-link-code-expiry">
-              Vence: {new Date(code.expiresAt).toLocaleString('es-AR')}
+              {UI_COPY.profileTelegramExpiryPrefix} {new Date(code.expiresAt).toLocaleString('es-AR')}
             </p>
           </div>
         )}
       </Card>
 
-      <Card className="mt-6" data-testid="account-settings">
-        <h2 className="text-lg font-semibold text-ink">Cuenta</h2>
-        <p className="mt-2 text-sm text-ink-muted">Cerrá tu sesión en este dispositivo.</p>
-        <div className="mt-4">
+      <SettingsSection title={UI_COPY.profileApplicationTitle}>
+        <div className="space-y-3 p-4" data-testid="pwa-install-settings">
+          <h3 className="text-sm font-medium text-ink">{PWA_COPY.settingsInstallHeading}</h3>
+          <IosInstallHint forceVisible />
+        </div>
+        <SettingsRow
+          title={UI_COPY.profileUnitsTitle}
+          description={UI_COPY.profileUnitsDescription}
+        />
+        <SettingsRow
+          title={UI_COPY.profileAppearanceTitle}
+          description={UI_COPY.profileAppearanceDescription}
+        />
+      </SettingsSection>
+
+      <Card data-testid="account-settings">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-semibold text-ink">{UI_COPY.profileAccountTitle}</h2>
+            <p className="mt-2 text-sm text-ink-muted">{UI_COPY.profileLogoutDescription}</p>
+            <p className="mt-2 text-xs text-ink-muted">{UI_COPY.profileVersionLabel(APP_VERSION)}</p>
+          </div>
           <LogoutButton />
         </div>
       </Card>
