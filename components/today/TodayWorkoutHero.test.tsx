@@ -47,7 +47,11 @@ function useTodayState(today: TodayResponse | null, overrides: { loading?: boole
   });
 }
 
-function workoutToday(planGoal: string | null = null, dayReason: string | null = null): TodayResponse {
+function workoutToday(
+  planGoal: string | null = null,
+  dayReason: string | null = null,
+  completion: { completed: number; total: number } = { completed: 0, total: 0 },
+): TodayResponse {
   return {
     kind: 'workout',
     localDate: '2026-09-20',
@@ -58,6 +62,7 @@ function workoutToday(planGoal: string | null = null, dayReason: string | null =
     routineName: 'Empuje y torso superior',
     planGoal,
     dayReason,
+    completion,
   };
 }
 
@@ -170,6 +175,39 @@ describe('TodayWorkoutHero', () => {
 
     await screen.findByRole('heading', { name: 'Empuje y torso superior' });
     expect(screen.queryByLabelText(/Por qué hoy/)).toBeNull();
+  });
+
+  it('renders the honest completion meter with real exercise counts', async () => {
+    useTodayState(workoutToday(null, null, { completed: 2, total: 3 }));
+    mockFetchRoutineDetail.mockResolvedValue(routineDetail());
+
+    await renderHero();
+
+    const meter = await screen.findByTestId('completion-meter');
+    expect(meter.textContent).toContain('2 de 3 ejercicios');
+    const bar = screen.getByRole('progressbar', { name: 'Avance de hoy' });
+    expect(bar.getAttribute('aria-valuenow')).toBe('2');
+    expect(bar.getAttribute('aria-valuemax')).toBe('3');
+    expect(meter.textContent).not.toMatch(/%/);
+  });
+
+  it('shows a completed message when every exercise is done', async () => {
+    useTodayState(workoutToday(null, null, { completed: 3, total: 3 }));
+    mockFetchRoutineDetail.mockResolvedValue(routineDetail());
+
+    await renderHero();
+
+    expect(await screen.findByText('Completaste el entrenamiento de hoy')).toBeTruthy();
+  });
+
+  it('omits the completion meter when the routine has no exercises', async () => {
+    useTodayState(workoutToday(null, null, { completed: 0, total: 0 }));
+    mockFetchRoutineDetail.mockResolvedValue(routineDetail());
+
+    await renderHero();
+
+    await screen.findByRole('heading', { name: 'Empuje y torso superior' });
+    expect(screen.queryByTestId('completion-meter')).toBeNull();
   });
 
   it('calls start and adapt actions from workout buttons', async () => {

@@ -126,6 +126,7 @@ describe('GET /api/today', () => {
       routineName: 'Sábado fuerza',
       planGoal: null,
       dayReason: null,
+      completion: { completed: 0, total: 0 },
     });
   });
 

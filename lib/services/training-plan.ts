@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { catalogVisibleToUser } from '@/lib/auth/ownership';
 import { db } from '@/lib/db/client';
 import { routines, scheduledRoutines, trainingPlans } from '@/lib/db/schema';
+import { getTodayRoutineCompletion, type RoutineCompletion } from '@/lib/services/routine-completion';
 import { cordobaLocalDate } from '@/lib/time/cordoba';
 import { AppError } from '@/types/errors';
 import type { ScheduledRoutine, TrainingPlan } from '@/lib/db/schema';
@@ -29,6 +30,7 @@ export type TodayScheduledRoutineResult =
       routineName: string;
       planGoal: string | null;
       dayReason: string | null;
+      completion: RoutineCompletion;
     }
   | {
       kind: 'routine_missing';
@@ -249,6 +251,8 @@ export async function resolveTodayScheduledRoutine(
     };
   }
 
+  const completion = await getTodayRoutineCompletion(userId, routine.id, now);
+
   return {
     kind: 'workout',
     localDate,
@@ -259,5 +263,6 @@ export async function resolveTodayScheduledRoutine(
     routineName: routine.name,
     planGoal: plan.goal,
     dayReason: scheduled.note,
+    completion,
   };
 }

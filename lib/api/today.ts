@@ -99,12 +99,14 @@ function parseTodayResponse(value: unknown): TodayResponse | null {
         trainingPlanId: value.trainingPlanId,
         planGoal: parseNullableString(value.planGoal),
       };
-    case 'workout':
+    case 'workout': {
+      const completion = parseCompletion(value.completion);
       if (
         !isInteger(value.trainingPlanId) ||
         !isInteger(value.scheduledRoutineId) ||
         !isInteger(value.routineId) ||
-        typeof value.routineName !== 'string'
+        typeof value.routineName !== 'string' ||
+        completion === null
       ) {
         return null;
       }
@@ -118,7 +120,9 @@ function parseTodayResponse(value: unknown): TodayResponse | null {
         routineName: value.routineName,
         planGoal: parseNullableString(value.planGoal),
         dayReason: parseNullableString(value.dayReason),
+        completion,
       };
+    }
     case 'routine_missing':
       if (
         !isInteger(value.trainingPlanId) ||
@@ -158,6 +162,23 @@ function isInteger(value: unknown): value is number {
 
 function parseNullableString(value: unknown): string | null {
   return typeof value === 'string' ? value : null;
+}
+
+function parseCompletion(value: unknown): { completed: number; total: number } | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+  const { completed, total } = value;
+  if (
+    !isInteger(completed) ||
+    !isInteger(total) ||
+    completed < 0 ||
+    total < 0 ||
+    completed > total
+  ) {
+    return null;
+  }
+  return { completed, total };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

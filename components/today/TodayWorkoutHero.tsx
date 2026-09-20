@@ -42,6 +42,9 @@ const COPY = {
   home: 'Casa',
   goalLabel: 'Objetivo del plan',
   reasonLabel: 'Por qué hoy',
+  completionLabel: 'Avance de hoy',
+  completionUnit: 'ejercicios',
+  completionDone: 'Completaste el entrenamiento de hoy',
 };
 
 /**
@@ -153,6 +156,13 @@ export function TodayWorkoutHero({
           ) : null}
           {metrics ? <StatsRow exercises={metrics.exercises} series={metrics.series} minutes={metrics.minutes} /> : null}
 
+          {today.completion.total > 0 ? (
+            <CompletionMeter
+              completed={today.completion.completed}
+              total={today.completion.total}
+            />
+          ) : null}
+
           <div className="relative space-y-3">
             <Button size="lg" onClick={onStartWorkout}>{COPY.start}</Button>
             <Button size="lg" variant="secondary" onClick={onAdapt}>{COPY.adapt}</Button>
@@ -210,6 +220,42 @@ function ReasonNote({ reason }: { reason: string }) {
         {COPY.reasonLabel}
       </span>
       <span className="leading-5">{reason}</span>
+    </div>
+  );
+}
+
+function CompletionMeter({ completed, total }: { completed: number; total: number }) {
+  const isDone = completed >= total;
+  const summary = `${completed} de ${total} ${COPY.completionUnit}`;
+
+  return (
+    <div className="relative space-y-2" data-testid="completion-meter">
+      <div className="flex items-center justify-between text-sm">
+        <span className="text-xs font-semibold uppercase tracking-[0.14em] text-brand">
+          {COPY.completionLabel}
+        </span>
+        <MetricValue
+          metric={metric(summary, 'atlas_computed')}
+          label={COPY.completionLabel}
+          className="font-medium text-ink"
+        />
+      </div>
+      <div
+        className="h-2 overflow-hidden rounded-full bg-surface/70 ring-1 ring-line"
+        role="progressbar"
+        aria-valuenow={completed}
+        aria-valuemin={0}
+        aria-valuemax={total}
+        aria-label={COPY.completionLabel}
+      >
+        <div
+          className="h-full rounded-full bg-brand transition-[width]"
+          style={{ width: `${(completed / total) * 100}%` }}
+        />
+      </div>
+      {isDone ? (
+        <p className="text-xs font-medium text-success">{COPY.completionDone}</p>
+      ) : null}
     </div>
   );
 }

@@ -31,6 +31,7 @@ describe('today client', () => {
       routineName: 'Tren superior',
       planGoal: 'Hipertrofia',
       dayReason: 'Empuje pesado hoy',
+      completion: { completed: 1, total: 4 },
     } as const;
     global.fetch = jest.fn(async () => jsonResponse(payload)) as unknown as typeof fetch;
 
@@ -47,6 +48,28 @@ describe('today client', () => {
     global.fetch = jest.fn(async () => jsonResponse(payload)) as unknown as typeof fetch;
 
     await expect(fetchToday()).resolves.toEqual(payload);
+  });
+
+  it('rejects a workout payload with missing or inconsistent completion counts', async () => {
+    const base = {
+      kind: 'workout',
+      localDate: '2026-09-21',
+      dayOfWeek: 1,
+      trainingPlanId: 3,
+      scheduledRoutineId: 4,
+      routineId: 5,
+      routineName: 'Tren superior',
+      planGoal: null,
+      dayReason: null,
+    } as const;
+
+    global.fetch = jest.fn(async () => jsonResponse(base)) as unknown as typeof fetch;
+    await expect(fetchToday()).rejects.toMatchObject({ name: 'TodayClientError', kind: 'generic' });
+
+    global.fetch = jest.fn(async () =>
+      jsonResponse({ ...base, completion: { completed: 5, total: 3 } }),
+    ) as unknown as typeof fetch;
+    await expect(fetchToday()).rejects.toMatchObject({ name: 'TodayClientError', kind: 'generic' });
   });
 
   it('throws a typed error when the API responds with non-200', async () => {
