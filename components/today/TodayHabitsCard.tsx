@@ -1,11 +1,14 @@
+'use client';
+
 import { HabitPreviewRow, type HabitPreview } from '@/components/today/HabitPreviewRow';
 import { Card } from '@/components/ui/Card';
+import { ErrorState, LoadingState } from '@/components/ui/states';
+import { useHabits } from '@/hooks/useHabits';
 
 const COPY = {
   heading: 'Hábitos de hoy',
-  note: 'Pronto vas a poder registrar estos hábitos. Atlas los va a usar como contexto real, sin inventar números.',
-  soon: 'Próximamente',
-};
+  note: 'Tocá cada hábito para registrar que lo cumpliste hoy. Atlas los usa como contexto real, sin inventar números.',
+} as const;
 
 const HABIT_PREVIEWS: readonly HabitPreview[] = [
   { id: 'hydration', name: 'Hidratación', hint: 'Objetivo diario', icon: 'M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z' },
@@ -17,21 +20,36 @@ const HABIT_PREVIEWS: readonly HabitPreview[] = [
 /**
  * Habits section for the Today screen.
  *
- * Renders the structural preview of the planned habits (icon, name, static hint)
- * with an honest "coming soon" marker. There is no Habit/HabitEntry backend yet,
- * so no counts, ratios or progress percentages are shown (DATA HONESTY RULE).
- * @returns Habits card with a data-honest preview list.
+ * Renders one checkbox per habit in the honest catalog, wired to `/api/habits`
+ * via {@link useHabits}. Each toggle is `source: user_input`; no counts, ratios,
+ * or progress percentages are shown (DATA HONESTY RULE).
+ * @returns Habits card with interactive, data-honest completion toggles.
  * @example <TodayHabitsCard />
  */
 export function TodayHabitsCard() {
+  const { doneByKey, loading, saving, error, toggle } = useHabits();
+
   return (
     <Card className="space-y-3 p-5">
       <h2 className="font-serif text-xl font-semibold text-ink">{COPY.heading}</h2>
-      <ul className="divide-y divide-line" data-testid="habit-preview-list">
-        {HABIT_PREVIEWS.map((habit) => (
-          <HabitPreviewRow key={habit.id} habit={habit} soonLabel={COPY.soon} />
-        ))}
-      </ul>
+
+      {loading ? <LoadingState compact /> : null}
+      {error ? <ErrorState message={error} /> : null}
+
+      {!loading ? (
+        <ul className="divide-y divide-line" data-testid="habit-preview-list">
+          {HABIT_PREVIEWS.map((habit) => (
+            <HabitPreviewRow
+              key={habit.id}
+              habit={habit}
+              done={doneByKey[habit.id]}
+              onToggle={toggle}
+              disabled={saving}
+            />
+          ))}
+        </ul>
+      ) : null}
+
       <p className="text-xs leading-relaxed text-ink-muted">{COPY.note}</p>
     </Card>
   );
