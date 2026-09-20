@@ -1,7 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, handleApiError } from '@/lib/auth/middleware';
-import { upsertDailyCheckin, getDailyCheckin } from '@/lib/services/daily-checkins';
-import { cordobaLocalDate } from '@/lib/time/cordoba';
+import { getTodayCheckIn, recordDailyCheckIn } from '@/lib/services/daily-checkin';
+
+function getMoodFromBody(body: unknown): unknown {
+  if (typeof body !== 'object' || body === null || !('mood' in body)) {
+    return undefined;
+  }
+
+  return body.mood;
+}
+
+function isValidMood(mood: unknown): mood is number {
+  return typeof mood === 'number' && Number.isInteger(mood) && mood >= 1 && mood <= 5;
+}
 
 /**
  * GET /api/mood — today's checkin for the authenticated user (Córdoba date)
@@ -9,7 +20,7 @@ import { cordobaLocalDate } from '@/lib/time/cordoba';
 export async function GET(request: NextRequest) {
   try {
     const session = await requireAuth(request);
-    const checkin = await getDailyCheckin(session.userId, cordobaLocalDate());
+    const checkin = await getTodayCheckIn(session.userId);
     return NextResponse.json(checkin);
   } catch (error) {
     return handleApiError(error);
@@ -22,17 +33,17 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await requireAuth(request);
-    const body = await request.json();
-    const { mood } = body;
+    const body: unknown = await request.json();
+    const mood = getMoodFromBody(body);
 
-    if (mood === undefined || typeof mood !== 'number') {
+    if (!isValidMood(mood)) {
       return NextResponse.json(
         { code: 'VALIDATION', message: 'El estado de ánimo debe estar entre 1 y 5' },
         { status: 400 },
       );
     }
 
-    const checkin = await upsertDailyCheckin(session.userId, cordobaLocalDate(), mood);
+    const checkin = await recordDailyCheckIn({ userId: session.userId, mood });
     return NextResponse.json(checkin);
   } catch (error) {
     return handleApiError(error);
