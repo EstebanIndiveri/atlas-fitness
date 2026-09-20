@@ -69,6 +69,7 @@ describe('TrainingPlan adaptive service', () => {
       routineId,
       routineName: 'Push',
       planGoal: null,
+      dayReason: null,
     });
   });
 
@@ -87,6 +88,43 @@ describe('TrainingPlan adaptive service', () => {
     );
 
     expect(result).toMatchObject({ kind: 'workout', planGoal: 'Hipertrofia' });
+  });
+
+  it('persists a per-day note and surfaces it as dayReason on the workout result', async () => {
+    const routineId = await createRoutine('Push nota');
+    await createTrainingPlan({
+      userId,
+      name: 'Plan semanal',
+      schedule: [{ dayOfWeek: 3, routineId, note: 'Toca empuje pesado esta semana' }],
+    });
+
+    const result = await resolveTodayScheduledRoutine(
+      userId,
+      new Date('2026-09-16T15:00:00.000Z'),
+    );
+
+    expect(result).toMatchObject({
+      kind: 'workout',
+      dayReason: 'Toca empuje pesado esta semana',
+    });
+  });
+
+  it('rejects a per-day note longer than 140 characters with a typed validation error', async () => {
+    const routineId = await createRoutine('Push nota límite');
+    let caughtError: unknown;
+
+    try {
+      await createTrainingPlan({
+        userId,
+        name: 'Plan semanal',
+        schedule: [{ dayOfWeek: 3, routineId, note: 'x'.repeat(141) }],
+      });
+    } catch (error) {
+      caughtError = error;
+    }
+
+    expect(caughtError).toBeInstanceOf(AppError);
+    expect(caughtError).toMatchObject({ code: 'VALIDATION' });
   });
 
   it('rejects a goal longer than 60 characters with a typed validation error', async () => {
@@ -165,6 +203,7 @@ describe('TrainingPlan adaptive service', () => {
       scheduledRoutineId: expect.any(Number),
       routineId,
       planGoal: null,
+      dayReason: null,
     });
   });
 

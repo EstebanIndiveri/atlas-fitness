@@ -9,7 +9,7 @@ import type { ApiError } from '@/types/errors';
 export type CreateTrainingPlanInput = {
   name: string;
   goal?: string;
-  schedule: Array<{ dayOfWeek: TrainingPlanDayOfWeek; routineId: number }>;
+  schedule: Array<{ dayOfWeek: TrainingPlanDayOfWeek; routineId: number; note?: string }>;
 };
 
 export type TrainingPlanClientErrorKind =
@@ -196,6 +196,7 @@ function parseScheduledRoutine(value: unknown): ScheduledRoutine | null {
     trainingPlanId: value.trainingPlanId,
     dayOfWeek: value.dayOfWeek,
     routineId: value.routineId,
+    note: typeof value.note === 'string' ? value.note : null,
     createdAt,
   };
 }

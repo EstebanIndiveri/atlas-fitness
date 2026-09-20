@@ -28,6 +28,7 @@ export type TodayScheduledRoutineResult =
       routineId: number;
       routineName: string;
       planGoal: string | null;
+      dayReason: string | null;
     }
   | {
       kind: 'routine_missing';
@@ -37,6 +38,7 @@ export type TodayScheduledRoutineResult =
       scheduledRoutineId: number;
       routineId: number;
       planGoal: string | null;
+      dayReason: string | null;
     };
 
 export interface CreateTrainingPlanResult {
@@ -63,6 +65,7 @@ const createTrainingPlanSchema = z.object({
       z.object({
         dayOfWeek: dayOfWeekSchema,
         routineId: z.number().int().positive(),
+        note: z.string().trim().min(1).max(140).optional(),
       }),
     )
     .min(1)
@@ -184,6 +187,7 @@ export async function createTrainingPlan(input: unknown): Promise<CreateTraining
           trainingPlanId: plan.id,
           dayOfWeek: assignment.dayOfWeek,
           routineId: assignment.routineId,
+          note: assignment.note ?? null,
         })),
       )
       .returning();
@@ -241,6 +245,7 @@ export async function resolveTodayScheduledRoutine(
       scheduledRoutineId: scheduled.id,
       routineId: scheduled.routineId,
       planGoal: plan.goal,
+      dayReason: scheduled.note,
     };
   }
 
@@ -253,5 +258,6 @@ export async function resolveTodayScheduledRoutine(
     routineId: routine.id,
     routineName: routine.name,
     planGoal: plan.goal,
+    dayReason: scheduled.note,
   };
 }

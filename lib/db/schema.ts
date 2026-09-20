@@ -118,6 +118,7 @@ export const scheduledRoutines = sqliteTable(
     routineId: integer('routine_id')
       .notNull()
       .references(() => routines.id),
+    note: text('note'),
     createdAt: integer('created_at', { mode: 'timestamp' })
       .notNull()
       .default(sql`(unixepoch())`),

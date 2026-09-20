@@ -30,6 +30,7 @@ describe('today client', () => {
       routineId: 5,
       routineName: 'Tren superior',
       planGoal: 'Hipertrofia',
+      dayReason: 'Empuje pesado hoy',
     } as const;
     global.fetch = jest.fn(async () => jsonResponse(payload)) as unknown as typeof fetch;
 
