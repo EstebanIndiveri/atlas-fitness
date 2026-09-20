@@ -47,6 +47,9 @@ describe('TrainingTodayHero', () => {
     expect(screen.getByRole('link', { name: 'Ver detalles' }).getAttribute('href')).toBe(
       '/dashboard/routines/12',
     );
+    expect(screen.getByRole('link', { name: 'Adaptar con Coach Atlas' }).getAttribute('href')).toBe(
+      '/dashboard/session/adapt?routineId=12&routineName=Torso+fuerte&planGoal=Fuerza',
+    );
   });
 
   it('disables starting when an active guided workout exists', () => {

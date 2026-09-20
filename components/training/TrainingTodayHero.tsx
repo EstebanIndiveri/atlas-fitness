@@ -151,7 +151,7 @@ function WorkoutHero({
             : UI_COPY.training.startWorkout}
         </Button>
         <Link
-          href="/dashboard/session"
+          href={buildAdaptHref(today)}
           className={buttonClassName({ variant: 'secondary', size: 'lg' })}
         >
           {UI_COPY.training.adaptWithCoach}
@@ -162,6 +162,17 @@ function WorkoutHero({
       </Link>
     </Card>
   );
+}
+
+function buildAdaptHref(today: Extract<TodayResponse, { kind: 'workout' }>): string {
+  const params = new URLSearchParams({
+    routineId: String(today.routineId),
+    routineName: today.routineName,
+  });
+  if (today.planGoal) {
+    params.set('planGoal', today.planGoal);
+  }
+  return `/dashboard/session/adapt?${params.toString()}`;
 }
 
 function formatCount(value: number, singular: string, plural: string): string {
