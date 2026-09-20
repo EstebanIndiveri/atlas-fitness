@@ -170,7 +170,7 @@ test.describe('Workout Flow', () => {
     await expect(page.locator('[data-testid="pr-badge"]')).toHaveCount(1);
   });
 
-  test('should display workout history', async ({ page }) => {
+  test('should display workout progress recent sessions', async ({ page }) => {
     // Create a workout
     await page.click('[data-testid="new-workout-button"]');
     await page.waitForResponse((resp) => resp.url().includes('/api/workouts') && resp.status() === 201);
@@ -193,9 +193,10 @@ test.describe('Workout Flow', () => {
     await page.click('a:has-text("Ver todo")');
     await page.waitForURL('/dashboard/history', { timeout: 5000 });
 
-    // Verify workout is in history
-    await expect(page.locator('[data-testid="workout-history-item"]')).toBeVisible({ timeout: 5000 });
-    await expect(page.locator('text=Test workout')).toBeVisible();
+    // Verify the completed workout is represented in the progress recent sessions list.
+    await expect(page.locator('h1:has-text("Progreso")')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('h2:has-text("Sesiones recientes")')).toBeVisible();
+    await expect(page.locator('a[href^="/dashboard/workout/"]')).toBeVisible();
   });
 
   test('should show active workout on dashboard when not finished', async ({ page }) => {
