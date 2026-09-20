@@ -41,6 +41,7 @@ const COPY = {
   gym: 'Gimnasio',
   home: 'Casa',
   goalLabel: 'Objetivo del plan',
+  reasonLabel: 'Por qué hoy',
 };
 
 /**
@@ -137,6 +138,7 @@ export function TodayWorkoutHero({
             {routine?.description ? (
               <p className="text-sm leading-6 text-ink-muted">{routine.description}</p>
             ) : null}
+            {today.dayReason ? <ReasonNote reason={today.dayReason} /> : null}
           </div>
 
           {detailState.status === 'loading' ? (
@@ -195,6 +197,20 @@ function GoalPill({ goal }: { goal: string }) {
     >
       {goal}
     </span>
+  );
+}
+
+function ReasonNote({ reason }: { reason: string }) {
+  return (
+    <div
+      className="flex items-start gap-2 rounded-lg bg-surface/60 px-3 py-2 text-sm text-ink-muted ring-1 ring-line"
+      aria-label={`${COPY.reasonLabel}: ${reason}`}
+    >
+      <span className="mt-0.5 text-xs font-semibold uppercase tracking-[0.14em] text-brand">
+        {COPY.reasonLabel}
+      </span>
+      <span className="leading-5">{reason}</span>
+    </div>
   );
 }
 

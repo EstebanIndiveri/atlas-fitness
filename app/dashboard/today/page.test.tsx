@@ -33,6 +33,7 @@ const workoutToday: TodayResponse = {
   routineId: 7,
   routineName: 'Push A',
   planGoal: null,
+  dayReason: null,
 };
 
 function mockHooks(today: TodayResponse | null) {

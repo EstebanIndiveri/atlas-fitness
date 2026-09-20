@@ -85,6 +85,7 @@ function resultFor(userId: number): CreateTrainingPlanResult {
       trainingPlanId: plan.id,
       dayOfWeek: 1,
       routineId: 7,
+      note: null,
       createdAt: new Date('2026-09-19T12:00:00.000Z'),
     },
   ];

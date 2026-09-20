@@ -125,6 +125,7 @@ describe('GET /api/today', () => {
       routineId,
       routineName: 'Sábado fuerza',
       planGoal: null,
+      dayReason: null,
     });
   });
 
@@ -148,6 +149,7 @@ describe('GET /api/today', () => {
       scheduledRoutineId: expect.any(Number),
       routineId,
       planGoal: null,
+      dayReason: null,
     });
   });
 

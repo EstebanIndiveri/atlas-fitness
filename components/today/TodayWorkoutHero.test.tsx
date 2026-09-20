@@ -47,7 +47,7 @@ function useTodayState(today: TodayResponse | null, overrides: { loading?: boole
   });
 }
 
-function workoutToday(planGoal: string | null = null): TodayResponse {
+function workoutToday(planGoal: string | null = null, dayReason: string | null = null): TodayResponse {
   return {
     kind: 'workout',
     localDate: '2026-09-20',
@@ -57,6 +57,7 @@ function workoutToday(planGoal: string | null = null): TodayResponse {
     routineId: 7,
     routineName: 'Empuje y torso superior',
     planGoal,
+    dayReason,
   };
 }
 
@@ -151,6 +152,26 @@ describe('TodayWorkoutHero', () => {
     expect(screen.queryByLabelText(/Objetivo del plan/)).toBeNull();
   });
 
+  it('renders the why-today reason note only when the day has a reason', async () => {
+    useTodayState(workoutToday(null, 'Toca empuje pesado esta semana'));
+    mockFetchRoutineDetail.mockResolvedValue(routineDetail());
+
+    await renderHero();
+
+    expect(await screen.findByText('Toca empuje pesado esta semana')).toBeTruthy();
+    expect(screen.getByLabelText('Por qué hoy: Toca empuje pesado esta semana')).toBeTruthy();
+  });
+
+  it('omits the why-today reason note when the day has no reason', async () => {
+    useTodayState(workoutToday(null, null));
+    mockFetchRoutineDetail.mockResolvedValue(routineDetail());
+
+    await renderHero();
+
+    await screen.findByRole('heading', { name: 'Empuje y torso superior' });
+    expect(screen.queryByLabelText(/Por qué hoy/)).toBeNull();
+  });
+
   it('calls start and adapt actions from workout buttons', async () => {
     const onStartWorkout = jest.fn();
     const onAdapt = jest.fn();
@@ -208,6 +229,7 @@ describe('TodayWorkoutHero', () => {
         scheduledRoutineId: 2,
         routineId: 7,
         planGoal: null,
+        dayReason: null,
       },
       { reload },
     );

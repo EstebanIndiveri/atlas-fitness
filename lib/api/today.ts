@@ -117,6 +117,7 @@ function parseTodayResponse(value: unknown): TodayResponse | null {
         routineId: value.routineId,
         routineName: value.routineName,
         planGoal: parseNullableString(value.planGoal),
+        dayReason: parseNullableString(value.dayReason),
       };
     case 'routine_missing':
       if (
@@ -134,6 +135,7 @@ function parseTodayResponse(value: unknown): TodayResponse | null {
         scheduledRoutineId: value.scheduledRoutineId,
         routineId: value.routineId,
         planGoal: parseNullableString(value.planGoal),
+        dayReason: parseNullableString(value.dayReason),
       };
     default:
       return null;
