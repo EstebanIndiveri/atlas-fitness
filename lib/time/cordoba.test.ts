@@ -2,6 +2,7 @@ import { describe, it, expect } from '@jest/globals';
 import {
   CORDOBA_TIMEZONE,
   addLocalDateDays,
+  cordobaDisplayDate,
   cordobaLocalDate,
   yesterdayCordoba,
 } from './cordoba';
@@ -32,5 +33,19 @@ describe('Córdoba timezone helpers', () => {
 
   it('returns yesterday in Córdoba for a given instant', () => {
     expect(yesterdayCordoba(new Date('2026-09-17T15:00:00.000Z'))).toBe('2026-09-16');
+  });
+
+  it('formats a human display date in es-AR for Córdoba', () => {
+    // 2026-09-24T12:00:00Z = jueves 24 de septiembre in Córdoba
+    expect(cordobaDisplayDate(new Date('2026-09-24T12:00:00.000Z'))).toBe(
+      'jueves, 24 de septiembre',
+    );
+  });
+
+  it('resolves the display date on the Córdoba side of midnight', () => {
+    // 2026-09-25T02:00:00Z = 2026-09-24 23:00 in Córdoba
+    expect(cordobaDisplayDate(new Date('2026-09-25T02:00:00.000Z'))).toBe(
+      'jueves, 24 de septiembre',
+    );
   });
 });

@@ -58,15 +58,26 @@ export function TodayWorkoutHero({
   });
   const [detailRequestId, setDetailRequestId] = useState(0);
 
+  const workoutRoutineId = today?.kind === 'workout' ? today.routineId : null;
+  const detailKey = workoutRoutineId === null ? null : `${workoutRoutineId}:${detailRequestId}`;
+  const [loadedKey, setLoadedKey] = useState<string | null>(null);
+
+  if (detailKey !== loadedKey) {
+    setLoadedKey(detailKey);
+    setDetailState(
+      detailKey === null
+        ? { status: 'idle', routine: null, error: null }
+        : { status: 'loading', routine: null, error: null },
+    );
+  }
+
   useEffect(() => {
-    if (today?.kind !== 'workout') {
-      setDetailState({ status: 'idle', routine: null, error: null });
+    if (workoutRoutineId === null) {
       return undefined;
     }
 
-    const routineId = today.routineId;
+    const routineId = workoutRoutineId;
     let cancelled = false;
-    setDetailState({ status: 'loading', routine: null, error: null });
 
     async function loadRoutine(): Promise<void> {
       try {
@@ -85,7 +96,7 @@ export function TodayWorkoutHero({
     return () => {
       cancelled = true;
     };
-  }, [today, detailRequestId]);
+  }, [workoutRoutineId, detailRequestId]);
 
   if (loading) {
     return <LoadingState />;

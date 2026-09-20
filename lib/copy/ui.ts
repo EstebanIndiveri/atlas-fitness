@@ -6,6 +6,7 @@ export const UI_COPY = {
   primaryNav: 'Principal',
   tabNav: 'Pestañas',
   navHome: 'Inicio',
+  navToday: 'Hoy',
   navHistory: 'Historial',
   navSettings: 'Ajustes',
   navSession: 'Sesión',

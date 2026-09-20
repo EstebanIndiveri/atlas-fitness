@@ -3,7 +3,7 @@
  */
 import { afterEach, describe, expect, it, jest } from '@jest/globals';
 
-import { createTrainingPlan, TrainingPlanClientError } from './training-plan';
+import { createTrainingPlan } from './training-plan';
 
 function jsonResponse(body: unknown, status = 200): Response {
   return {

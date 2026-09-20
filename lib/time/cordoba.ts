@@ -39,3 +39,15 @@ export function addLocalDateDays(localDate: string, days: number): string {
 export function yesterdayCordoba(instant: Date = new Date()): string {
   return addLocalDateDays(cordobaLocalDate(instant), -1);
 }
+
+/**
+ * Human display date in Córdoba (es-AR), e.g. "jueves, 24 de septiembre".
+ */
+export function cordobaDisplayDate(instant: Date = new Date()): string {
+  return new Intl.DateTimeFormat('es-AR', {
+    timeZone: CORDOBA_TIMEZONE,
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  }).format(instant);
+}
