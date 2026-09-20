@@ -30,7 +30,7 @@ export function GuidedSessionHeader({
   return (
     <header className="mb-5 rounded-2xl bg-surface p-4 shadow-card ring-1 ring-line">
       <div className="flex items-center justify-between gap-3">
-        <Link href="/dashboard" className="text-sm font-medium text-brand hover:underline">
+        <Link href="/dashboard/today" className="text-sm font-medium text-brand hover:underline">
           ← Volver
         </Link>
         {muscleGroup ? (

@@ -27,7 +27,7 @@ test.describe('Authentication Flow', () => {
     await page.waitForResponse((resp) => resp.url().includes('/api/auth/register') && resp.status() === 201);
     
     // Should redirect to dashboard (client-side then proxy allows)
-    await page.waitForURL('/dashboard', { timeout: 15000 });
+    await page.waitForURL('/dashboard/today', { timeout: 15000 });
     
     // Wait for /api/auth/me to complete and welcome message to appear
     await page.waitForResponse((resp) => resp.url().includes('/api/auth/me'));
@@ -55,7 +55,7 @@ test.describe('Authentication Flow', () => {
     await page.waitForResponse((resp) => resp.url().includes('/api/auth/login') && resp.status() === 200);
     
     // Should redirect to dashboard again
-    await page.waitForURL('/dashboard', { timeout: 15000 });
+    await page.waitForURL('/dashboard/today', { timeout: 15000 });
     await page.waitForResponse((resp) => resp.url().includes('/api/auth/me'));
     await expect(page.locator('[data-testid="welcome-message"]')).toBeVisible({ timeout: 10000 });
     await expect(page.locator('[data-testid="welcome-message"]')).toContainText(TEST_USER.name);
@@ -101,7 +101,7 @@ test.describe('Authentication Flow', () => {
     await page.click('button[type="submit"]');
     await page.waitForResponse((resp) => resp.url().includes('/api/auth/register') && resp.status() === 201);
     
-    await page.waitForURL('/dashboard', { timeout: 15000 });
+    await page.waitForURL('/dashboard/today', { timeout: 15000 });
     await page.waitForResponse((resp) => resp.url().includes('/api/auth/me'));
     await expect(page.locator('[data-testid="welcome-message"]')).toBeVisible({ timeout: 10000 });
 
@@ -109,7 +109,7 @@ test.describe('Authentication Flow', () => {
     await page.goto('/login');
     
     // Middleware should redirect us to dashboard
-    await page.waitForURL('/dashboard', { timeout: 5000 });
+    await page.waitForURL('/dashboard/today', { timeout: 5000 });
     await expect(page.locator('[data-testid="welcome-message"]')).toBeVisible({ timeout: 10000 });
   });
 
@@ -123,7 +123,7 @@ test.describe('Authentication Flow', () => {
     
     // Wait for either success (navigation to dashboard) or error
     await Promise.race([
-      page.waitForURL('/dashboard', { timeout: 15000 }),
+      page.waitForURL('/dashboard/today', { timeout: 15000 }),
       page.waitForSelector('[data-testid="form-error"]', { timeout: 15000 }),
     ]);
 

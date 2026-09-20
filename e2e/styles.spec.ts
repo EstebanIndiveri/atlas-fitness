@@ -45,7 +45,7 @@ test.describe('Design system visual smoke', () => {
       ),
       page.click('button[type="submit"]'),
     ]);
-    await page.waitForURL('/dashboard', { timeout: 20000 });
+    await page.waitForURL('/dashboard/today', { timeout: 20000 });
     await expect(page.getByTestId('welcome-message')).toBeVisible({ timeout: 10000 });
 
     await expect(page.getByRole('navigation', { name: 'Principal' })).toBeVisible();

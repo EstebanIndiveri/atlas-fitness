@@ -17,7 +17,7 @@ test.describe('Guided session (Epic-E Must)', () => {
     await passwordInputs[1].fill(testUser.password);
     await page.click('button[type="submit"]');
     await page.waitForResponse((resp) => resp.url().includes('/api/auth/register') && resp.status() === 201);
-    await page.waitForURL('/dashboard', { timeout: 15000 });
+    await page.waitForURL('/dashboard/today', { timeout: 15000 });
     await page.waitForResponse((resp) => resp.url().includes('/api/auth/me'));
   });
 
@@ -36,7 +36,7 @@ test.describe('Guided session (Epic-E Must)', () => {
   });
 
   test('pick routine → check sets → rest → next (fallback) → close with mood', async ({ page }) => {
-    await page.click('[data-testid="guided-session-cta"]');
+    await page.getByTestId('session-link').click();
     await page.waitForURL('/dashboard/session', { timeout: 10000 });
     await expect(page.locator('h1')).toHaveText('Entrenar');
     await expectCssColor(page.locator('main').first(), 'background-color', ATLAS_SMOKE.canvas);

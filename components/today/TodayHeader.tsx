@@ -26,7 +26,10 @@ export function TodayHeader({ name, now = new Date() }: TodayHeaderProps) {
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-ink-muted">
         {displayDate}
       </p>
-      <h1 className="font-serif text-3xl font-semibold tracking-[-0.03em] text-ink sm:text-4xl">
+      <h1
+        className="font-serif text-3xl font-semibold tracking-[-0.03em] text-ink sm:text-4xl"
+        data-testid="welcome-message"
+      >
         {greeting}
       </h1>
       <p className="text-sm text-ink-muted">{COPY.subtitle}</p>

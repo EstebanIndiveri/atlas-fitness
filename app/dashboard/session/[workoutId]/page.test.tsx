@@ -76,7 +76,7 @@ describe('GuidedSessionPlayerPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Guardar y cerrar' }));
 
     await waitFor(() => expect(mockSaveAndClose).toHaveBeenCalledTimes(1));
-    expect(mockPush).toHaveBeenCalledWith('/dashboard');
+    expect(mockPush).toHaveBeenCalledWith('/dashboard/today');
   });
 
   it('shows skip and hold controls on the guided train screen', async () => {

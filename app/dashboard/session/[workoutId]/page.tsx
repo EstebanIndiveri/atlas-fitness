@@ -39,7 +39,7 @@ export default function GuidedSessionPlayerPage() {
 
   const handleSaveAndClose = async () => {
     await session.saveAndClose();
-    router.push('/dashboard');
+    router.push('/dashboard/today');
   };
 
   const handleSkip = async () => {

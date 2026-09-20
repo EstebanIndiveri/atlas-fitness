@@ -35,7 +35,7 @@ export default function LoginPage() {
       }
 
       // Force full page reload to ensure cookie is processed
-      window.location.href = '/dashboard';
+      window.location.href = '/dashboard/today';
     } catch {
       setError('Error de conexión. Intenta nuevamente.');
     } finally {
