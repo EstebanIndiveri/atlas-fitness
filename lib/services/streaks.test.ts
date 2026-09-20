@@ -22,8 +22,12 @@ import {
   runStreakNudges,
   updateStreakFromActivity,
 } from './streaks';
-import { upsertDailyCheckin } from './daily-checkins';
+import { recordDailyCheckIn } from './daily-checkin';
 import * as workoutsService from './workouts';
+
+function noonUtcForLocalDate(localDate: string): Date {
+  return new Date(`${localDate}T15:00:00.000Z`);
+}
 
 /**
  * Active-day rule (Must):
@@ -159,7 +163,7 @@ describe('Streaks service', () => {
     });
 
     it('is true when a mood checkin exists for that local date', async () => {
-      await upsertDailyCheckin(testUserId, TODAY, 4);
+      await recordDailyCheckIn({ userId: testUserId, mood: 4, now: noonUtcForLocalDate(TODAY) });
       await expect(isActiveDay(testUserId, TODAY)).resolves.toBe(true);
     });
 
@@ -203,7 +207,7 @@ describe('Streaks service', () => {
     it('does not double-count mood + workout on the same Córdoba day', async () => {
       const workout = await workoutsService.createWorkout(testUserId);
       await workoutsService.updateWorkout(workout.id, testUserId, { endedAt: NOW });
-      await upsertDailyCheckin(testUserId, TODAY, 5);
+      await recordDailyCheckIn({ userId: testUserId, mood: 5, now: noonUtcForLocalDate(TODAY) });
 
       const streak = await getStreakForUser(testUserId, NOW);
       expect(streak.currentStreak).toBe(1);
@@ -212,7 +216,7 @@ describe('Streaks service', () => {
 
     it('increments when yesterday was also active', async () => {
       const yesterday = addLocalDateDays(TODAY, -1);
-      await upsertDailyCheckin(testUserId, yesterday, 3);
+      await recordDailyCheckIn({ userId: testUserId, mood: 3, now: noonUtcForLocalDate(yesterday) });
       const workout = await workoutsService.createWorkout(testUserId);
       await workoutsService.updateWorkout(workout.id, testUserId, { endedAt: NOW });
 
@@ -223,7 +227,7 @@ describe('Streaks service', () => {
 
     it('resets current_streak after a lost day (TZ Córdoba)', async () => {
       const twoDaysAgo = addLocalDateDays(TODAY, -2);
-      await upsertDailyCheckin(testUserId, twoDaysAgo, 4);
+      await recordDailyCheckIn({ userId: testUserId, mood: 4, now: noonUtcForLocalDate(twoDaysAgo) });
 
       const streak = await updateStreakFromActivity(testUserId, NOW);
       expect(streak.currentStreak).toBe(0);
@@ -240,7 +244,7 @@ describe('Streaks service', () => {
     });
 
     it('treats last_workout_date as last active day for mood-only activity', async () => {
-      await upsertDailyCheckin(testUserId, TODAY, 2);
+      await recordDailyCheckIn({ userId: testUserId, mood: 2, now: noonUtcForLocalDate(TODAY) });
       const streak = await getStreakForUser(testUserId, NOW);
       expect(streak.lastActiveDate).toBe(TODAY);
       expect(streak.currentStreak).toBe(1);
@@ -250,7 +254,7 @@ describe('Streaks service', () => {
   describe('runStreakNudges', () => {
     it('records a nudge for users active yesterday but not today', async () => {
       const yesterday = addLocalDateDays(TODAY, -1);
-      await upsertDailyCheckin(testUserId, yesterday, 4);
+      await recordDailyCheckIn({ userId: testUserId, mood: 4, now: noonUtcForLocalDate(yesterday) });
       await updateStreakFromActivity(testUserId, NOW);
 
       const result = await runStreakNudges(NOW);
@@ -269,7 +273,7 @@ describe('Streaks service', () => {
 
     it('is idempotent — a second run the same Córdoba day does not duplicate', async () => {
       const yesterday = addLocalDateDays(TODAY, -1);
-      await upsertDailyCheckin(testUserId, yesterday, 4);
+      await recordDailyCheckIn({ userId: testUserId, mood: 4, now: noonUtcForLocalDate(yesterday) });
 
       const first = await runStreakNudges(NOW);
       const second = await runStreakNudges(NOW);
@@ -284,7 +288,7 @@ describe('Streaks service', () => {
     });
 
     it('does not nudge users who are already active today', async () => {
-      await upsertDailyCheckin(testUserId, TODAY, 5);
+      await recordDailyCheckIn({ userId: testUserId, mood: 5, now: noonUtcForLocalDate(TODAY) });
       const result = await runStreakNudges(NOW);
       expect(result.considered).toBe(0);
       expect(result.recorded).toBe(0);

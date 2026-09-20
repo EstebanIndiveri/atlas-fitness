@@ -17,10 +17,8 @@ gobernanza.
 - `no-unused-vars` es warning, no error.
 - No hay Prettier ni regla automatizada de orden de imports.
 
-La política prohíbe `any`, pero producción contiene tres casts explícitos:
+La política prohíbe `any`, pero producción contiene un cast explícito:
 
-- `lib/services/daily-checkins.ts:66`
-- `lib/services/workout-sets.ts:82`
 - `lib/services/tips.ts:55`
 
 ## Diseño de módulos
