@@ -10,6 +10,29 @@ export const HABIT_KEYS = ['hydration', 'walk', 'mobility', 'sleep'] as const;
 export type HabitKey = (typeof HABIT_KEYS)[number];
 
 /**
+ * Habits tracked with a user-entered quantitative amount instead of a plain
+ * boolean toggle. The amount is `source: user_input` (e.g. hydration liters);
+ * Atlas never fabricates a target or a completion ratio for it.
+ */
+export const QUANTITATIVE_HABIT_KEYS = ['hydration'] as const;
+
+export type QuantitativeHabitKey = (typeof QUANTITATIVE_HABIT_KEYS)[number];
+
+/**
+ * Type guard narrowing a habit key to one tracked with a quantitative amount.
+ *
+ * @param value - Candidate value from an untrusted boundary (API, storage).
+ * @returns True when the habit is quantitative (records an amount).
+ * @example
+ * if (isQuantitativeHabitKey(key)) { renderStepper(key); }
+ */
+export function isQuantitativeHabitKey(value: unknown): value is QuantitativeHabitKey {
+  return (
+    typeof value === 'string' && (QUANTITATIVE_HABIT_KEYS as readonly string[]).includes(value)
+  );
+}
+
+/**
  * Type guard narrowing an unknown value to a known habit key.
  *
  * @param value - Candidate value from an untrusted boundary (API, storage).

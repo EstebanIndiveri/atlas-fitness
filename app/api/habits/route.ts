@@ -8,6 +8,7 @@ type HabitLogRequestInput = {
   userId: number;
   habitKey?: unknown;
   done?: unknown;
+  amount?: unknown;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -34,6 +35,9 @@ function buildHabitLogInput(userId: number, body: unknown): HabitLogRequestInput
   }
   if ('done' in body) {
     input.done = body.done;
+  }
+  if ('amount' in body) {
+    input.amount = body.amount;
   }
 
   return input;

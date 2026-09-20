@@ -3,8 +3,9 @@ import { z } from 'zod';
 
 import { db } from '@/lib/db/client';
 import { habitLogs } from '@/lib/db/schema';
+import { isValidHydrationLiters, parseHydrationLiters } from '@/lib/format/hydration';
 import { cordobaLocalDate } from '@/lib/time/cordoba';
-import { HABIT_KEYS } from '@/types/habit';
+import { HABIT_KEYS, isQuantitativeHabitKey } from '@/types/habit';
 import { AppError } from '@/types/errors';
 import type { HabitLog } from '@/lib/db/schema';
 import type { HabitKey } from '@/types/habit';
@@ -12,12 +13,28 @@ import type { HabitKey } from '@/types/habit';
 export { HABIT_KEYS };
 export type { HabitKey };
 
-const setHabitLogSchema = z.object({
-  userId: z.number().int().positive(),
-  habitKey: z.enum(HABIT_KEYS),
-  done: z.boolean(),
-  now: z.date().optional(),
-});
+const setHabitLogSchema = z
+  .object({
+    userId: z.number().int().positive(),
+    habitKey: z.enum(HABIT_KEYS),
+    done: z.boolean(),
+    amount: z.string().optional(),
+    now: z.date().optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.amount === undefined) {
+      return;
+    }
+
+    if (!isQuantitativeHabitKey(value.habitKey)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Hábito sin cantidad', path: ['amount'] });
+      return;
+    }
+
+    if (!isValidHydrationLiters(value.amount)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Cantidad inválida', path: ['amount'] });
+    }
+  });
 
 type ValidSetHabitLogInput = z.infer<typeof setHabitLogSchema>;
 
@@ -35,17 +52,24 @@ function parseSetHabitLogInput(input: unknown): ValidSetHabitLogInput {
  * Upserts today's completion state for a single habit in Córdoba local time.
  *
  * Idempotent on (userId, localDate, habitKey): repeated calls update the same row,
- * so a habit can be toggled on and off without creating duplicates.
+ * so a habit can be toggled on and off without creating duplicates. Quantitative
+ * habits (e.g. hydration) may carry a user-entered `amount` (liters decimal string),
+ * which is normalized on save and cleared when the habit is toggled off.
  * @param input - Unknown boundary payload validated with Zod before persistence.
  * @returns The created or updated HabitLog row.
- * @throws {AppError} VALIDATION when habitKey, done, or userId are invalid.
+ * @throws {AppError} VALIDATION when habitKey, done, userId, or amount are invalid.
  * @example
- * await setHabitLog({ userId: 1, habitKey: 'hydration', done: true });
+ * await setHabitLog({ userId: 1, habitKey: 'hydration', done: true, amount: '1.5' });
  */
 export async function setHabitLog(input: unknown): Promise<HabitLog> {
   const validInput = parseSetHabitLogInput(input);
   const localDate = cordobaLocalDate(validInput.now);
   const now = new Date();
+
+  const amount =
+    validInput.done && validInput.amount !== undefined
+      ? parseHydrationLiters(validInput.amount)
+      : null;
 
   const [log] = await db
     .insert(habitLogs)
@@ -54,12 +78,14 @@ export async function setHabitLog(input: unknown): Promise<HabitLog> {
       localDate,
       habitKey: validInput.habitKey,
       done: validInput.done,
+      amount,
       updatedAt: now,
     })
     .onConflictDoUpdate({
       target: [habitLogs.userId, habitLogs.localDate, habitLogs.habitKey],
       set: {
         done: validInput.done,
+        amount,
         updatedAt: now,
       },
     })

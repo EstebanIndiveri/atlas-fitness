@@ -9,13 +9,14 @@ function jsonTextResponse(body: unknown, ok = true, status = 200): Response {
   return { ok, status, text: async () => JSON.stringify(body) } as Response;
 }
 
-function habitRow(habitKey: string, done: boolean) {
+function habitRow(habitKey: string, done: boolean, amount: string | null = null) {
   return {
     id: habitKey.length,
     userId: 1,
     localDate: '2026-09-20',
     habitKey,
     done,
+    amount,
     createdAt: '2026-09-20T12:00:00.000Z',
     updatedAt: '2026-09-20T12:00:00.000Z',
   };
@@ -128,5 +129,65 @@ describe('useHabits', () => {
     await waitLoaded(result);
 
     expect(result.current.error).toBe(TODAY_COPY.habitsSessionExpired);
+  });
+
+  it('loads quantitative amounts into amountByKey', async () => {
+    global.fetch = jest
+      .fn<typeof fetch>()
+      .mockResolvedValue(
+        jsonTextResponse([habitRow('hydration', true, '1.5')]),
+      ) as unknown as typeof fetch;
+
+    const { result } = renderHook(() => useHabits());
+    await waitLoaded(result);
+
+    expect(result.current.amountByKey.hydration).toBe('1.5');
+    expect(result.current.amountByKey.walk).toBeNull();
+  });
+
+  it('adds a hydration step and persists the accumulated amount', async () => {
+    const fetchMock = jest
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonTextResponse([habitRow('hydration', true, '1')]))
+      .mockResolvedValueOnce(jsonTextResponse(habitRow('hydration', true, '1.25')));
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    const { result } = renderHook(() => useHabits());
+    await waitLoaded(result);
+
+    await act(async () => {
+      await result.current.addAmount('hydration');
+    });
+
+    expect(result.current.amountByKey.hydration).toBe('1.25');
+    expect(result.current.doneByKey.hydration).toBe(true);
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/habits', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ habitKey: 'hydration', done: true, amount: '1.25' }),
+    });
+  });
+
+  it('clears a hydration amount and sends done:false', async () => {
+    const fetchMock = jest
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonTextResponse([habitRow('hydration', true, '1.5')]))
+      .mockResolvedValueOnce(jsonTextResponse(habitRow('hydration', false, null)));
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    const { result } = renderHook(() => useHabits());
+    await waitLoaded(result);
+
+    await act(async () => {
+      await result.current.clearAmount('hydration');
+    });
+
+    expect(result.current.amountByKey.hydration).toBeNull();
+    expect(result.current.doneByKey.hydration).toBe(false);
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/habits', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ habitKey: 'hydration', done: false }),
+    });
   });
 });
