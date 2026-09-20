@@ -1,7 +1,7 @@
 /**
  * @jest-environment node
  */
-import { describe, it, expect, beforeEach } from '@jest/globals';
+import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 import { db } from '@/lib/db/client';
 import {
   botMessages,
@@ -28,6 +28,9 @@ import { createWorkoutSet, listWorkoutSets } from '@/lib/services/workout-sets';
 import { AppError } from '@/types/errors';
 import { suggestNextExerciseForWorkout } from '@/lib/services/guided-session';
 
+const originalGeminiApiKey = process.env.GEMINI_API_KEY;
+const originalFetch = global.fetch;
+
 async function wipe() {
   await db.delete(workoutQueueMutations);
   await db.delete(workoutSets);
@@ -53,6 +56,12 @@ describe('applyWorkoutQueueAction', () => {
   let routineId: number;
 
   beforeEach(async () => {
+    if (originalGeminiApiKey === undefined) {
+      delete process.env.GEMINI_API_KEY;
+    } else {
+      process.env.GEMINI_API_KEY = originalGeminiApiKey;
+    }
+    global.fetch = originalFetch;
     await wipe();
     const [user] = await db
       .insert(users)
@@ -162,6 +171,98 @@ describe('applyWorkoutQueueAction', () => {
     expect(reloaded.queue.heldExerciseIds).toEqual([benchId]);
   });
 
+  it('does not suggest the just-held exercise when Gemini selects it immediately', async () => {
+    const workout = await createWorkout(userId, routineId);
+    process.env.GEMINI_API_KEY = 'test-key';
+    global.fetch = jest.fn(async () =>
+      geminiJsonResponse({
+        nextExerciseId: benchId,
+        isLast: false,
+        message: 'Volvé al press ahora.',
+      }),
+    );
+
+    const result = await applyWorkoutQueueAction({
+      workoutId: workout.id,
+      userId,
+      action: 'hold',
+      exerciseId: benchId,
+      clientMutationId: 'mut-hold-no-immediate-repeat',
+    });
+
+    expect(result.queue.pendingExerciseIds).toEqual([squatId, rowId, benchId]);
+    expect(result.suggestion.nextExerciseId).toBe(squatId);
+    expect(result.suggestion.nextExerciseId).not.toBe(benchId);
+  });
+
+  it('preserves distinct concurrent skip and hold mutations from the same starting queue', async () => {
+    const workout = await createWorkout(userId, routineId);
+    process.env.GEMINI_API_KEY = 'test-key';
+    global.fetch = createFetchBarrier(2);
+
+    const outcomes = await Promise.allSettled([
+      applyWorkoutQueueAction({
+        workoutId: workout.id,
+        userId,
+        action: 'skip',
+        exerciseId: benchId,
+        clientMutationId: 'mut-concurrent-skip',
+      }),
+      applyWorkoutQueueAction({
+        workoutId: workout.id,
+        userId,
+        action: 'hold',
+        exerciseId: squatId,
+        clientMutationId: 'mut-concurrent-hold',
+      }),
+    ]);
+
+    expect(outcomes).toEqual([
+      expect.objectContaining({ status: 'fulfilled' }),
+      expect.objectContaining({ status: 'fulfilled' }),
+    ]);
+    const reloaded = await getWorkoutById(workout.id, userId);
+    expect(reloaded.queue.pendingExerciseIds).toEqual([rowId, squatId]);
+    expect(reloaded.queue.skippedExerciseIds).toEqual([benchId]);
+    expect(reloaded.queue.heldExerciseIds).toEqual([squatId]);
+  });
+
+  function createFetchBarrier(requiredCalls: number): jest.MockedFunction<typeof fetch> {
+    let calls = 0;
+    let releaseBarrier: () => void = () => undefined;
+    const barrier = new Promise<void>((resolve) => {
+      releaseBarrier = resolve;
+    });
+
+    return jest.fn(async () => {
+      calls += 1;
+      if (calls === requiredCalls) {
+        releaseBarrier();
+      }
+      await barrier;
+      return new Response('Gemini unavailable', { status: 500 });
+    });
+  }
+
+  function geminiJsonResponse(payload: {
+    nextExerciseId: number | null;
+    isLast: boolean;
+    message: string;
+  }): Response {
+    return new Response(
+      JSON.stringify({
+        candidates: [
+          {
+            content: {
+              parts: [{ text: JSON.stringify(payload) }],
+            },
+          },
+        ],
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
   it('does not delete or patch finished sets (decimal weight_kg stays a string)', async () => {
     const workout = await createWorkout(userId, routineId);
     const logged = await createWorkoutSet({
@@ -229,6 +330,29 @@ describe('applyWorkoutQueueAction', () => {
         action: 'hold',
         exerciseId: benchId,
         clientMutationId: 'mut-foreign',
+      }),
+    ).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    } satisfies Partial<AppError>);
+  });
+
+  it('rejects a foreign duplicate mutation without returning the stored response', async () => {
+    const workout = await createWorkout(otherUserId, routineId);
+    await applyWorkoutQueueAction({
+      workoutId: workout.id,
+      userId: otherUserId,
+      action: 'skip',
+      exerciseId: benchId,
+      clientMutationId: 'mut-foreign-duplicate',
+    });
+
+    await expect(
+      applyWorkoutQueueAction({
+        workoutId: workout.id,
+        userId,
+        action: 'skip',
+        exerciseId: benchId,
+        clientMutationId: 'mut-foreign-duplicate',
       }),
     ).rejects.toMatchObject({
       code: 'FORBIDDEN',

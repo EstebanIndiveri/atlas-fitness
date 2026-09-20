@@ -70,7 +70,9 @@ Otros: `401 UNAUTHORIZED`, `404 NOT_FOUND` (inexistente / soft-deleted), `403 FO
 ## BE
 
 - Auth: `requireAuth` + `workout.userId === session.userId`.
-- Persistencia: `workouts.queue_json` + tabla `workout_queue_mutations` (unique `workout_id + action + client_mutation_id`).
+- Persistencia: `workouts.queue_json` + `workouts.queue_version` + tabla `workout_queue_mutations` (unique `workout_id + action + client_mutation_id`).
+- Concurrencia: cada mutación recalcula desde la cola vigente y persiste con optimistic locking (`queue_version = queue_version + 1` con guard por versión esperada). Si otro write ganó, se re-lee, se revalida que el ejercicio siga pendiente, se recomputa y se reintenta de forma acotada. La fila de idempotencia y el update de cola quedan en la misma transacción; si el guard de versión falla, ambos se revierten.
+- Hold: la cola persistida mueve el ejercicio al final, pero la sugerencia inmediata de esa respuesta excluye el ejercicio recién pospuesto. Puede volver a aparecer en recargas o turnos posteriores.
 - Cola pura: `lib/session/queue.ts` (misma semántica que FE).
 - Servicio: `lib/services/session-queue.ts`.
 - Sugerencia post skip/hold y `POST next-exercise`: ADR-003 sobre pending.

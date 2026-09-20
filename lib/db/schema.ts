@@ -119,6 +119,7 @@ export const workouts = sqliteTable(
     note: text('note'),
     mood: integer('mood'),
     queueJson: text('queue_json'),
+    queueVersion: integer('queue_version').notNull().default(0),
     deletedAt: integer('deleted_at', { mode: 'timestamp' }),
   },
   (table) => ({

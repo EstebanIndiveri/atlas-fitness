@@ -64,6 +64,13 @@
       "when": 1789900800000,
       "tag": "0008_workout_queue",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1789904400000,
+      "tag": "0009_workout_queue_version",
+      "breakpoints": true
     }
   ]
 }

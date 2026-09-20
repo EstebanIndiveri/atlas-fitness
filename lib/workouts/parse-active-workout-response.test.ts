@@ -12,6 +12,7 @@ const sampleWorkout = {
   deletedAt: null,
   routineId: null,
   queueJson: null,
+  queueVersion: 0,
 } satisfies Workout;
 
 describe('parseActiveWorkoutResponse', () => {

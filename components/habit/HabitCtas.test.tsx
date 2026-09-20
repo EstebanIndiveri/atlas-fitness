@@ -16,6 +16,7 @@ function workout(overrides: Partial<Workout> = {}): Workout {
     deletedAt: null,
     routineId: null,
     queueJson: null,
+    queueVersion: 0,
     ...overrides,
   };
 }
