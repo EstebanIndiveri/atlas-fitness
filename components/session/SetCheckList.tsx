@@ -2,7 +2,9 @@
 
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { MetricValue } from '@/components/ui/MetricValue';
 import { SESSION_COPY } from '@/lib/copy/session';
+import { metric } from '@/types/metric';
 
 type SetCheckListProps = {
   targetSets: number;
@@ -35,7 +37,10 @@ export function SetCheckList({
               data-testid={done ? 'set-complete' : 'set-pending'}
             >
               <span className="text-sm text-ink">
-                {SESSION_COPY.setProgress(slot, targetSets)}
+                <MetricValue
+                  metric={metric(SESSION_COPY.setProgress(slot, targetSets), 'atlas_computed')}
+                  label="Progreso de serie"
+                />
               </span>
               <span className="text-sm text-ink-muted" aria-hidden>
                 {done ? '✓' : '○'}
