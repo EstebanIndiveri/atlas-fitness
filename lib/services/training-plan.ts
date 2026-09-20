@@ -61,6 +61,7 @@ const createTrainingPlanSchema = z.object({
         routineId: z.number().int().positive(),
       }),
     )
+    .min(1)
     .max(7),
 });
 
@@ -71,7 +72,16 @@ function parseCreateTrainingPlanInput(input: unknown): ValidCreateTrainingPlanIn
 
   if (!parsed.success) {
     const invalidDay = parsed.error.issues.some((issue) => issue.path.includes('dayOfWeek'));
-    throw new AppError('VALIDATION', invalidDay ? 'Día de semana inválido' : 'Plan inválido');
+    const emptySchedule = parsed.error.issues.some(
+      (issue) => issue.path.length === 1 && issue.path[0] === 'schedule' && issue.code === 'too_small',
+    );
+    const message = emptySchedule
+      ? 'El plan debe tener al menos un día asignado'
+      : invalidDay
+        ? 'Día de semana inválido'
+        : 'Plan inválido';
+
+    throw new AppError('VALIDATION', message);
   }
 
   const uniqueDays = new Set(parsed.data.schedule.map((item) => item.dayOfWeek));
@@ -162,19 +172,16 @@ export async function createTrainingPlan(input: unknown): Promise<CreateTraining
       })
       .returning();
 
-    const schedule =
-      validInput.schedule.length === 0
-        ? []
-        : await tx
-            .insert(scheduledRoutines)
-            .values(
-              validInput.schedule.map((assignment) => ({
-                trainingPlanId: plan.id,
-                dayOfWeek: assignment.dayOfWeek,
-                routineId: assignment.routineId,
-              })),
-            )
-            .returning();
+    const schedule = await tx
+      .insert(scheduledRoutines)
+      .values(
+        validInput.schedule.map((assignment) => ({
+          trainingPlanId: plan.id,
+          dayOfWeek: assignment.dayOfWeek,
+          routineId: assignment.routineId,
+        })),
+      )
+      .returning();
 
     return { plan, schedule };
   });
