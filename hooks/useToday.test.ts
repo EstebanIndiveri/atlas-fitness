@@ -31,6 +31,7 @@ describe('useToday', () => {
       routineName: 'Torso pesado',
       planGoal: null,
       dayReason: null,
+      completion: { completed: 0, total: 5 },
     } as const;
     const fetchMock = jest.fn<typeof fetch>().mockResolvedValue(jsonTextResponse(today));
     global.fetch = fetchMock as unknown as typeof fetch;

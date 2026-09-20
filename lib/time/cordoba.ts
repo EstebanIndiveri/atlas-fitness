@@ -6,6 +6,29 @@ export const CORDOBA_TIMEZONE = 'America/Argentina/Cordoba';
 
 const LOCAL_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
+/** Fixed Córdoba UTC offset in hours (UTC−3, no DST). */
+const CORDOBA_UTC_OFFSET_HOURS = 3;
+
+/**
+ * Returns the UTC instant window `[startUtc, endUtc)` covering a Córdoba
+ * calendar date. Local midnight is 03:00 UTC because Córdoba is UTC−3 year-round.
+ *
+ * @param localDate - Córdoba calendar date in YYYY-MM-DD format.
+ * @returns Half-open UTC range: `startUtc` inclusive, `endUtc` exclusive.
+ * @throws {Error} When `localDate` is not a valid YYYY-MM-DD string.
+ * @example
+ * const { startUtc, endUtc } = cordobaLocalDateToUtcRange('2026-09-24');
+ */
+export function cordobaLocalDateToUtcRange(localDate: string): { startUtc: Date; endUtc: Date } {
+  if (!LOCAL_DATE_RE.test(localDate)) {
+    throw new Error(`Invalid local date: ${localDate}`);
+  }
+  const [year, month, day] = localDate.split('-').map(Number);
+  const startUtc = new Date(Date.UTC(year, month - 1, day, CORDOBA_UTC_OFFSET_HOURS, 0, 0, 0));
+  const endUtc = new Date(startUtc.getTime() + 24 * 60 * 60 * 1000);
+  return { startUtc, endUtc };
+}
+
 /**
  * Returns the calendar date (YYYY-MM-DD) for `instant` in Córdoba.
  */

@@ -34,6 +34,7 @@ const workoutToday: TodayResponse = {
   routineName: 'Push A',
   planGoal: null,
   dayReason: null,
+  completion: { completed: 0, total: 0 },
 };
 
 function mockHooks(today: TodayResponse | null) {

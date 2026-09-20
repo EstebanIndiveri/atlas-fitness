@@ -70,6 +70,7 @@ describe('TrainingPlan adaptive service', () => {
       routineName: 'Push',
       planGoal: null,
       dayReason: null,
+      completion: { completed: 0, total: 0 },
     });
   });
 

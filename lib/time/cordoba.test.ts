@@ -4,6 +4,7 @@ import {
   addLocalDateDays,
   cordobaDisplayDate,
   cordobaLocalDate,
+  cordobaLocalDateToUtcRange,
   cordobaWeekdayIndex,
   localDateWeekdayIndex,
   yesterdayCordoba,
@@ -69,5 +70,25 @@ describe('Córdoba timezone helpers', () => {
   it('rejects an invalid calendar date string', () => {
     expect(() => localDateWeekdayIndex('2026/09/21')).toThrow();
     expect(() => localDateWeekdayIndex('nope')).toThrow();
+  });
+
+  describe('cordobaLocalDateToUtcRange', () => {
+    it('maps a local date to its UTC-3 day window (local midnight = 03:00 UTC)', () => {
+      const { startUtc, endUtc } = cordobaLocalDateToUtcRange('2026-09-24');
+      expect(startUtc.toISOString()).toBe('2026-09-24T03:00:00.000Z');
+      expect(endUtc.toISOString()).toBe('2026-09-25T03:00:00.000Z');
+    });
+
+    it('produces a window that contains a late-night local instant', () => {
+      // 2026-09-25T02:00:00Z is 2026-09-24 23:00 in Córdoba.
+      const instant = new Date('2026-09-25T02:00:00.000Z');
+      const { startUtc, endUtc } = cordobaLocalDateToUtcRange('2026-09-24');
+      expect(instant.getTime()).toBeGreaterThanOrEqual(startUtc.getTime());
+      expect(instant.getTime()).toBeLessThan(endUtc.getTime());
+    });
+
+    it('rejects an invalid calendar date string', () => {
+      expect(() => cordobaLocalDateToUtcRange('2026/09/24')).toThrow();
+    });
   });
 });
