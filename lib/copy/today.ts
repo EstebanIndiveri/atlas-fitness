@@ -9,4 +9,5 @@ export const TODAY_COPY = {
   habitsError: 'No pudimos cargar tus hábitos de hoy. Probá de nuevo en unos minutos.',
   habitsSessionExpired: 'Tu sesión expiró. Iniciá sesión de nuevo para registrar tus hábitos.',
   habitsSaveError: 'No pudimos guardar tu hábito. Probá de nuevo en unos minutos.',
+  weekError: 'No pudimos cargar tu semana. Probá de nuevo en unos minutos.',
 } as const;
