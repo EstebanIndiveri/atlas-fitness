@@ -51,3 +51,27 @@ export function cordobaDisplayDate(instant: Date = new Date()): string {
     month: 'long',
   }).format(instant);
 }
+
+const WEEKDAY_TO_MONDAY_INDEX: Record<string, number> = {
+  Mon: 0,
+  Tue: 1,
+  Wed: 2,
+  Thu: 3,
+  Fri: 4,
+  Sat: 5,
+  Sun: 6,
+};
+
+/**
+ * Weekday index for `instant` in Córdoba, Monday-first (0 = Monday … 6 = Sunday).
+ * @param instant Point in time to evaluate (defaults to now).
+ * @returns Monday-based weekday index in the range 0–6.
+ * @example cordobaWeekdayIndex(new Date('2026-09-24T12:00:00Z')) // 3 (Thursday)
+ */
+export function cordobaWeekdayIndex(instant: Date = new Date()): number {
+  const short = new Intl.DateTimeFormat('en-US', {
+    timeZone: CORDOBA_TIMEZONE,
+    weekday: 'short',
+  }).format(instant);
+  return WEEKDAY_TO_MONDAY_INDEX[short] ?? 0;
+}

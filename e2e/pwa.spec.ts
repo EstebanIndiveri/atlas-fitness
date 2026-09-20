@@ -96,7 +96,7 @@ test.describe('PWA installability', () => {
       page.click('button[type="submit"]'),
     ]);
     await page.waitForURL('/dashboard', { timeout: 20000 });
-    await page.click('[data-testid="settings-link"]');
+    await page.click('[data-testid="profile-link"]');
     await page.waitForURL('**/dashboard/settings', { timeout: 10000 });
 
     const settingsHint = page.getByTestId('pwa-install-settings').getByTestId('ios-install-hint');

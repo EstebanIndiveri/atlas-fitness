@@ -31,7 +31,7 @@ test.describe('UX hábito — mobile 390px', () => {
     await expect(page.getByTestId('app-bottom-nav')).toBeVisible();
     await expect(page.getByRole('navigation', { name: 'Principal' })).toBeHidden();
 
-    const homeTab = page.getByTestId('bottom-nav-home');
+    const homeTab = page.getByTestId('bottom-nav-today');
     const box = await homeTab.boundingBox();
     expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
 
@@ -54,7 +54,7 @@ test.describe('UX hábito — desktop shell', () => {
     await registerFreshUser(page);
     await expect(page.getByTestId('welcome-message')).toBeVisible({ timeout: 10000 });
     await expect(page.getByRole('navigation', { name: 'Principal' })).toBeVisible();
-    await expect(page.getByTestId('settings-link')).toBeVisible();
+    await expect(page.getByTestId('profile-link')).toBeVisible();
     await expect(page.getByTestId('app-bottom-nav')).toBeHidden();
     await expect(page.getByTestId('streak-chip')).toBeVisible();
     await expect(page.getByTestId('current-streak')).toBeVisible();

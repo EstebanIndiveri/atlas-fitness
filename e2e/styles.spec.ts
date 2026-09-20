@@ -55,7 +55,7 @@ test.describe('Design system visual smoke', () => {
       ATLAS_SMOKE.roundedMd,
     );
 
-    await page.getByTestId('settings-link').click();
+    await page.getByTestId('profile-link').click();
     await page.waitForURL('**/dashboard/settings', { timeout: 10000 });
     await expect(page.getByRole('heading', { name: 'Ajustes' })).toBeVisible();
     await expect(page.getByTestId('app-header')).toBeVisible();

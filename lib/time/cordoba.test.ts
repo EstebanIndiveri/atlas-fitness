@@ -4,6 +4,7 @@ import {
   addLocalDateDays,
   cordobaDisplayDate,
   cordobaLocalDate,
+  cordobaWeekdayIndex,
   yesterdayCordoba,
 } from './cordoba';
 
@@ -47,5 +48,14 @@ describe('Córdoba timezone helpers', () => {
     expect(cordobaDisplayDate(new Date('2026-09-25T02:00:00.000Z'))).toBe(
       'jueves, 24 de septiembre',
     );
+  });
+
+  it('returns a Monday-first weekday index in Córdoba', () => {
+    // 2026-09-24 is a Thursday → index 3
+    expect(cordobaWeekdayIndex(new Date('2026-09-24T12:00:00.000Z'))).toBe(3);
+    // 2026-09-21 is a Monday → index 0
+    expect(cordobaWeekdayIndex(new Date('2026-09-21T12:00:00.000Z'))).toBe(0);
+    // Sunday on the Córdoba side of midnight → index 6
+    expect(cordobaWeekdayIndex(new Date('2026-09-21T02:00:00.000Z'))).toBe(6);
   });
 });

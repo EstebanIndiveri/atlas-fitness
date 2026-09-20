@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { IosInstallHint } from '@/components/pwa/IosInstallHint';
+import { LogoutButton } from '@/components/shell/AppNav';
 import { Button, buttonClassName } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { ErrorState, LoadingState } from '@/components/ui/states';
@@ -120,6 +121,14 @@ export default function SettingsPage() {
             </p>
           </div>
         )}
+      </Card>
+
+      <Card className="mt-6" data-testid="account-settings">
+        <h2 className="text-lg font-semibold text-ink">Cuenta</h2>
+        <p className="mt-2 text-sm text-ink-muted">Cerrá tu sesión en este dispositivo.</p>
+        <div className="mt-4">
+          <LogoutButton />
+        </div>
       </Card>
     </div>
   );
