@@ -157,7 +157,7 @@ describe('CoachRecommendation persistence service', () => {
     await expect(
       decideCoachRecommendation({ id: recommendation.id, userId, decision: 'rejected' }),
     ).rejects.toMatchObject({
-      code: 'RECOMMENDATION_ALREADY_DECIDED',
+      code: 'CONFLICT',
       message: 'La recomendación ya fue decidida',
     });
   });

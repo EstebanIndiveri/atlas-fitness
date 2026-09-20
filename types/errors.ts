@@ -5,9 +5,7 @@ export type ErrorCode =
   | 'VALIDATION'
   | 'CONFLICT'
   | 'RATE_LIMIT'
-  | 'SERVICE_UNAVAILABLE'
-  | 'RECOMMENDATION_NOT_FOUND'
-  | 'RECOMMENDATION_ALREADY_DECIDED';
+  | 'SERVICE_UNAVAILABLE';
 
 export interface ApiError {
   code: ErrorCode;

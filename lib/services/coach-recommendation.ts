@@ -195,17 +195,17 @@ export async function recordCoachRecommendation(input: unknown): Promise<CoachRe
  * @param input Recommendation id, owner id, and final decision.
  * @returns The decided recommendation DTO.
  * @throws {AppError} VALIDATION when input is invalid.
- * @throws {AppError} RECOMMENDATION_NOT_FOUND when the row is missing or foreign.
- * @throws {AppError} RECOMMENDATION_ALREADY_DECIDED when decision is not pending.
+ * @throws {AppError} NOT_FOUND when the row is missing or foreign.
+ * @throws {AppError} CONFLICT when decision is not pending.
  * @example
  * await decideCoachRecommendation({ id: 1, userId: 1, decision: 'accepted' });
  */
 export async function decideCoachRecommendation(input: unknown): Promise<CoachRecommendationDto> {
   const validInput = parseDecideInput(input);
   const existing = await findOwnedRecommendation(validInput.id, validInput.userId);
-  if (!existing) throw new AppError('RECOMMENDATION_NOT_FOUND', 'Recomendación no encontrada');
+  if (!existing) throw new AppError('NOT_FOUND', 'Recomendación no encontrada');
   if (existing.decision !== 'pending') {
-    throw new AppError('RECOMMENDATION_ALREADY_DECIDED', 'La recomendación ya fue decidida');
+    throw new AppError('CONFLICT', 'La recomendación ya fue decidida');
   }
 
   const [updated] = await db
@@ -214,7 +214,7 @@ export async function decideCoachRecommendation(input: unknown): Promise<CoachRe
     .where(and(eq(coachRecommendations.id, validInput.id), eq(coachRecommendations.decision, 'pending')))
     .returning();
 
-  if (!updated) throw new AppError('RECOMMENDATION_ALREADY_DECIDED', 'La recomendación ya fue decidida');
+  if (!updated) throw new AppError('CONFLICT', 'La recomendación ya fue decidida');
   return toDto(updated);
 }
 

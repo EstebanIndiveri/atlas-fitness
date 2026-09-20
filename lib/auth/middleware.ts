@@ -56,8 +56,6 @@ export function handleApiError(error: unknown): NextResponse {
     CONFLICT: 409,
     RATE_LIMIT: 429,
     SERVICE_UNAVAILABLE: 503,
-    RECOMMENDATION_NOT_FOUND: 404,
-    RECOMMENDATION_ALREADY_DECIDED: 409,
   } as const;
 
   if (error instanceof AppError) {
