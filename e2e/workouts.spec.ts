@@ -127,13 +127,16 @@ test.describe('Workout Flow', () => {
     await page.click('[data-testid="confirm-end-workout"]');
     await page.waitForResponse((resp) => resp.url().includes('/api/workouts/') && resp.status() === 200);
 
-    // Should redirect to dashboard
+    // Should redirect to the Today home
     await page.waitForURL('/dashboard/today', { timeout: 10000 });
 
-    // Verify workout appears in history
-    await expect(page.locator('text=Buen entrenamiento inicial')).toBeVisible({ timeout: 5000 });
-    // Mood emoji should be visible in history (not strict mode to allow for multiple occurrences)
-    await expect(page.locator('text=😊').first()).toBeVisible();
+    // The note and mood persisted (surfaced via the API; HOY does not list history).
+    const list = await page.request.get('/api/workouts');
+    expect(list.status()).toBe(200);
+    const workouts = (await list.json()) as Array<{ note: string | null; mood: number | null }>;
+    expect(
+      workouts.some((w) => w.note === 'Buen entrenamiento inicial' && w.mood === 4),
+    ).toBe(true);
   });
 
   test('should show PR badge when matching or exceeding previous record', async ({ page }) => {
@@ -199,8 +202,8 @@ test.describe('Workout Flow', () => {
     await page.waitForResponse((resp) => resp.url().includes('/api/workouts/') && resp.status() === 200);
     await page.waitForURL('/dashboard/today', { timeout: 10000 });
 
-    // Go to history page
-    await page.click('a:has-text("Ver todo")');
+    // Go to the Progreso (history) tab, which lists recent sessions.
+    await page.goto('/dashboard/history');
     await page.waitForURL('/dashboard/history', { timeout: 5000 });
 
     // Verify the completed workout is represented in the progress recent sessions list.
@@ -227,7 +230,7 @@ test.describe('Workout Flow', () => {
 
   test('should not allow adding sets to finished workout', async ({ page }) => {
     // Create and finish a workout
-    await startManualWorkout(page);
+    const workoutId = await startManualWorkout(page);
     
     await page.click('[data-testid="add-set-button"]');
     await page.selectOption('[data-testid="exercise-select"]', { index: 1 });
@@ -242,9 +245,8 @@ test.describe('Workout Flow', () => {
     await page.waitForResponse((resp) => resp.url().includes('/api/workouts/') && resp.status() === 200);
     await page.waitForURL('/dashboard/today', { timeout: 10000 });
 
-    // Click on the workout in history
-    const workoutLink = page.locator('a[href^="/dashboard/workout/"]').first();
-    await workoutLink.click();
+    // Reopen the finished workout directly.
+    await page.goto(`/dashboard/workout/${workoutId}`);
     await page.waitForURL(/\/dashboard\/workout\/\d+/, { timeout: 5000 });
 
     // Should show "Entrenamiento Finalizado"
