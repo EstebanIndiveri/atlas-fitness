@@ -38,7 +38,7 @@ test.describe('Guided session (Epic-E Must)', () => {
   test('pick routine → check sets → rest → next (fallback) → close with mood', async ({ page }) => {
     await page.click('[data-testid="guided-session-cta"]');
     await page.waitForURL('/dashboard/session', { timeout: 10000 });
-    await expect(page.locator('h1')).toHaveText('Elegí una rutina');
+    await expect(page.locator('h1')).toHaveText('Entrenar');
     await expectCssColor(page.locator('main').first(), 'background-color', ATLAS_SMOKE.canvas);
 
     await page
