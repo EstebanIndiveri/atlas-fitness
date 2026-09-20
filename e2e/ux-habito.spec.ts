@@ -44,7 +44,7 @@ test.describe('UX hábito — mobile 390px', () => {
 
     await page.getByTestId('bottom-nav-session').click();
     await page.waitForURL('**/dashboard/session', { timeout: 10000 });
-    await expect(page.getByRole('heading', { name: 'Elegí una rutina' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Entrenar' })).toBeVisible();
     await expect(page.getByTestId('app-bottom-nav')).toBeVisible();
   });
 });

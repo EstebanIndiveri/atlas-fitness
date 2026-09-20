@@ -1,11 +1,6 @@
 /** Product copy for guided sessions (es-AR). */
 export const SESSION_COPY = {
   navSession: 'Sesión',
-  pickTitle: 'Elegí una rutina',
-  pickSubtitle: 'Seguí el orden, marcá cada serie y descansá entre ellas.',
-  emptyRoutinesTitle: 'No hay rutinas',
-  emptyRoutinesBody: 'Todavía no hay rutinas cargadas. Pedile a quien administra Atlas que corra el seed.',
-  startRoutine: 'Empezar rutina',
   continueGuided: 'Continuar sesión guiada',
   guidedCta: 'Sesión guiada',
   currentExercise: 'Ejercicio actual',
