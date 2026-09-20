@@ -8,6 +8,14 @@ const QA_USER_EMAIL = 'qa@atlas.test';
 const QA_USER_PASSWORD = 'Test1234!';
 
 /**
+ * Base URL for free-exercise-db (yuhonas) demonstration images.
+ * Real, stable, openly-licensed photos so exercises never ship with a placeholder.
+ * Videos are populated by the media enrichment job (validated), never as search links.
+ */
+const FREE_EXERCISE_DB_IMAGE_BASE =
+  'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises';
+
+/**
  * System exercises with fixed slugs for testing
  */
 const SYSTEM_EXERCISES = [
@@ -17,8 +25,8 @@ const SYSTEM_EXERCISES = [
     muscleGroup: 'Pecho',
     instructions:
       'Acostado en un banco plano, baja la barra hasta el pecho y empuja hacia arriba con control.',
-    imageUrl: null,
-    videoUrl: 'https://www.youtube.com/results?search_query=press+banca+tecnica',
+    imageUrl: `${FREE_EXERCISE_DB_IMAGE_BASE}/Barbell_Bench_Press_-_Medium_Grip/0.jpg`,
+    videoUrl: null,
     isSystem: true,
   },
   {
@@ -27,8 +35,8 @@ const SYSTEM_EXERCISES = [
     muscleGroup: 'Piernas',
     instructions:
       'Con la barra en los hombros, baja doblando rodillas y caderas hasta que los muslos estén paralelos al suelo.',
-    imageUrl: null,
-    videoUrl: 'https://www.youtube.com/results?search_query=sentadilla+con+barra+tecnica',
+    imageUrl: `${FREE_EXERCISE_DB_IMAGE_BASE}/Barbell_Full_Squat/0.jpg`,
+    videoUrl: null,
     isSystem: true,
   },
   {
@@ -37,8 +45,8 @@ const SYSTEM_EXERCISES = [
     muscleGroup: 'Espalda',
     instructions:
       'Con la barra en el suelo, agáchate y levántala manteniendo la espalda recta hasta estar de pie.',
-    imageUrl: null,
-    videoUrl: 'https://www.youtube.com/results?search_query=peso+muerto+tecnica',
+    imageUrl: `${FREE_EXERCISE_DB_IMAGE_BASE}/Barbell_Deadlift/0.jpg`,
+    videoUrl: null,
     isSystem: true,
   },
   {
@@ -47,8 +55,8 @@ const SYSTEM_EXERCISES = [
     muscleGroup: 'Hombros',
     instructions:
       'De pie, empuja la barra desde los hombros hacia arriba hasta extender completamente los brazos.',
-    imageUrl: null,
-    videoUrl: 'https://www.youtube.com/results?search_query=press+militar+tecnica',
+    imageUrl: `${FREE_EXERCISE_DB_IMAGE_BASE}/Standing_Military_Press/0.jpg`,
+    videoUrl: null,
     isSystem: true,
   },
   {
@@ -57,8 +65,8 @@ const SYSTEM_EXERCISES = [
     muscleGroup: 'Espalda',
     instructions:
       'Inclinado hacia adelante, tira de la barra hacia tu abdomen manteniendo los codos cerca del cuerpo.',
-    imageUrl: null,
-    videoUrl: 'https://www.youtube.com/results?search_query=remo+con+barra+tecnica',
+    imageUrl: `${FREE_EXERCISE_DB_IMAGE_BASE}/Bent_Over_Barbell_Row/0.jpg`,
+    videoUrl: null,
     isSystem: true,
   },
 ];
