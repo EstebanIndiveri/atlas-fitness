@@ -8,6 +8,7 @@ import { APP_NAV_LINKS, bottomNavTestId, isCurrentPath } from './nav-links';
 
 const TAB_ICON: Record<(typeof APP_NAV_LINKS)[number]['tabId'], string> = {
   home: 'M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1z',
+  today: 'M7 3v3 M17 3v3 M4 8h16 M5 6h14a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z M9 13l2 2 4-4',
   session: 'M5 6h14v12H5z M9 3h6v3H9z M8 11h8 M8 15h5',
   history: 'M12 7v5l3 2 M21 12a9 9 0 1 1-2.6-6.3',
   settings:
@@ -23,7 +24,7 @@ export function AppBottomNav() {
       data-testid={UI_COPY_TEST_IDS.appBottomNav}
       className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 pb-safe md:hidden"
     >
-      <ul className="grid grid-cols-4">
+      <ul className="grid grid-cols-5">
         {APP_NAV_LINKS.map((link) => {
           const current = isCurrentPath(pathname, link.href);
           return (

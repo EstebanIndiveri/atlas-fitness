@@ -7,6 +7,7 @@ export const PUBLIC_NAV_LINKS = [
 
 export const APP_NAV_LINKS = [
   { href: '/dashboard', label: UI_COPY.navHome, tabId: 'home' },
+  { href: '/dashboard/today', label: UI_COPY.navToday, tabId: 'today', headerTestId: 'today-link' },
   { href: '/dashboard/session', label: UI_COPY.navSession, tabId: 'session', headerTestId: 'session-link' },
   { href: '/dashboard/history', label: UI_COPY.navHistory, tabId: 'history' },
   { href: '/dashboard/settings', label: UI_COPY.navSettings, tabId: 'settings', headerTestId: 'settings-link' },

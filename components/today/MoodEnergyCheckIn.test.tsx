@@ -1,17 +1,18 @@
-import { afterEach, describe, expect, it, jest } from '@jest/globals';
+import { afterEach, describe, expect, it } from '@jest/globals';
 import { fireEvent, render, screen } from '@testing-library/react';
 
+declare const jest: typeof import('@jest/globals').jest;
+
 import type { DailyCheckInResponse } from '@/lib/api/checkin';
-import type { useDailyCheckin as useDailyCheckinType } from '@/hooks/useDailyCheckin';
 
 jest.mock('@/hooks/useDailyCheckin', () => ({
   useDailyCheckin: jest.fn(),
 }));
 
-const { useDailyCheckin } = jest.requireMock('@/hooks/useDailyCheckin') as {
-  useDailyCheckin: jest.MockedFunction<typeof useDailyCheckinType>;
-};
-const { MoodEnergyCheckIn } = require('./MoodEnergyCheckIn') as typeof import('./MoodEnergyCheckIn');
+import { useDailyCheckin as useDailyCheckinHook } from '@/hooks/useDailyCheckin';
+import { MoodEnergyCheckIn } from './MoodEnergyCheckIn';
+
+const useDailyCheckin = jest.mocked(useDailyCheckinHook);
 
 const recordedCheckin: DailyCheckInResponse = {
   id: 1,
@@ -24,10 +25,10 @@ const recordedCheckin: DailyCheckInResponse = {
   updatedAt: '2026-09-20T10:00:00.000Z',
 };
 
-function mockCheckin(overrides: Partial<ReturnType<typeof useDailyCheckinType>> = {}) {
-  const submit = jest.fn<ReturnType<typeof useDailyCheckinType>['submit']>().mockResolvedValue(recordedCheckin);
-  const reload = jest.fn<ReturnType<typeof useDailyCheckinType>['reload']>();
-  const value: ReturnType<typeof useDailyCheckinType> = {
+function mockCheckin(overrides: Partial<ReturnType<typeof useDailyCheckinHook>> = {}) {
+  const submit = jest.fn<ReturnType<typeof useDailyCheckinHook>['submit']>().mockResolvedValue(recordedCheckin);
+  const reload = jest.fn<ReturnType<typeof useDailyCheckinHook>['reload']>();
+  const value: ReturnType<typeof useDailyCheckinHook> = {
     checkin: null,
     loading: false,
     saving: false,

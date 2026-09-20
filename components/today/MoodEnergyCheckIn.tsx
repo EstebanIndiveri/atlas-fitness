@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { useRef, useState, type KeyboardEvent } from 'react';
 
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -69,11 +69,13 @@ export function MoodEnergyCheckIn() {
   const [selectedMood, setSelectedMood] = useState<number | null>(checkin?.mood ?? null);
   const [selectedEnergy, setSelectedEnergy] = useState<CheckInEnergy | null>(toCheckInEnergy(checkin?.energy));
   const [moodFirstHint, setMoodFirstHint] = useState(false);
+  const [syncedCheckin, setSyncedCheckin] = useState(checkin);
 
-  useEffect(() => {
+  if (checkin !== syncedCheckin) {
+    setSyncedCheckin(checkin);
     setSelectedMood(checkin?.mood ?? null);
     setSelectedEnergy(toCheckInEnergy(checkin?.energy));
-  }, [checkin]);
+  }
 
   const handleMoodSelect = (mood: number): void => {
     if (saving) return;
