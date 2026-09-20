@@ -57,7 +57,7 @@ test.describe('Design system visual smoke', () => {
 
     await page.getByTestId('profile-link').click();
     await page.waitForURL('**/dashboard/settings', { timeout: 10000 });
-    await expect(page.getByRole('heading', { name: 'Ajustes' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Perfil' })).toBeVisible();
     await expect(page.getByTestId('app-header')).toBeVisible();
     await expectCssColor(page.locator('main').first(), 'background-color', ATLAS_SMOKE.canvas);
   });
