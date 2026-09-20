@@ -4,18 +4,13 @@ import { z } from 'zod';
 import { db } from '@/lib/db/client';
 import { habitLogs } from '@/lib/db/schema';
 import { cordobaLocalDate } from '@/lib/time/cordoba';
+import { HABIT_KEYS } from '@/types/habit';
 import { AppError } from '@/types/errors';
 import type { HabitLog } from '@/lib/db/schema';
+import type { HabitKey } from '@/types/habit';
 
-/**
- * Honest catalog of manually tracked daily habits.
- *
- * Every habit log is `source: user_input` (a manual completion toggle); the app
- * never fabricates targets, counts, or progress ratios for these (DATA HONESTY RULE).
- */
-export const HABIT_KEYS = ['hydration', 'walk', 'mobility', 'sleep'] as const;
-
-export type HabitKey = (typeof HABIT_KEYS)[number];
+export { HABIT_KEYS };
+export type { HabitKey };
 
 const setHabitLogSchema = z.object({
   userId: z.number().int().positive(),
