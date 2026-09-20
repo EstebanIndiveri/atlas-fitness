@@ -449,10 +449,47 @@ export const streakNudges = sqliteTable(
   })
 );
 
+/**
+ * Habit logs — one row per user, per Córdoba local date, per habit.
+ *
+ * Every row is inherently `source: user_input` (a manual completion toggle);
+ * no targets, counts, or progress ratios are fabricated (DATA HONESTY RULE).
+ * Unique (user_id, local_date, habit_key) so daily toggles upsert idempotently.
+ */
+export const habitLogs = sqliteTable(
+  'habit_logs',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id),
+    localDate: text('local_date').notNull(),
+    habitKey: text('habit_key').notNull(),
+    done: integer('done', { mode: 'boolean' }).notNull().default(true),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .default(sql`(unixepoch())`),
+    updatedAt: integer('updated_at', { mode: 'timestamp' })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (table) => ({
+    uniqueUserDateHabit: uniqueIndex('habit_logs_user_id_local_date_habit_key_unique').on(
+      table.userId,
+      table.localDate,
+      table.habitKey
+    ),
+    userDateIdx: index('habit_logs_user_id_local_date_idx').on(table.userId, table.localDate),
+    habitKeyValue: check(
+      'habit_logs_habit_key_check',
+      sql`${table.habitKey} IN ('hydration', 'walk', 'mobility', 'sleep')`
+    ),
+  })
+);
+
 // Type exports
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
-
 export type SessionRow = typeof sessions.$inferSelect;
 export type NewSessionRow = typeof sessions.$inferInsert;
 
@@ -506,3 +543,6 @@ export type NewDailyCheckin = typeof dailyCheckins.$inferInsert;
 
 export type StreakNudge = typeof streakNudges.$inferSelect;
 export type NewStreakNudge = typeof streakNudges.$inferInsert;
+
+export type HabitLog = typeof habitLogs.$inferSelect;
+export type NewHabitLog = typeof habitLogs.$inferInsert;
