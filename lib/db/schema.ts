@@ -90,6 +90,7 @@ export const trainingPlans = sqliteTable(
       .notNull()
       .references(() => users.id),
     name: text('name').notNull(),
+    goal: text('goal'),
     isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
     createdAt: integer('created_at', { mode: 'timestamp' })
       .notNull()

@@ -97,6 +97,7 @@ function parseTodayResponse(value: unknown): TodayResponse | null {
         localDate: value.localDate,
         dayOfWeek: value.dayOfWeek,
         trainingPlanId: value.trainingPlanId,
+        planGoal: parseNullableString(value.planGoal),
       };
     case 'workout':
       if (
@@ -115,6 +116,7 @@ function parseTodayResponse(value: unknown): TodayResponse | null {
         scheduledRoutineId: value.scheduledRoutineId,
         routineId: value.routineId,
         routineName: value.routineName,
+        planGoal: parseNullableString(value.planGoal),
       };
     case 'routine_missing':
       if (
@@ -131,6 +133,7 @@ function parseTodayResponse(value: unknown): TodayResponse | null {
         trainingPlanId: value.trainingPlanId,
         scheduledRoutineId: value.scheduledRoutineId,
         routineId: value.routineId,
+        planGoal: parseNullableString(value.planGoal),
       };
     default:
       return null;
@@ -149,6 +152,10 @@ function isDayOfWeek(value: unknown): value is TodayResponse['dayOfWeek'] {
 
 function isInteger(value: unknown): value is number {
   return typeof value === 'number' && Number.isInteger(value);
+}
+
+function parseNullableString(value: unknown): string | null {
+  return typeof value === 'string' ? value : null;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

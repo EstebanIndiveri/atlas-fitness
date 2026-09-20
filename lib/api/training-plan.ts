@@ -8,6 +8,7 @@ import type { ApiError } from '@/types/errors';
 
 export type CreateTrainingPlanInput = {
   name: string;
+  goal?: string;
   schedule: Array<{ dayOfWeek: TrainingPlanDayOfWeek; routineId: number }>;
 };
 
@@ -165,6 +166,7 @@ function parseTrainingPlan(value: unknown): TrainingPlan | null {
     id: value.id,
     userId: value.userId,
     name: value.name,
+    goal: typeof value.goal === 'string' ? value.goal : null,
     isActive: value.isActive,
     createdAt,
     updatedAt,

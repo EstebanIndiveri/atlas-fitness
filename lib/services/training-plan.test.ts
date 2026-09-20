@@ -68,7 +68,44 @@ describe('TrainingPlan adaptive service', () => {
       scheduledRoutineId: expect.any(Number),
       routineId,
       routineName: 'Push',
+      planGoal: null,
     });
+  });
+
+  it('persists the plan goal and surfaces it as planGoal on the workout result', async () => {
+    const routineId = await createRoutine('Push fuerza');
+    await createTrainingPlan({
+      userId,
+      name: 'Plan semanal',
+      goal: 'Hipertrofia',
+      schedule: [{ dayOfWeek: 3, routineId }],
+    });
+
+    const result = await resolveTodayScheduledRoutine(
+      userId,
+      new Date('2026-09-16T15:00:00.000Z'),
+    );
+
+    expect(result).toMatchObject({ kind: 'workout', planGoal: 'Hipertrofia' });
+  });
+
+  it('rejects a goal longer than 60 characters with a typed validation error', async () => {
+    const routineId = await createRoutine('Push límite');
+    let caughtError: unknown;
+
+    try {
+      await createTrainingPlan({
+        userId,
+        name: 'Plan semanal',
+        goal: 'x'.repeat(61),
+        schedule: [{ dayOfWeek: 3, routineId }],
+      });
+    } catch (error) {
+      caughtError = error;
+    }
+
+    expect(caughtError).toBeInstanceOf(AppError);
+    expect(caughtError).toMatchObject({ code: 'VALIDATION' });
   });
 
   it('returns rest_day when the active plan has no routine for today', async () => {
@@ -89,6 +126,7 @@ describe('TrainingPlan adaptive service', () => {
       localDate: '2026-09-16',
       dayOfWeek: 3,
       trainingPlanId: expect.any(Number),
+      planGoal: null,
     });
   });
 
@@ -126,6 +164,7 @@ describe('TrainingPlan adaptive service', () => {
       trainingPlanId: expect.any(Number),
       scheduledRoutineId: expect.any(Number),
       routineId,
+      planGoal: null,
     });
   });
 

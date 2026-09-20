@@ -101,6 +101,7 @@ describe('GET /api/today', () => {
       localDate: '2026-09-19',
       dayOfWeek: 6,
       trainingPlanId: expect.any(Number),
+      planGoal: null,
     });
   });
 
@@ -123,6 +124,7 @@ describe('GET /api/today', () => {
       scheduledRoutineId: expect.any(Number),
       routineId,
       routineName: 'Sábado fuerza',
+      planGoal: null,
     });
   });
 
@@ -145,6 +147,7 @@ describe('GET /api/today', () => {
       trainingPlanId: expect.any(Number),
       scheduledRoutineId: expect.any(Number),
       routineId,
+      planGoal: null,
     });
   });
 

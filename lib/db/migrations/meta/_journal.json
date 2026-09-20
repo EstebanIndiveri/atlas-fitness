@@ -106,6 +106,13 @@
       "when": 1789927200000,
       "tag": "0014_habit_logs",
       "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "6",
+      "when": 1789930800000,
+      "tag": "0015_training_plans_goal",
+      "breakpoints": true
     }
   ]
 }

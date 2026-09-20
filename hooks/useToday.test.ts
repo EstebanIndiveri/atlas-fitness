@@ -29,6 +29,7 @@ describe('useToday', () => {
       scheduledRoutineId: 20,
       routineId: 30,
       routineName: 'Torso pesado',
+      planGoal: null,
     } as const;
     const fetchMock = jest.fn<typeof fetch>().mockResolvedValue(jsonTextResponse(today));
     global.fetch = fetchMock as unknown as typeof fetch;
@@ -79,6 +80,7 @@ describe('useToday', () => {
       localDate: '2026-09-20',
       dayOfWeek: 0,
       trainingPlanId: 10,
+      planGoal: null,
     } as const;
     const fetchMock = jest
       .fn<typeof fetch>()
