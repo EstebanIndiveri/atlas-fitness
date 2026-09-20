@@ -52,6 +52,22 @@ export function cordobaDisplayDate(instant: Date = new Date()): string {
   }).format(instant);
 }
 
+/**
+ * Monday-first weekday index (0 = Monday … 6 = Sunday) for a YYYY-MM-DD calendar
+ * date, computed purely from the calendar day with no timezone shift.
+ * @param localDate Córdoba calendar date (YYYY-MM-DD).
+ * @returns Monday-based weekday index in the range 0–6.
+ * @example localDateWeekdayIndex('2026-09-24') // 3 (Thursday)
+ */
+export function localDateWeekdayIndex(localDate: string): number {
+  if (!LOCAL_DATE_RE.test(localDate)) {
+    throw new Error(`Invalid local date: ${localDate}`);
+  }
+  const [year, month, day] = localDate.split('-').map(Number);
+  const sundayFirst = new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+  return (sundayFirst + 6) % 7;
+}
+
 const WEEKDAY_TO_MONDAY_INDEX: Record<string, number> = {
   Mon: 0,
   Tue: 1,

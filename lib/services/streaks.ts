@@ -80,7 +80,7 @@ export function computeStreakFromActiveDates(
   };
 }
 
-async function loadActiveDates(userId: number): Promise<Set<string>> {
+export async function loadActiveDates(userId: number): Promise<Set<string>> {
   const [endedWorkouts, checkins] = await Promise.all([
     db.query.workouts.findMany({
       where: and(

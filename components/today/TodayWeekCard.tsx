@@ -1,34 +1,66 @@
+'use client';
+
 import { StreakChip } from '@/components/StreakChip';
 import { WeekDayStrip } from '@/components/today/WeekDayStrip';
+import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { EmptyState } from '@/components/ui/states';
+import { MetricValue } from '@/components/ui/MetricValue';
+import { ErrorState, LoadingState } from '@/components/ui/states';
+import { useWeekConsistency } from '@/hooks/useWeekConsistency';
+import { metric } from '@/types/metric';
 
 const COPY = {
   heading: 'Esta semana',
   daysLabel: 'Tu semana',
-  planEmptyTitle: 'Progreso semanal en camino',
-  planEmptyDescription:
-    'Cuando tengas un plan activo, Atlas va a mostrar acá tu avance real de la semana. Sin métricas inventadas.',
-};
+  activeSuffix: 'días activos esta semana',
+  activeSuffixSingular: 'día activo esta semana',
+  activeHint: 'Cuenta los días con entrenamiento terminado o check-in.',
+  retry: 'Reintentar',
+} as const;
 
 /**
  * Weekly section for the Today screen.
  *
- * Reuses {@link StreakChip} for the real streak and {@link WeekDayStrip} for the
- * day structure (today highlighted, no fabricated completion), plus an honest empty
- * state for weekly plan progress, which has no aggregation backend yet (DATA HONESTY RULE).
- * @returns Weekly card with real streak, day strip and a plan-progress empty state.
+ * Reuses {@link StreakChip} for the real streak and drives {@link WeekDayStrip}
+ * plus an active-days summary from `useWeekConsistency`. Every number is
+ * `atlas_computed` (derived from the user's ended workouts and daily check-ins),
+ * so nothing is fabricated (DATA HONESTY RULE). Loading and error states are handled
+ * explicitly and never hide the failure behind a fake value.
+ * @returns Weekly card with real streak, day strip and an honest active-days summary.
  * @example <TodayWeekCard />
  */
 export function TodayWeekCard() {
+  const { week, loading, error, reload } = useWeekConsistency();
+
   return (
     <Card className="space-y-4 p-5">
       <h2 className="font-serif text-xl font-semibold text-ink">{COPY.heading}</h2>
       <StreakChip />
-      <section className="space-y-2" aria-label={COPY.daysLabel}>
-        <WeekDayStrip />
+      <section className="space-y-3" aria-label={COPY.daysLabel}>
+        <WeekDayStrip days={week?.days} />
+        {loading ? (
+          <LoadingState compact />
+        ) : error ? (
+          <div className="space-y-2">
+            <ErrorState message={error} />
+            <Button variant="secondary" size="sm" onClick={reload}>
+              {COPY.retry}
+            </Button>
+          </div>
+        ) : week ? (
+          <div className="space-y-1">
+            <p className="text-sm text-ink">
+              <MetricValue
+                metric={metric(week.activeCount, 'atlas_computed')}
+                label="Días activos"
+                className="font-semibold text-ink"
+              />{' '}
+              {week.activeCount === 1 ? COPY.activeSuffixSingular : COPY.activeSuffix}
+            </p>
+            <p className="text-xs text-ink-muted">{COPY.activeHint}</p>
+          </div>
+        ) : null}
       </section>
-      <EmptyState title={COPY.planEmptyTitle} description={COPY.planEmptyDescription} />
     </Card>
   );
 }

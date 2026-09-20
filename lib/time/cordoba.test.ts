@@ -5,6 +5,7 @@ import {
   cordobaDisplayDate,
   cordobaLocalDate,
   cordobaWeekdayIndex,
+  localDateWeekdayIndex,
   yesterdayCordoba,
 } from './cordoba';
 
@@ -57,5 +58,16 @@ describe('Córdoba timezone helpers', () => {
     expect(cordobaWeekdayIndex(new Date('2026-09-21T12:00:00.000Z'))).toBe(0);
     // Sunday on the Córdoba side of midnight → index 6
     expect(cordobaWeekdayIndex(new Date('2026-09-21T02:00:00.000Z'))).toBe(6);
+  });
+
+  it('returns a Monday-first weekday index from a calendar date string', () => {
+    expect(localDateWeekdayIndex('2026-09-21')).toBe(0); // Monday
+    expect(localDateWeekdayIndex('2026-09-24')).toBe(3); // Thursday
+    expect(localDateWeekdayIndex('2026-09-27')).toBe(6); // Sunday
+  });
+
+  it('rejects an invalid calendar date string', () => {
+    expect(() => localDateWeekdayIndex('2026/09/21')).toThrow();
+    expect(() => localDateWeekdayIndex('nope')).toThrow();
   });
 });
