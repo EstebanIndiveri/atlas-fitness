@@ -71,6 +71,13 @@
       "when": 1789904400000,
       "tag": "0009_workout_queue_version",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1789910112000,
+      "tag": "0010_daily_checkins_energy_note",
+      "breakpoints": true
     }
   ]
 }
