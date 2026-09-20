@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { GuidedExerciseCard } from '@/components/session/GuidedExerciseCard';
 import { RestTimer } from '@/components/session/RestTimer';
 import { SessionCloseScreen } from '@/components/session/SessionCloseScreen';
+import { SessionQueueActions } from '@/components/session/SessionQueueActions';
 import { PageContainer } from '@/components/shell/PageContainer';
 import { Card } from '@/components/ui/Card';
 import { ErrorState, LoadingState } from '@/components/ui/states';
@@ -38,6 +39,20 @@ export default function GuidedSessionPlayerPage() {
   const handleSaveAndClose = async () => {
     await session.saveAndClose();
     router.push('/dashboard');
+  };
+
+  const handleSkip = async () => {
+    const ok = await session.skipCurrent();
+    if (ok) {
+      rest.skip();
+    }
+  };
+
+  const handleHold = async () => {
+    const ok = await session.holdCurrent();
+    if (ok) {
+      rest.skip();
+    }
   };
 
   if (session.loading) {
@@ -100,14 +115,23 @@ export default function GuidedSessionPlayerPage() {
           ) : null}
 
           {session.current ? (
-            <GuidedExerciseCard
-              exercise={session.current}
-              completedCount={session.completedCount}
-              weight={session.weight}
-              onWeightChange={session.setWeight}
-              onCompleteSet={() => void handleCompleteSet()}
-              busy={session.busy || rest.active}
-            />
+            <>
+              <GuidedExerciseCard
+                exercise={session.current}
+                completedCount={session.completedCount}
+                weight={session.weight}
+                onWeightChange={session.setWeight}
+                onCompleteSet={() => void handleCompleteSet()}
+                busy={session.busy || rest.active}
+              />
+              <SessionQueueActions
+                items={session.queueItems}
+                onSkip={() => void handleSkip()}
+                onHold={() => void handleHold()}
+                busy={session.busy}
+                error={session.actionError}
+              />
+            </>
           ) : (
             <Card className="p-4">
               <p className="text-ink">{SESSION_COPY.lastExerciseDone}</p>
