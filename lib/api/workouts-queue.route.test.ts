@@ -57,6 +57,19 @@ async function authenticatedRequest(
   });
 }
 
+async function malformedJsonRequest(
+  userId: number,
+  url: string,
+  method: string,
+): Promise<NextRequest> {
+  const cookie = await issueSessionCookieHeader(userId);
+  return new NextRequest(url, {
+    method,
+    headers: { cookie, 'content-type': 'application/json' },
+    body: '{"exerciseId":',
+  });
+}
+
 describe('POST /api/workouts/:id/skip and /hold', () => {
   let userId: number;
   let otherUserId: number;
@@ -174,6 +187,23 @@ describe('POST /api/workouts/:id/skip and /hold', () => {
     expect(response.status).toBe(400);
     expect(body.code).toBe('VALIDATION');
     expect(body.message).toBe(INACTIVE_WORKOUT_MESSAGE);
+  });
+
+  it('returns 400 VALIDATION for a malformed JSON body', async () => {
+    const workout = await workoutsService.createWorkout(userId, routineId);
+    const response = await skipWorkout(
+      await malformedJsonRequest(
+        userId,
+        `http://localhost:3000/api/workouts/${workout.id}/skip`,
+        'POST',
+      ),
+      { params: Promise.resolve({ id: String(workout.id) }) },
+    );
+    const body = (await response.json()) as { code: string; message: string };
+
+    expect(response.status).toBe(400);
+    expect(body.code).toBe('VALIDATION');
+    expect(body.message).toEqual(expect.any(String));
   });
 
   it('returns 403 FORBIDDEN for a foreign workout', async () => {

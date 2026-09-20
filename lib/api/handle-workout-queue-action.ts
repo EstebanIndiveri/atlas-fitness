@@ -23,7 +23,12 @@ export async function handleWorkoutQueueActionRequest(
       throw new AppError('VALIDATION', 'ID de entrenamiento inválido');
     }
 
-    const body = await request.json();
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      throw new AppError('VALIDATION', 'Body JSON inválido');
+    }
     const validated = skipHoldBodySchema.parse(body);
 
     const result = await applyWorkoutQueueAction({
