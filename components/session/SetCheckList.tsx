@@ -93,23 +93,22 @@ export function SetCheckList({
                     <span aria-hidden>● </span>
                     {SESSION_COPY.activeSetLabel(slot)}
                   </p>
-                  <span className="rounded-full bg-surface px-2 py-0.5 text-[10px] font-medium text-brand ring-1 ring-line">
+                  <span className="shrink-0 rounded-full bg-surface px-2 py-0.5 text-[10px] font-medium text-brand ring-1 ring-line">
                     {SESSION_COPY.targetReps(targetReps)}
                   </span>
                 </div>
-                <div className="grid grid-cols-[2.5rem_minmax(7rem,1fr)_minmax(6.5rem,0.9fr)_2.25rem] items-center gap-2">
-                  <span className="text-sm font-semibold text-brand">{slot}</span>
-                  <div className="rounded-xl bg-surface p-2 ring-1 ring-line">
-                    <div className="mb-2 flex items-center justify-between">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-xl bg-surface p-3 ring-1 ring-line">
+                    <div className="mb-2 flex items-baseline justify-between gap-1">
                       <label htmlFor="guided-weight" className="text-[10px] font-medium uppercase text-ink-muted">
-                        Peso
+                        Peso (kg)
                       </label>
-                      <span className="text-[10px] text-ink-muted">Paso ±2.5 kg</span>
+                      <span className="shrink-0 text-[10px] text-ink-muted">±2.5</span>
                     </div>
-                    <div className="grid grid-cols-[2rem_minmax(4.5rem,1fr)_auto_2rem] items-center gap-1.5">
+                    <div className="flex items-center gap-2">
                       <button
                         type="button"
-                        className="size-8 rounded-md bg-canvas text-lg font-semibold text-ink"
+                        className="size-9 shrink-0 rounded-md bg-canvas text-xl font-semibold leading-none text-ink"
                         onClick={() => onWeightChange(stepWeight(weight, -2.5))}
                         aria-label="Bajar peso 2.5 kg"
                         aria-pressed={false}
@@ -119,17 +118,16 @@ export function SetCheckList({
                       </button>
                       <input
                         id="guided-weight"
-                        className="min-w-[4.5rem] rounded-md bg-canvas px-1 text-center text-lg font-bold text-ink outline-none ring-1 ring-line focus:ring-brand"
+                        className="w-full min-w-0 rounded-md bg-canvas px-1 py-1.5 text-center text-lg font-bold text-ink outline-none ring-1 ring-line focus:ring-brand"
                         inputMode="decimal"
                         value={weight}
                         onChange={(event) => onWeightChange(event.target.value)}
                         aria-label={SESSION_COPY.weightLabel}
                         data-testid="guided-weight-input"
                       />
-                      <span className="text-xs text-ink-muted">kg</span>
                       <button
                         type="button"
-                        className="size-8 rounded-md bg-canvas text-lg font-semibold text-ink"
+                        className="size-9 shrink-0 rounded-md bg-canvas text-xl font-semibold leading-none text-ink"
                         onClick={() => onWeightChange(stepWeight(weight, 2.5))}
                         aria-label="Subir peso 2.5 kg"
                         aria-pressed={false}
@@ -139,17 +137,17 @@ export function SetCheckList({
                       </button>
                     </div>
                   </div>
-                  <div className="rounded-xl bg-surface p-2 ring-1 ring-line">
-                    <div className="mb-2 flex items-center justify-between">
+                  <div className="rounded-xl bg-surface p-3 ring-1 ring-line">
+                    <div className="mb-2 flex items-baseline justify-between gap-1">
                       <label htmlFor="guided-reps" className="text-[10px] font-medium uppercase text-ink-muted">
                         Reps
                       </label>
-                      <span className="text-[10px] text-ink-muted">Paso ±1</span>
+                      <span className="shrink-0 text-[10px] text-ink-muted">±1</span>
                     </div>
-                    <div className="grid grid-cols-[2rem_minmax(2.75rem,1fr)_auto_2rem] items-center gap-1.5">
+                    <div className="flex items-center gap-2">
                       <button
                         type="button"
-                        className="size-8 rounded-md bg-canvas text-lg font-semibold text-ink"
+                        className="size-9 shrink-0 rounded-md bg-canvas text-xl font-semibold leading-none text-ink"
                         onClick={() => onRepsChange(stepReps(reps, -1, targetReps))}
                         aria-label="Bajar repeticiones 1"
                         aria-pressed={false}
@@ -159,17 +157,16 @@ export function SetCheckList({
                       </button>
                       <input
                         id="guided-reps"
-                        className="min-w-[2.75rem] rounded-md bg-canvas px-1 text-center text-lg font-bold text-ink outline-none ring-1 ring-line focus:ring-brand"
+                        className="w-full min-w-0 rounded-md bg-canvas px-1 py-1.5 text-center text-lg font-bold text-ink outline-none ring-1 ring-line focus:ring-brand"
                         inputMode="numeric"
                         value={reps}
                         onChange={(event) => onRepsChange(event.target.value)}
                         aria-label="Repeticiones"
                         data-testid="guided-reps-input"
                       />
-                      <span className="text-xs text-ink-muted">reps</span>
                       <button
                         type="button"
-                        className="size-8 rounded-md bg-canvas text-lg font-semibold text-ink"
+                        className="size-9 shrink-0 rounded-md bg-canvas text-xl font-semibold leading-none text-ink"
                         onClick={() => onRepsChange(stepReps(reps, 1, targetReps))}
                         aria-label="Subir repeticiones 1"
                         aria-pressed={false}
@@ -179,9 +176,6 @@ export function SetCheckList({
                       </button>
                     </div>
                   </div>
-                  <span className="text-right text-brand" aria-hidden>
-                    ●
-                  </span>
                 </div>
               </li>
             );

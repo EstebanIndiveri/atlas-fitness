@@ -104,7 +104,7 @@ export default function TodayPage() {
       }
       const workoutId = readWorkoutId(await response.json());
       if (workoutId !== null) {
-        router.push(`/dashboard/workout/${workoutId}`);
+        router.push(`/dashboard/session/${workoutId}`);
       }
     } catch (error) {
       console.error('Today: failed to start scheduled workout', error);
@@ -116,7 +116,7 @@ export default function TodayPage() {
   }, []);
 
   const handleCreatePlan = useCallback(() => {
-    router.push('/dashboard/routines/new');
+    router.push('/dashboard/plan/new');
   }, [router]);
 
   if (!onboardingDone || userLoading) {
