@@ -1,11 +1,13 @@
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, gte, isNotNull, isNull, lt } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { catalogVisibleToUser } from '@/lib/auth/ownership';
 import { db } from '@/lib/db/client';
-import { routines, scheduledRoutines, trainingPlans } from '@/lib/db/schema';
+import { routines, scheduledRoutines, trainingPlans, workouts } from '@/lib/db/schema';
+import { buildDayReason, type DayReasonEnergy } from '@/lib/services/day-reason';
+import { getTodayCheckIn } from '@/lib/services/daily-checkin';
 import { getTodayRoutineCompletion, type RoutineCompletion } from '@/lib/services/routine-completion';
-import { cordobaLocalDate } from '@/lib/time/cordoba';
+import { addLocalDateDays, cordobaLocalDate, cordobaLocalDateToUtcRange } from '@/lib/time/cordoba';
 import { AppError } from '@/types/errors';
 import type { ScheduledRoutine, TrainingPlan } from '@/lib/db/schema';
 
@@ -149,6 +151,47 @@ async function findActiveTrainingPlan(userId: number): Promise<TrainingPlan | nu
   return plan ?? null;
 }
 
+function isDayReasonEnergy(value: string | null): value is DayReasonEnergy {
+  return value === 'low' || value === 'medium' || value === 'high';
+}
+
+async function didUserTrainOnLocalDate(userId: number, localDate: string): Promise<boolean> {
+  const { startUtc, endUtc } = cordobaLocalDateToUtcRange(localDate);
+  const workout = await db.query.workouts.findFirst({
+    where: and(
+      eq(workouts.userId, userId),
+      isNull(workouts.deletedAt),
+      isNotNull(workouts.endedAt),
+      gte(workouts.endedAt, startUtc),
+      lt(workouts.endedAt, endUtc),
+    ),
+    columns: { id: true },
+  });
+
+  return workout !== undefined;
+}
+
+async function buildTodayTrainingPlanDayReason(
+  userId: number,
+  localDate: string,
+  planGoal: string | null,
+  now: Date,
+): Promise<string> {
+  const yesterday = addLocalDateDays(localDate, -1);
+  const [checkIn, trainedYesterday] = await Promise.all([
+    getTodayCheckIn(userId, now),
+    didUserTrainOnLocalDate(userId, yesterday),
+  ]);
+  const checkInEnergy = checkIn?.energy ?? null;
+
+  return buildDayReason({
+    energy: isDayReasonEnergy(checkInEnergy) ? checkInEnergy : null,
+    mood: checkIn?.mood ?? null,
+    restedYesterday: !trainedYesterday,
+    goal: planGoal,
+  });
+}
+
 /**
  * Creates a V1 weekly TrainingPlan and makes it the user's only active plan.
  *
@@ -230,6 +273,8 @@ export async function resolveTodayScheduledRoutine(
     return { kind: 'rest_day', localDate, dayOfWeek, trainingPlanId: plan.id, planGoal: plan.goal };
   }
 
+  const dayReason = await buildTodayTrainingPlanDayReason(userId, localDate, plan.goal, now);
+
   const routine = await db.query.routines.findFirst({
     where: and(
       eq(routines.id, scheduled.routineId),
@@ -247,7 +292,7 @@ export async function resolveTodayScheduledRoutine(
       scheduledRoutineId: scheduled.id,
       routineId: scheduled.routineId,
       planGoal: plan.goal,
-      dayReason: scheduled.note,
+      dayReason,
     };
   }
 
@@ -262,7 +307,7 @@ export async function resolveTodayScheduledRoutine(
     routineId: routine.id,
     routineName: routine.name,
     planGoal: plan.goal,
-    dayReason: scheduled.note,
+    dayReason,
     completion,
   };
 }

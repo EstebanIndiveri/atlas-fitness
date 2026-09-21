@@ -35,24 +35,29 @@ export function WeeklyConsistencyCard({ week }: WeeklyConsistencyCardProps) {
 
   return (
     <Card className="space-y-4 overflow-hidden rounded-2xl p-5">
-      <div data-testid="weekly-consistency-header" className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
+      <div data-testid="weekly-consistency-header" className="flex min-w-0 flex-col gap-3">
+        <div className="min-w-0 break-words">
           <h2 className="text-base font-semibold text-ink">{PROGRESS_COPY.week.title}</h2>
           <p className="mt-1 text-sm text-ink-muted">{PROGRESS_COPY.week.body}</p>
         </div>
-        <div className="flex shrink-0 flex-col items-end gap-1 text-right">
-          <div aria-label={PROGRESS_COPY.week.activeLabel} className="whitespace-nowrap">
-            <MetricValue
-              metric={metric(`${week.activeCount} de 7`, 'atlas_computed')}
-              label={PROGRESS_COPY.week.activeLabel}
-              className="text-sm"
-            />
-          </div>
-          <div aria-label={PROGRESS_COPY.week.percentLabel} className="whitespace-nowrap">
+        <div
+          data-testid="weekly-consistency-metrics"
+          className="flex min-w-0 flex-col gap-1 overflow-hidden rounded-xl bg-canvas p-3"
+        >
+          <div aria-label={PROGRESS_COPY.week.percentLabel} className="min-w-0">
             <MetricValue
               metric={metric(`${consistencyPercent}%`, 'atlas_computed')}
               label={PROGRESS_COPY.week.percentLabel}
-              className="text-lg"
+              showSource
+              className="flex min-w-0 flex-wrap text-2xl leading-tight tabular-nums [overflow-wrap:anywhere]"
+            />
+          </div>
+          <div aria-label={PROGRESS_COPY.week.activeLabel} className="min-w-0 text-sm text-ink-muted">
+            <span>Días activos: </span>
+            <MetricValue
+              metric={metric(`${week.activeCount} de 7`, 'atlas_computed')}
+              label={PROGRESS_COPY.week.activeLabel}
+              className="inline-flex min-w-0 flex-wrap leading-tight tabular-nums [overflow-wrap:anywhere]"
             />
           </div>
         </div>

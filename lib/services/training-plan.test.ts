@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import { eq } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { routines, scheduledRoutines, trainingPlans, users } from '@/lib/db/schema';
+import { dailyCheckins, routines, scheduledRoutines, trainingPlans, users, workouts } from '@/lib/db/schema';
 import {
   createTrainingPlan,
   resolveTodayScheduledRoutine,
@@ -14,6 +14,8 @@ describe('TrainingPlan adaptive service', () => {
   let userId: number;
 
   beforeEach(async () => {
+    await db.delete(dailyCheckins);
+    await db.delete(workouts);
     await db.delete(scheduledRoutines);
     await db.delete(trainingPlans);
     await db.delete(routines);
@@ -69,7 +71,7 @@ describe('TrainingPlan adaptive service', () => {
       routineId,
       routineName: 'Push',
       planGoal: null,
-      dayReason: null,
+      dayReason: 'Registrá tu check-in para que Atlas ajuste la sesión de hoy.',
       completion: { completed: 0, total: 0 },
     });
   });
@@ -91,11 +93,12 @@ describe('TrainingPlan adaptive service', () => {
     expect(result).toMatchObject({ kind: 'workout', planGoal: 'Hipertrofia' });
   });
 
-  it('persists a per-day note and surfaces it as dayReason on the workout result', async () => {
+  it('does not surface a per-day note as dayReason on the workout result', async () => {
     const routineId = await createRoutine('Push nota');
     await createTrainingPlan({
       userId,
       name: 'Plan semanal',
+      goal: 'Hipertrofia',
       schedule: [{ dayOfWeek: 3, routineId, note: 'Toca empuje pesado esta semana' }],
     });
 
@@ -106,7 +109,65 @@ describe('TrainingPlan adaptive service', () => {
 
     expect(result).toMatchObject({
       kind: 'workout',
-      dayReason: 'Toca empuje pesado esta semana',
+      dayReason: 'Registrá tu check-in para que Atlas ajuste la sesión de hoy.',
+    });
+  });
+
+  it('builds dayReason from high energy and no ended workout yesterday', async () => {
+    const routineId = await createRoutine('Push energía alta');
+    await createTrainingPlan({
+      userId,
+      name: 'Plan semanal',
+      goal: 'Fuerza',
+      schedule: [{ dayOfWeek: 3, routineId, note: 'Nota privada del plan' }],
+    });
+    await db.insert(dailyCheckins).values({
+      userId,
+      localDate: '2026-09-16',
+      mood: 5,
+      energy: 'high',
+    });
+
+    const result = await resolveTodayScheduledRoutine(
+      userId,
+      new Date('2026-09-16T15:00:00.000Z'),
+    );
+
+    expect(result).toMatchObject({
+      kind: 'workout',
+      dayReason: 'Marcaste energía alta y ayer descansaste: buen día para la sesión prevista sin recortes.',
+    });
+  });
+
+  it('does not claim yesterday rest when an ended workout exists on the previous Córdoba date', async () => {
+    const routineId = await createRoutine('Push post descanso');
+    await createTrainingPlan({
+      userId,
+      name: 'Plan semanal',
+      goal: 'Fuerza',
+      schedule: [{ dayOfWeek: 3, routineId }],
+    });
+    await db.insert(dailyCheckins).values({
+      userId,
+      localDate: '2026-09-16',
+      mood: 5,
+      energy: 'high',
+    });
+    await db.insert(workouts).values({
+      userId,
+      routineId,
+      startedAt: new Date('2026-09-15T14:00:00.000Z'),
+      endedAt: new Date('2026-09-15T15:00:00.000Z'),
+    });
+
+    const result = await resolveTodayScheduledRoutine(
+      userId,
+      new Date('2026-09-16T15:00:00.000Z'),
+    );
+
+    expect(result).toMatchObject({
+      kind: 'workout',
+      dayReason: 'Sesión de Fuerza prevista para hoy. Ajustá con Coach Atlas si tu día cambió.',
     });
   });
 
@@ -204,7 +265,7 @@ describe('TrainingPlan adaptive service', () => {
       scheduledRoutineId: expect.any(Number),
       routineId,
       planGoal: null,
-      dayReason: null,
+      dayReason: 'Registrá tu check-in para que Atlas ajuste la sesión de hoy.',
     });
   });
 
