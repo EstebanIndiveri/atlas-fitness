@@ -64,7 +64,7 @@ function buildStrengthChart(points: StrengthVolumePoint[]): StrengthChart {
 
   const path = chartPoints.length > 1
     ? chartPoints.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ')
-    : null;
+    : `M ${chartPoints[0].x - 10} ${chartPoints[0].y} L ${chartPoints[0].x + 10} ${chartPoints[0].y}`;
 
   return { path, points: chartPoints };
 }
@@ -119,7 +119,14 @@ export function StrengthEvolutionCard({ strength }: StrengthEvolutionCardProps) 
           >
             <path d="M16 96H264" className="stroke-line" strokeWidth="1" fill="none" />
             {chart.path ? (
-              <path d={chart.path} className="stroke-brand" strokeWidth="3" fill="none" strokeLinecap="round" />
+              <path
+                data-testid="strength-chart-series"
+                d={chart.path}
+                className="stroke-brand"
+                strokeWidth="3"
+                fill="none"
+                strokeLinecap="round"
+              />
             ) : null}
             {chart.points.map((point) => (
               <circle key={point.key} cx={point.x} cy={point.y} r="4.5" className="fill-brand" />

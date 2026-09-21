@@ -68,6 +68,7 @@ describe('ProgressInsightCards', () => {
     render(<StrengthEvolutionCard strength={{ ...strength, trendLabel: 'Punto de partida', points: [strength.points[0]], latestVolumeKg: '270' }} />);
 
     expect(screen.getByText('Punto de partida')).toBeTruthy();
+    expect(screen.getByTestId('strength-chart-series')).toBeTruthy();
     expect(screen.getByText('Primer punto real: seguí registrando para ver la tendencia.')).toBeTruthy();
   });
 

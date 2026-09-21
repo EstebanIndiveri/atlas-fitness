@@ -125,7 +125,7 @@ describe('GET /api/today', () => {
       routineId,
       routineName: 'Sábado fuerza',
       planGoal: null,
-      dayReason: null,
+      dayReason: 'Registrá tu check-in para que Atlas ajuste la sesión de hoy.',
       completion: { completed: 0, total: 0 },
     });
   });
@@ -150,7 +150,7 @@ describe('GET /api/today', () => {
       scheduledRoutineId: expect.any(Number),
       routineId,
       planGoal: null,
-      dayReason: null,
+      dayReason: 'Registrá tu check-in para que Atlas ajuste la sesión de hoy.',
     });
   });
 
