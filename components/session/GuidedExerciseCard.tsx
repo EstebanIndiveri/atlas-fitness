@@ -11,62 +11,88 @@ import type { RoutineExerciseItem } from '@/types/routine';
 type GuidedExerciseCardProps = {
   exercise: RoutineExerciseItem;
   completedCount: number;
+  completedSets?: readonly CompletedSet[];
   weight: string;
   onWeightChange: (value: string) => void;
   onCompleteSet: () => void;
   busy: boolean;
+  nextExerciseName?: string | null;
 };
 
+type CompletedSet = {
+  setIndex: number;
+  weightKg: string;
+  reps: number;
+};
+
+function ActionChip({
+  children,
+  ariaLabel,
+}: {
+  children: string;
+  ariaLabel: string;
+}) {
+  return (
+    <button
+      type="button"
+      className="rounded-lg bg-canvas px-3 py-2 text-xs font-medium text-ink-muted"
+      aria-label={ariaLabel}
+      aria-pressed={false}
+      disabled
+    >
+      {children}
+    </button>
+  );
+}
+
+/**
+ * Active exercise card for the guided-session player.
+ *
+ * @param props Exercise metadata plus current-session set data and completion controls.
+ * @returns A Figma-aligned exercise card without inventing unavailable prior-session data.
+ * @example
+ * <GuidedExerciseCard exercise={exercise} completedCount={1} weight="75" onWeightChange={() => {}} onCompleteSet={() => {}} busy={false} />
+ */
 export function GuidedExerciseCard({
   exercise,
   completedCount,
+  completedSets = [],
   weight,
   onWeightChange,
   onCompleteSet,
   busy,
+  nextExerciseName,
 }: GuidedExerciseCardProps) {
   const safeCompletedCount = Math.min(completedCount, exercise.targetSets);
-  const setProgressPercent = exercise.targetSets > 0
-    ? Math.round((safeCompletedCount / exercise.targetSets) * 100)
-    : 0;
+  const activeSet = Math.min(safeCompletedCount + 1, exercise.targetSets);
 
   return (
-    <Card className="mb-4 overflow-hidden p-0" data-testid="guided-exercise-card">
-      <div className="bg-surface px-4 pt-4">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">
-              {SESSION_COPY.currentExercise}
-            </p>
-            <h2 className="mt-1 text-2xl font-bold tracking-[-0.03em] text-ink" data-testid="guided-exercise-name">
-              {exercise.exerciseName}
-            </h2>
-          </div>
-          <span className="rounded-full bg-canvas px-3 py-1 text-xs font-semibold text-ink-muted ring-1 ring-line">
+    <Card className="mb-4 overflow-hidden rounded-2xl p-0" data-testid="guided-exercise-card">
+      <div className="bg-surface px-4 py-4">
+        <div className="flex items-center justify-between gap-3">
+          <span className="rounded-full bg-brand-muted px-3 py-1 text-[11px] font-semibold text-brand">
+            {exercise.muscleGroup}
+          </span>
+          <span className="text-xs font-medium text-ink-muted">
             <MetricValue
-              metric={metric(SESSION_COPY.targetSets(exercise.targetSets, exercise.targetReps), 'user_input')}
-              label="Objetivo de series"
+              metric={metric(SESSION_COPY.activeSetProgress(activeSet, exercise.targetSets), 'atlas_computed')}
+              label="Serie actual"
             />
           </span>
         </div>
-        <p className="mt-2 text-sm text-ink-muted">{exercise.muscleGroup}</p>
-        <div className="mt-3">
-          <div className="flex items-center justify-between text-xs font-medium text-ink-muted">
-            <MetricValue
-              metric={metric(SESSION_COPY.completedSetProgress(safeCompletedCount, exercise.targetSets), 'atlas_computed')}
-              label="Series completadas"
-            />
-            <MetricValue
-              metric={metric(`${setProgressPercent}%`, 'atlas_computed')}
-              label="Progreso de series"
-            />
-          </div>
-          <div className="mt-1 h-2 rounded-full bg-canvas ring-1 ring-line">
-            <div
-              className="h-full rounded-full bg-brand"
-              style={{ width: `${setProgressPercent}%` }}
-            />
-          </div>
+        <h2 className="mt-3 text-3xl font-semibold tracking-[-0.05em] text-brand" data-testid="guided-exercise-name">
+          {exercise.exerciseName}
+        </h2>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <ActionChip ariaLabel="Técnica no disponible en esta versión">
+            {SESSION_COPY.technique}
+          </ActionChip>
+          <ActionChip ariaLabel="Reemplazar ejercicio desde los controles de cola">
+            {SESSION_COPY.replace}
+          </ActionChip>
+          <ActionChip ariaLabel="Notas no disponibles en esta versión">
+            {SESSION_COPY.notes}
+          </ActionChip>
         </div>
       </div>
       <ExerciseMedia
@@ -85,11 +111,14 @@ export function GuidedExerciseCard({
       <div className="mt-4 px-4 pb-4">
         <SetCheckList
           targetSets={exercise.targetSets}
+          targetReps={exercise.targetReps}
           completedCount={completedCount}
+          completedSets={completedSets}
           weight={weight}
           onWeightChange={onWeightChange}
           onCompleteSet={onCompleteSet}
           busy={busy}
+          nextExerciseName={nextExerciseName}
         />
       </div>
     </Card>
