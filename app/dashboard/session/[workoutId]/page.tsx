@@ -41,7 +41,6 @@ export default function GuidedSessionPlayerPage() {
     session.mood ? moodToSensation[session.mood] ?? null : null,
   );
   const [discomfort, setDiscomfort] = useState<DiscomfortEntry[]>([]);
-  const [note, setNote] = useState('');
   const [feedbackSaving, setFeedbackSaving] = useState(false);
   const [feedbackError, setFeedbackError] = useState<string | null>(null);
 
@@ -65,7 +64,7 @@ export default function GuidedSessionPlayerPage() {
     if (
       !session.workout ||
       selectedSensation === null ||
-      !isValidFeedback(selectedEffort, selectedSensation, discomfort, note)
+      !isValidFeedback(selectedEffort, selectedSensation, discomfort)
     ) {
       setFeedbackError(SESSION_COPY.feedbackSaveError);
       return;
@@ -82,7 +81,7 @@ export default function GuidedSessionPlayerPage() {
         effort: selectedEffort,
         sensation: selectedSensation,
         discomfort,
-        note: note.trim().length > 0 ? note.trim() : null,
+        note: null,
       });
       router.push('/dashboard/today');
     } catch {
@@ -154,6 +153,7 @@ export default function GuidedSessionPlayerPage() {
       {showClose ? (
         <SessionCloseScreen
           summary={session.summary}
+          routineName={session.routine.name}
           muscleGroups={muscleGroups}
           effort={effort}
           onEffort={setEffort}
@@ -161,8 +161,6 @@ export default function GuidedSessionPlayerPage() {
           onSensation={setSensation}
           discomfort={discomfort}
           onDiscomfortChange={setDiscomfort}
-          note={note}
-          onNoteChange={setNote}
           mood={session.mood}
           onMood={session.setMood}
           onSave={() => void handleSaveAndClose()}

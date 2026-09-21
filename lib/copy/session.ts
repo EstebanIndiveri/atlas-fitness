@@ -40,20 +40,20 @@ export const SESSION_COPY = {
   streakLabel: 'Racha',
   streakDays: (n: number) => (n === 1 ? '1 día seguido' : `${n} días seguidos`),
   moodLabel: '¿Cómo te sentís?',
-  effortLabel: 'Esfuerzo percibido',
-  effortOptionLabel: (value: number) => `Esfuerzo ${value} de 10`,
-  sensationLabel: '¿Cómo terminó el cuerpo?',
-  discomfortTitle: 'Molestias',
-  discomfortEmpty: 'Sin molestias registradas.',
+  feedbackTitle: '¿Cómo te sentiste?',
+  feedbackHelper: 'Atlas usa este feedback para calibrar la recuperación y tus próximas cargas.',
+  effortLabel: '¿Qué tan exigente fue?',
+  effortOptionLabel: (label: string, rpeCaption: string) => `${label} ${rpeCaption}`,
+  sensationLabel: 'Sensación general',
+  discomfortTitle: 'Molestias o dolores físicos',
+  discomfortEmpty: 'Sin dolores registrados por ahora.',
   discomfortAreaLabel: 'Zona con molestia',
   discomfortIntensityLabel: 'Intensidad',
   discomfortAdd: 'Agregar molestia',
   discomfortRemove: (label: string) => `Quitar molestia ${label}`,
   discomfortMaxReached: 'Podés registrar hasta 5 molestias.',
-  noteLabel: 'Nota opcional',
-  noteHelp: 'Máximo 500 caracteres.',
   feedbackSaveError: 'No se pudo guardar el feedback post-entrenamiento. Probá de nuevo.',
-  saveAndClose: 'Guardar y cerrar',
+  saveAndClose: 'Finalizar y guardar',
   improvementNone: 'Sin dato previo para comparar.',
   improvementSame: (name: string) => `${name}: mismo peso tope que la última sesión.`,
   improvementUp: (name: string, delta: string) => `${name}: +${delta} kg vs la última sesión.`,
@@ -78,12 +78,23 @@ export const MOOD_EMOJIS = [
 ] as const;
 
 export const POST_WORKOUT_SENSATIONS = [
-  { value: 'bad', legacyMood: 1, emoji: '😞', label: 'Mal' },
-  { value: 'hard', legacyMood: 2, emoji: '😤', label: 'Difícil' },
-  { value: 'neutral', legacyMood: 3, emoji: '😐', label: 'Neutral' },
-  { value: 'good', legacyMood: 4, emoji: '😊', label: 'Bien' },
-  { value: 'great', legacyMood: 5, emoji: '😄', label: 'Excelente' },
+  { value: 'bad', legacyMood: 1, emoji: '😮‍💨', label: 'Agotado' },
+  { value: 'neutral', legacyMood: 3, emoji: '😐', label: 'Normal' },
+  { value: 'good', legacyMood: 4, emoji: '🙂', label: 'Bien' },
+  { value: 'great', legacyMood: 5, emoji: '😄', label: 'Muy bien' },
 ] as const;
+
+export const POST_WORKOUT_RPE_OPTIONS = [
+  { id: 'liviano', label: 'Liviano', rpeCaption: 'RPE 6', effort: 6 },
+  { id: 'normal', label: 'Normal', rpeCaption: 'RPE 7', effort: 7 },
+  { id: 'exigente', label: 'Exigente', rpeCaption: 'RPE 8.5', effort: 9 },
+  { id: 'muy-exigente', label: 'Muy exigente', rpeCaption: 'RPE 9.5', effort: 10 },
+] as const;
+
+export const POST_WORKOUT_DISCOMFORT_TOGGLE = {
+  noneLabel: 'No, todo bien',
+  registerLabel: 'Registrar zona',
+} as const;
 
 export const DISCOMFORT_AREA_OPTIONS = [
   { value: 'neck', label: 'Cuello' },
