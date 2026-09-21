@@ -39,6 +39,7 @@ const draft: RoutineDraft = {
   source: 'fallback',
   name: 'Coach Atlas · Fuerza',
   description: 'Borrador validado.',
+  reason: 'Atlas eligió una sentadilla por el objetivo y el nivel.',
   kind: 'gym',
   restSeconds: 120,
   exercises: [

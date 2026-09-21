@@ -5,40 +5,19 @@ export type RoutineDraftSource = 'gemini' | 'fallback';
 export type RoutineDraftLocation = RoutineKind;
 export type RoutineDraftLevel = 'beginner' | 'intermediate' | 'advanced';
 export interface RoutineDraftBrief {
-  goal: string;
-  daysPerWeek: number;
-  location: RoutineDraftLocation;
-  level: RoutineDraftLevel;
+  goal: string; daysPerWeek: number; location: RoutineDraftLocation; level: RoutineDraftLevel;
 }
 export interface RoutineDraftExercise {
-  exerciseId: number;
-  exerciseName: string;
-  muscleGroup: string;
-  sortOrder: number;
-  targetSets: number;
-  targetReps: number;
+  exerciseId: number; exerciseName: string; muscleGroup: string; sortOrder: number; targetSets: number; targetReps: number;
 }
 export interface RoutineDraft {
-  source: RoutineDraftSource;
-  name: string;
-  description: string;
-  kind: RoutineKind;
-  restSeconds: number;
-  exercises: RoutineDraftExercise[];
+  source: RoutineDraftSource; name: string; description: string; reason: string;
+  kind: RoutineKind; restSeconds: number; exercises: RoutineDraftExercise[];
 }
 type GeminiFetch = typeof fetch;
-type RawGeminiExercise = {
-  exerciseId?: unknown;
-  sortOrder?: unknown;
-  targetSets?: unknown;
-  targetReps?: unknown;
-};
+type RawGeminiExercise = { exerciseId?: unknown; sortOrder?: unknown; targetSets?: unknown; targetReps?: unknown };
 type RawGeminiDraft = {
-  name?: unknown;
-  description?: unknown;
-  kind?: unknown;
-  restSeconds?: unknown;
-  exercises?: unknown;
+  name?: unknown; description?: unknown; kind?: unknown; reason?: unknown; restSeconds?: unknown; exercises?: unknown;
 };
 const LEVEL_TARGETS: Record<RoutineDraftLevel, { sets: number; reps: number; rest: number }> = {
   beginner: { sets: 2, reps: 12, rest: 75 },
@@ -105,6 +84,25 @@ function withCatalogDetails(
     targetReps: targets.reps,
   };
 }
+function levelLabel(level: RoutineDraftLevel): string {
+  if (level === 'beginner') return 'inicial';
+  return level === 'advanced' ? 'avanzado' : 'intermedio';
+}
+function locationLabel(location: RoutineDraftLocation): string {
+  return location === 'home' ? 'casa' : 'gimnasio';
+}
+function buildFallbackReason(brief: RoutineDraftBrief, selected: readonly ExerciseCatalogItem[]): string {
+  const groups = new Set(selected.map((item) => item.muscleGroup.trim().toLowerCase()));
+  const movementText = groups.size === selected.length
+    ? `${selected.length} movimientos de grupos musculares distintos`
+    : `${selected.length} movimientos reales del catálogo`;
+  return `Atlas eligió ${movementText} para ${brief.goal.trim()}, con volumen ${levelLabel(brief.level)} y ejecución viable en ${locationLabel(brief.location)}.`;
+}
+function cleanReason(value: unknown, fallback: string): string {
+  if (typeof value !== 'string') return fallback;
+  const trimmed = value.trim().replace(/\s+/g, ' ');
+  return trimmed ? trimmed.slice(0, 320) : fallback;
+}
 function buildFallbackDraft(
   brief: RoutineDraftBrief,
   catalog: readonly ExerciseCatalogItem[],
@@ -116,6 +114,7 @@ function buildFallbackDraft(
     source: 'fallback',
     name: `Coach Atlas · ${shortGoal(brief.goal)}`,
     description: `Borrador ${brief.location === 'home' ? 'para casa' : 'de gimnasio'} de ${brief.daysPerWeek} día${brief.daysPerWeek === 1 ? '' : 's'} por semana, armado con ejercicios reales del catálogo.`,
+    reason: buildFallbackReason(brief, selected),
     kind: brief.location,
     restSeconds: targets.rest,
     exercises: selected.map((item, index) => withCatalogDetails(item, index, targets)),
@@ -162,6 +161,7 @@ function normalizeGeminiDraft(
       typeof rawDraft.description === 'string' && rawDraft.description.trim()
         ? rawDraft.description.trim()
         : fallback.description,
+    reason: cleanReason(rawDraft.reason, fallback.reason),
     kind: brief.location,
     restSeconds: clampInteger(rawDraft.restSeconds, 0, 3600, fallback.restSeconds),
     exercises,
@@ -175,7 +175,7 @@ function buildPrompt(brief: RoutineDraftBrief, catalog: readonly ExerciseCatalog
   }));
   return [
     'Sos Coach Atlas. Respondé SOLO JSON válido con esta forma:',
-    '{"name":"string","description":"string","kind":"gym|home","restSeconds":number,"exercises":[{"exerciseId":number,"sortOrder":number,"targetSets":number,"targetReps":number}]}',
+    '{"name":"string","description":"string","reason":"string","kind":"gym|home","restSeconds":number,"exercises":[{"exerciseId":number,"sortOrder":number,"targetSets":number,"targetReps":number}]}',
     'Elegí exerciseId SOLO del catálogo recibido. No inventes ids ni ejercicios.',
     `Brief: ${JSON.stringify(brief)}`,
     `Catálogo: ${JSON.stringify(catalogPayload)}`,

@@ -27,6 +27,7 @@ describe('generateRoutineDraft', () => {
     expect(first.name).toContain('Coach Atlas');
     expect(first.kind).toBe('gym');
     expect(first.restSeconds).toBe(120);
+    expect(first.reason).toBe('Atlas eligió 4 movimientos de grupos musculares distintos para ganar fuerza sin perder técnica, con volumen intermedio y ejecución viable en gimnasio.');
     expect(first.exercises).toHaveLength(4);
     expect(first.exercises.map((exercise) => exercise.exerciseId)).toEqual([1, 2, 3, 4]);
     expect(first.exercises.every((exercise) => exercise.targetSets > 0 && exercise.targetReps > 0)).toBe(true);
@@ -57,6 +58,7 @@ describe('generateRoutineDraft', () => {
                   text: JSON.stringify({
                     name: 'Rutina inventada',
                     description: 'Debe limpiar ids externos.',
+                    reason: 'El remo inicia el plan y el resto completa grupos musculares reales.',
                     kind: 'gym',
                     restSeconds: 90,
                     exercises: [
@@ -78,6 +80,7 @@ describe('generateRoutineDraft', () => {
     });
 
     expect(draft.source).toBe('gemini');
+    expect(draft.reason).toBe('El remo inicia el plan y el resto completa grupos musculares reales.');
     expect(draft.exercises.map((exercise) => exercise.exerciseId)).toEqual([3, 1, 2, 4]);
     expect(draft.exercises.every((exercise) => catalog.some((item) => item.id === exercise.exerciseId))).toBe(true);
     expect(draft.exercises.map((exercise) => exercise.sortOrder)).toEqual([0, 1, 2, 3]);

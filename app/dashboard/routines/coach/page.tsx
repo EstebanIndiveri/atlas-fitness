@@ -5,11 +5,14 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { PageContainer } from '@/components/shell/PageContainer';
-import { Button, buttonClassName } from '@/components/ui/Button';
+import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Input, TextArea } from '@/components/ui/Input';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
+import { CoachRoutineStepIndicator } from '@/app/dashboard/routines/coach/CoachRoutineStepIndicator';
+import { RoutineDraftProposal } from '@/app/dashboard/routines/coach/RoutineDraftProposal';
 import { UI_COPY } from '@/lib/copy/ui';
+import type { CoachRoutineStep } from '@/app/dashboard/routines/coach/CoachRoutineStepIndicator';
 import type { RoutineDraft, RoutineDraftLevel, RoutineDraftLocation } from '@/lib/ai/routine-draft';
 import type { ApiError } from '@/types/errors';
 import type { ExerciseCatalogItem } from '@/types/exercise';
@@ -17,7 +20,6 @@ import type { ExerciseCatalogItem } from '@/types/exercise';
 const COPY = UI_COPY.training.coachRoutine;
 
 type Status = 'loading' | 'ready' | 'empty' | 'error';
-
 type BriefState = {
   goal: string;
   daysPerWeek: string;
@@ -25,12 +27,7 @@ type BriefState = {
   level: RoutineDraftLevel;
 };
 
-const initialBrief: BriefState = {
-  goal: '',
-  daysPerWeek: '3',
-  location: 'gym',
-  level: 'intermediate',
-};
+const initialBrief: BriefState = { goal: '', daysPerWeek: '3', location: 'gym', level: 'intermediate' };
 
 async function readApiError(response: Response, fallback: string): Promise<string> {
   try {
@@ -62,7 +59,10 @@ export default function CoachRoutinePage() {
   const [status, setStatus] = useState<Status>('loading');
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState<RoutineDraft | null>(null);
+  const [proposalDays, setProposalDays] = useState(3);
+  const [created, setCreated] = useState(false);
   const [busy, setBusy] = useState(false);
+  const step: CoachRoutineStep = created ? 'created' : draft ? 'proposal' : 'brief';
 
   useEffect(() => {
     let active = true;
@@ -72,8 +72,7 @@ export default function CoachRoutinePage() {
         return (await response.json()) as ExerciseCatalogItem[];
       })
       .then((items) => {
-        if (!active) return;
-        setStatus(items.length > 0 ? 'ready' : 'empty');
+        if (active) setStatus(items.length > 0 ? 'ready' : 'empty');
       })
       .catch((caught: unknown) => {
         if (!active) return;
@@ -86,21 +85,19 @@ export default function CoachRoutinePage() {
   }, []);
 
   async function generateDraft(): Promise<void> {
+    const daysPerWeek = Number.parseInt(brief.daysPerWeek, 10);
     setBusy(true);
     setError(null);
     setDraft(null);
+    setCreated(false);
     try {
       const response = await fetch('/api/routines/coach', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          goal: brief.goal.trim(),
-          daysPerWeek: Number.parseInt(brief.daysPerWeek, 10),
-          location: brief.location,
-          level: brief.level,
-        }),
+        body: JSON.stringify({ goal: brief.goal.trim(), daysPerWeek, location: brief.location, level: brief.level }),
       });
       if (!response.ok) throw new Error(await readApiError(response, COPY.generateError));
+      setProposalDays(daysPerWeek);
       setDraft((await response.json()) as RoutineDraft);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : COPY.generateError);
@@ -120,6 +117,7 @@ export default function CoachRoutinePage() {
         body: JSON.stringify(toCreatePayload(draft)),
       });
       if (!response.ok) throw new Error(await readApiError(response, COPY.createError));
+      setCreated(true);
       router.push('/dashboard/routines');
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : COPY.createError);
@@ -135,52 +133,52 @@ export default function CoachRoutinePage() {
         {COPY.backToRoutines}
       </Link>
       <div className="mt-4 space-y-4">
-        <Card className="space-y-4">
+        <CoachRoutineStepIndicator current={step} />
+        <Card className="space-y-4 rounded-xl">
           <div>
             <p className="text-sm font-semibold uppercase tracking-wide text-brand">{COPY.eyebrow}</p>
             <h1 className="mt-1 text-title font-bold text-ink">{COPY.title}</h1>
             <p className="mt-2 text-sm leading-6 text-ink-muted">{COPY.subtitle}</p>
           </div>
-          {status === 'empty' ? (
-            <EmptyState title={COPY.emptyTitle} description={COPY.emptyBody} />
-          ) : null}
+          {status === 'empty' ? <EmptyState title={COPY.emptyTitle} description={COPY.emptyBody} /> : null}
           {status === 'error' && error ? <ErrorState message={error} compact={false} /> : null}
-          {status === 'ready' ? (
-            <form className="space-y-4" onSubmit={(event) => { event.preventDefault(); void generateDraft(); }}>
-              <TextArea id="goal" label={COPY.goalLabel} rows={3} value={brief.goal} placeholder={COPY.goalPlaceholder} onChange={(event) => setBrief({ ...brief, goal: event.target.value })} />
-              <Input id="daysPerWeek" label={COPY.daysLabel} type="number" min={1} max={7} value={brief.daysPerWeek} onChange={(event) => setBrief({ ...brief, daysPerWeek: event.target.value })} />
-              <div className="grid gap-3 sm:grid-cols-2">
-                <label className="text-sm font-medium text-ink">{COPY.locationLabel}<select className="mt-1 w-full rounded-md border border-line bg-surface px-4 py-2" value={brief.location} onChange={(event) => setBrief({ ...brief, location: event.target.value as RoutineDraftLocation })}><option value="gym">{COPY.gym}</option><option value="home">{COPY.home}</option></select></label>
-                <label className="text-sm font-medium text-ink">{COPY.levelLabel}<select className="mt-1 w-full rounded-md border border-line bg-surface px-4 py-2" value={brief.level} onChange={(event) => setBrief({ ...brief, level: event.target.value as RoutineDraftLevel })}><option value="beginner">{COPY.beginner}</option><option value="intermediate">{COPY.intermediate}</option><option value="advanced">{COPY.advanced}</option></select></label>
-              </div>
-              <Button type="submit" size="lg" disabled={busy}>{busy ? COPY.generating : COPY.generate}</Button>
-            </form>
-          ) : null}
+          {status === 'ready' ? <BriefForm brief={brief} busy={busy} setBrief={setBrief} onSubmit={generateDraft} /> : null}
         </Card>
         {error && status === 'ready' ? <ErrorState message={error} /> : null}
-        {draft ? <DraftPreview draft={draft} busy={busy} onAccept={() => void acceptDraft()} /> : null}
+        {draft ? (
+          <RoutineDraftProposal
+            draft={draft}
+            daysPerWeek={proposalDays}
+            busy={busy}
+            onAccept={() => void acceptDraft()}
+            onAdjust={() => setDraft(null)}
+          />
+        ) : null}
       </div>
     </PageContainer>
   );
 }
 
-function DraftPreview({ draft, busy, onAccept }: { draft: RoutineDraft; busy: boolean; onAccept: () => void }) {
+function BriefForm({
+  brief,
+  busy,
+  setBrief,
+  onSubmit,
+}: {
+  brief: BriefState;
+  busy: boolean;
+  setBrief: (brief: BriefState) => void;
+  onSubmit: () => Promise<void>;
+}) {
   return (
-    <Card className="space-y-4" tone="brand">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-brand">{draft.source === 'fallback' ? COPY.fallbackBadge : COPY.geminiBadge}</p>
-        <h2 className="mt-1 text-xl font-bold text-ink">{draft.name}</h2>
-        <p className="mt-1 text-sm leading-6 text-ink-muted">{draft.description}</p>
+    <form className="space-y-4" onSubmit={(event) => { event.preventDefault(); void onSubmit(); }}>
+      <TextArea id="goal" label={COPY.goalLabel} rows={3} value={brief.goal} placeholder={COPY.goalPlaceholder} onChange={(event) => setBrief({ ...brief, goal: event.target.value })} />
+      <Input id="daysPerWeek" label={COPY.daysLabel} type="number" min={1} max={7} value={brief.daysPerWeek} onChange={(event) => setBrief({ ...brief, daysPerWeek: event.target.value })} />
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="text-sm font-medium text-ink">{COPY.locationLabel}<select className="mt-1 w-full rounded-md border border-line bg-surface px-4 py-2" value={brief.location} onChange={(event) => setBrief({ ...brief, location: event.target.value as RoutineDraftLocation })}><option value="gym">{COPY.gym}</option><option value="home">{COPY.home}</option></select></label>
+        <label className="text-sm font-medium text-ink">{COPY.levelLabel}<select className="mt-1 w-full rounded-md border border-line bg-surface px-4 py-2" value={brief.level} onChange={(event) => setBrief({ ...brief, level: event.target.value as RoutineDraftLevel })}><option value="beginner">{COPY.beginner}</option><option value="intermediate">{COPY.intermediate}</option><option value="advanced">{COPY.advanced}</option></select></label>
       </div>
-      <ul className="space-y-3">
-        {draft.exercises.map((exercise) => (
-          <li key={exercise.exerciseId} className="rounded-md bg-surface p-3">
-            <p className="font-medium text-ink">{exercise.exerciseName}</p>
-            <p className="text-sm text-ink-muted">{exercise.muscleGroup} · {exercise.targetSets}×{exercise.targetReps}</p>
-          </li>
-        ))}
-      </ul>
-      <button type="button" className={buttonClassName({ size: 'lg' })} disabled={busy} onClick={onAccept}>{busy ? COPY.creating : COPY.accept}</button>
-    </Card>
+      <Button type="submit" size="lg" disabled={busy}>{busy ? COPY.generating : COPY.generate}</Button>
+    </form>
   );
 }

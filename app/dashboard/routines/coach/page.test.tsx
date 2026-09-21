@@ -29,6 +29,7 @@ const draft = {
   source: 'fallback',
   name: 'Coach Atlas · Fuerza',
   description: 'Plan simple para fuerza.',
+  reason: 'Atlas eligió sentadilla para priorizar fuerza con volumen intermedio.',
   kind: 'gym',
   restSeconds: 120,
   exercises: [
@@ -62,7 +63,7 @@ describe('CoachRoutinePage', () => {
     render(<CoachRoutinePage />);
 
     expect(await screen.findByText('No hay ejercicios disponibles para armar una rutina.')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Generar rutina' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Generar propuesta' })).toBeNull();
   });
 
   it('generates a preview and accepts it using the existing routine create contract', async () => {
@@ -77,10 +78,21 @@ describe('CoachRoutinePage', () => {
     render(<CoachRoutinePage />);
     fireEvent.change(await screen.findByLabelText('Objetivo'), { target: { value: 'ganar fuerza' } });
     fireEvent.change(screen.getByLabelText('Días por semana'), { target: { value: '3' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Generar rutina' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Generar propuesta' }));
 
-    expect(await screen.findByRole('heading', { name: 'Coach Atlas · Fuerza' })).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Aceptar y crear rutina' }));
+    expect(await screen.findByText('Propuesta Atlas')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Coach Atlas · Fuerza' })).toBeTruthy();
+    expect(screen.getByText('Por qué')).toBeTruthy();
+    expect(screen.getByText('Atlas eligió sentadilla para priorizar fuerza con volumen intermedio.')).toBeTruthy();
+    expect(screen.getByText('3 días')).toBeTruthy();
+    expect(screen.getByText('1 ejercicio')).toBeTruthy();
+    expect(screen.getByText('3 series')).toBeTruthy();
+    expect(screen.getByText('Ingresado por vos')).toBeTruthy();
+    expect(screen.getAllByText('Calculado por Atlas').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText('Sentadilla')).toBeTruthy();
+    expect(screen.getByText('Piernas · 3×8')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Ajustar el brief' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Crear esta rutina' }));
 
     await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/dashboard/routines'));
     expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/routines/coach', {
