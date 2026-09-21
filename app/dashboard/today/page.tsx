@@ -104,7 +104,7 @@ export default function TodayPage() {
       }
       const workoutId = readWorkoutId(await response.json());
       if (workoutId !== null) {
-        router.push(`/dashboard/workout/${workoutId}`);
+        router.push(`/dashboard/session/${workoutId}`);
       }
     } catch (error) {
       console.error('Today: failed to start scheduled workout', error);

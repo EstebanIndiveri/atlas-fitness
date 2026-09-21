@@ -223,7 +223,7 @@ describe('TodayPage', () => {
     fireEvent.click(startButton);
 
     await waitFor(() => {
-      expect(push).toHaveBeenCalledWith('/dashboard/workout/42');
+      expect(push).toHaveBeenCalledWith('/dashboard/session/42');
     });
     const workoutCall = jest.mocked(global.fetch).mock.calls.find((call) =>
       String(call[0]).includes('/api/workouts'),
