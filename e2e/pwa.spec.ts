@@ -99,7 +99,12 @@ test.describe('PWA installability', () => {
     await page.click('[data-testid="profile-link"]');
     await page.waitForURL('**/dashboard/settings', { timeout: 10000 });
 
-    const settingsHint = page.getByTestId('pwa-install-settings').getByTestId('ios-install-hint');
+    const installSection = page.getByTestId('pwa-install-settings');
+    const installCard = installSection.getByTestId('app-install-prompt');
+    await expect(installCard).toBeVisible();
+    await installCard.getByRole('button', { name: 'Instalar' }).click();
+
+    const settingsHint = installSection.getByTestId('ios-install-hint');
     await expect(settingsHint).toBeVisible();
     await expect(settingsHint).toContainText(PWA_COPY.iosTitle);
     await expect(settingsHint).toContainText('Home Screen');
