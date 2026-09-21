@@ -36,7 +36,7 @@ describe('AppShell', () => {
     installMatchMedia();
   });
 
-  it('renders skip link, header, install prompt mount and main landmark for the app variant', async () => {
+  it('renders skip link, header and main landmark without the in-flow install prompt for the app variant', async () => {
     render(
       <AppShell variant="app">
         <p>Bienvenido</p>
@@ -63,11 +63,13 @@ describe('AppShell', () => {
     expect(screen.getByRole('main').id).toBe('contenido');
     expect(screen.getByRole('main').className).toContain('pb-app-nav');
 
+    // The in-flow install card was removed from the shell in favour of the
+    // transient InstallToast on Hoy; it must not mount even when installable.
     act(() => {
       window.dispatchEvent(new DeferredInstallEvent('beforeinstallprompt'));
     });
 
-    expect(await screen.findByTestId('app-install-prompt')).toBeTruthy();
+    expect(screen.queryByTestId('app-install-prompt')).toBeNull();
   });
 
   it('keeps header nav for desktop and bottom tabs for the app variant', () => {

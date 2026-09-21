@@ -9,7 +9,7 @@ import { PWA_COPY } from '@/lib/pwa/copy';
 import { IosInstallHint } from './IosInstallHint';
 
 /** Milliseconds the floating install toast stays visible before auto-hiding. */
-export const INSTALL_TOAST_AUTO_DISMISS_MS = 8000;
+export const INSTALL_TOAST_AUTO_DISMISS_MS = 10000;
 
 /**
  * Floating, auto-dismissing install prompt shown on Hoy.

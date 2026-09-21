@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 
-import { IosInstallHint } from '@/components/pwa/IosInstallHint';
+import { AppInstallPrompt } from '@/components/pwa/AppInstallPrompt';
 import { ProfileHeaderCard } from '@/components/profile/ProfileHeaderCard';
 import { SettingsRow } from '@/components/profile/SettingsRow';
 import { SettingsSection } from '@/components/profile/SettingsSection';
@@ -134,7 +134,7 @@ export default function SettingsPage() {
       <SettingsSection title={UI_COPY.profileApplicationTitle}>
         <div className="space-y-3 p-4" data-testid="pwa-install-settings">
           <h3 className="text-sm font-medium text-ink">{PWA_COPY.settingsInstallHeading}</h3>
-          <IosInstallHint forceVisible />
+          <AppInstallPrompt />
         </div>
         <SettingsRow
           title={UI_COPY.profileUnitsTitle}

@@ -15,8 +15,8 @@ jest.mock('@/hooks/useLinkCode', () => ({
   }),
 }));
 
-jest.mock('@/components/pwa/IosInstallHint', () => ({
-  IosInstallHint: () => <div data-testid="ios-install-hint">Instalar PWA</div>,
+jest.mock('@/components/pwa/AppInstallPrompt', () => ({
+  AppInstallPrompt: () => <div data-testid="app-install-prompt">Instalar</div>,
 }));
 
 function jsonResponse(body: unknown, ok = true): Response {
