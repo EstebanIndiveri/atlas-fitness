@@ -1,0 +1,43 @@
+name: Migrate Production DB
+
+# Runs Drizzle migrations against the production Turso database whenever code
+# lands on main. Vercel does NOT run migrations on deploy, so without this any
+# new migration (e.g. the 41-exercise catalog) silently never applies to prod.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'lib/db/migrations/**'
+      - 'lib/db/migrate.ts'
+      - 'lib/db/run-migrations.ts'
+      - '.github/workflows/deploy-migrate.yml'
+  workflow_dispatch: {}
+
+# Never let two migration runs race against the same database.
+concurrency:
+  group: migrate-production
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    name: Apply migrations to production
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run database migrations
+        run: npm run db:migrate
+        env:
+          TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
