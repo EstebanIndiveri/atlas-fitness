@@ -25,3 +25,10 @@ export interface UpdateExerciseInput {
   imageUrl?: string | null;
   videoUrl?: string | null;
 }
+
+export interface UploadResponse {
+  url: string;
+  contentType: string;
+  size: number;
+  kind: 'image' | 'video';
+}

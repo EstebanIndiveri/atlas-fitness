@@ -48,8 +48,10 @@ test.describe('Routine editor (Must UI)', () => {
 
     await expect(page.getByTestId('routine-exercise-row')).toHaveCount(1);
     await expect(page.getByTestId('routine-exercise-media')).toBeVisible();
-    await expect(page.getByTestId('routine-media-upload')).toBeDisabled();
-    await expect(page.getByText(/subida de archivos no está disponible/i)).toBeVisible();
+    await expect(page.getByTestId('routine-media-upload-image')).toBeDisabled();
+    await expect(
+      page.getByText(/no se puede cambiar/i).first(),
+    ).toBeVisible();
 
     const created = page.waitForResponse(
       (resp) =>
