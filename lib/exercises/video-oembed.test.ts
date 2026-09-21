@@ -12,6 +12,31 @@ describe('titleMatchesExercise', () => {
     expect(titleMatchesExercise('How to Bench Press', ['press banca', 'bench'])).toBe(true);
   });
 
+  it('matches a real title that shares the movement token but not the full phrase', () => {
+    // Gemini returns a valid "The Bench Press" clip; the stored keywords are the
+    // full Spanish/English names. A shared distinctive token must be enough.
+    // (All three flip from false->true vs the old full-phrase-substring logic.)
+    expect(titleMatchesExercise('The Bench Press', ['Press Banca', 'barbell bench press'])).toBe(
+      true,
+    );
+    expect(titleMatchesExercise('How to Squat', ['Sentadilla', 'barbell full squat'])).toBe(true);
+    expect(titleMatchesExercise('Deadlift form check', ['Peso Muerto', 'barbell deadlift'])).toBe(
+      true,
+    );
+  });
+
+  it('does not match on a shared generic gym word alone', () => {
+    // "leg press" and "bench press" share only the generic token "press".
+    expect(
+      titleMatchesExercise('Leg Press en máquina', ['Press Banca', 'barbell bench press']),
+    ).toBe(false);
+    // "peso" (weight) is generic in es-AR: a bodyweight routine is not a deadlift.
+    // This fails unless "peso" is treated as generic, locking that stopword in.
+    expect(
+      titleMatchesExercise('Rutina de peso corporal', ['Peso Muerto', 'barbell deadlift']),
+    ).toBe(false);
+  });
+
   it('does not match unrelated titles or blank keywords', () => {
     expect(titleMatchesExercise('Cooking pasta', ['sentadilla'])).toBe(false);
     expect(titleMatchesExercise('anything', ['  '])).toBe(false);
