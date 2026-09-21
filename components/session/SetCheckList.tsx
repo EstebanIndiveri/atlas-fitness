@@ -10,6 +10,8 @@ type SetCheckListProps = {
   completedSets?: readonly CompletedSet[];
   weight: string;
   onWeightChange: (value: string) => void;
+  reps: string;
+  onRepsChange: (value: string) => void;
   onCompleteSet: () => void;
   busy: boolean;
   nextExerciseName?: string | null;
@@ -31,6 +33,17 @@ function stepWeight(value: string, delta: number): string {
   return formatWeight(Math.max(0, base + delta));
 }
 
+function stepReps(value: string, delta: number, fallback: number): string {
+  const parsed = Number.parseInt(value, 10);
+  const base = Number.isFinite(parsed) ? parsed : fallback;
+  return String(Math.max(1, base + delta));
+}
+
+function hasValidReps(value: string): boolean {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0;
+}
+
 /**
  * Figma-aligned set table for the active exercise.
  *
@@ -46,6 +59,8 @@ export function SetCheckList({
   completedSets = [],
   weight,
   onWeightChange,
+  reps,
+  onRepsChange,
   onCompleteSet,
   busy,
   nextExerciseName,
@@ -57,12 +72,12 @@ export function SetCheckList({
   return (
     <div data-testid="set-checklist">
       <div
-        className="grid grid-cols-[0.8fr_1.2fr_0.9fr_1fr] rounded-t-2xl border border-line bg-surface px-3 py-3 text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-muted"
+        className="grid grid-cols-[2.5rem_minmax(7rem,1fr)_minmax(6.5rem,0.9fr)_2.25rem] gap-2 rounded-t-2xl border border-line bg-surface px-3 py-3 text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-muted"
         role="row"
       >
         <span>SERIE</span>
-        <span>CARGA (KG)</span>
-        <span>REPS</span>
+        <span className="text-center">CARGA (KG)</span>
+        <span className="text-center">REPS</span>
         <span className="text-right">ESTADO</span>
       </div>
       <ol className="mb-0 divide-y divide-line rounded-b-2xl border-x border-b border-line bg-surface">
@@ -73,7 +88,7 @@ export function SetCheckList({
           if (active) {
             return (
               <li key={slot} className="bg-brand-muted/40 px-3 py-3" data-testid="set-active">
-                <div className="mb-2 flex items-center justify-between gap-3">
+                <div className="mb-3 flex items-center justify-between gap-3">
                   <p className="text-xs font-bold uppercase tracking-[-0.01em] text-brand">
                     <span aria-hidden>● </span>
                     {SESSION_COPY.activeSetLabel(slot)}
@@ -82,7 +97,8 @@ export function SetCheckList({
                     {SESSION_COPY.targetReps(targetReps)}
                   </span>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-[2.5rem_minmax(7rem,1fr)_minmax(6.5rem,0.9fr)_2.25rem] items-center gap-2">
+                  <span className="text-sm font-semibold text-brand">{slot}</span>
                   <div className="rounded-xl bg-surface p-2 ring-1 ring-line">
                     <div className="mb-2 flex items-center justify-between">
                       <label htmlFor="guided-weight" className="text-[10px] font-medium uppercase text-ink-muted">
@@ -90,7 +106,7 @@ export function SetCheckList({
                       </label>
                       <span className="text-[10px] text-ink-muted">Paso ±2.5 kg</span>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="grid grid-cols-[2rem_minmax(4.5rem,1fr)_auto_2rem] items-center gap-1.5">
                       <button
                         type="button"
                         className="size-8 rounded-md bg-canvas text-lg font-semibold text-ink"
@@ -103,7 +119,7 @@ export function SetCheckList({
                       </button>
                       <input
                         id="guided-weight"
-                        className="min-w-0 flex-1 bg-transparent text-center text-lg font-bold text-ink outline-none"
+                        className="min-w-[4.5rem] rounded-md bg-canvas px-1 text-center text-lg font-bold text-ink outline-none ring-1 ring-line focus:ring-brand"
                         inputMode="decimal"
                         value={weight}
                         onChange={(event) => onWeightChange(event.target.value)}
@@ -125,34 +141,47 @@ export function SetCheckList({
                   </div>
                   <div className="rounded-xl bg-surface p-2 ring-1 ring-line">
                     <div className="mb-2 flex items-center justify-between">
-                      <p className="text-[10px] font-medium uppercase text-ink-muted">Reps</p>
+                      <label htmlFor="guided-reps" className="text-[10px] font-medium uppercase text-ink-muted">
+                        Reps
+                      </label>
                       <span className="text-[10px] text-ink-muted">Paso ±1</span>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="grid grid-cols-[2rem_minmax(2.75rem,1fr)_auto_2rem] items-center gap-1.5">
                       <button
                         type="button"
-                        className="size-8 rounded-md bg-canvas text-lg font-semibold text-ink opacity-50"
-                        aria-label="Bajar repeticiones no disponible"
+                        className="size-8 rounded-md bg-canvas text-lg font-semibold text-ink"
+                        onClick={() => onRepsChange(stepReps(reps, -1, targetReps))}
+                        aria-label="Bajar repeticiones 1"
                         aria-pressed={false}
-                        disabled
+                        disabled={busy}
                       >
                         −
                       </button>
-                      <span className="min-w-0 flex-1 text-center text-lg font-bold text-ink">
-                        {targetReps}
-                      </span>
+                      <input
+                        id="guided-reps"
+                        className="min-w-[2.75rem] rounded-md bg-canvas px-1 text-center text-lg font-bold text-ink outline-none ring-1 ring-line focus:ring-brand"
+                        inputMode="numeric"
+                        value={reps}
+                        onChange={(event) => onRepsChange(event.target.value)}
+                        aria-label="Repeticiones"
+                        data-testid="guided-reps-input"
+                      />
                       <span className="text-xs text-ink-muted">reps</span>
                       <button
                         type="button"
-                        className="size-8 rounded-md bg-canvas text-lg font-semibold text-ink opacity-50"
-                        aria-label="Subir repeticiones no disponible"
+                        className="size-8 rounded-md bg-canvas text-lg font-semibold text-ink"
+                        onClick={() => onRepsChange(stepReps(reps, 1, targetReps))}
+                        aria-label="Subir repeticiones 1"
                         aria-pressed={false}
-                        disabled
+                        disabled={busy}
                       >
                         +
                       </button>
                     </div>
                   </div>
+                  <span className="text-right text-brand" aria-hidden>
+                    ●
+                  </span>
                 </div>
               </li>
             );
@@ -160,14 +189,14 @@ export function SetCheckList({
           return (
             <li
               key={slot}
-              className="grid grid-cols-[0.8fr_1.2fr_0.9fr_1fr] items-center px-3 py-3 text-sm"
+              className="grid grid-cols-[2.5rem_minmax(7rem,1fr)_minmax(6.5rem,0.9fr)_2.25rem] items-center gap-2 px-3 py-3 text-sm"
               data-testid={done ? 'set-complete' : 'set-pending'}
             >
               <span className={done ? 'text-ink' : 'text-ink-muted'}>{slot}</span>
-              <span className={done ? 'text-2xl font-medium text-ink' : 'text-2xl text-ink-muted'}>
+              <span className={done ? 'text-center text-xl font-medium text-ink' : 'text-center text-xl text-ink-muted'}>
                 {completed?.weightKg ?? '—'}
               </span>
-              <span className={done ? 'text-2xl font-medium text-ink' : 'text-2xl text-ink-muted'}>
+              <span className={done ? 'text-center text-xl font-medium text-ink' : 'text-center text-xl text-ink-muted'}>
                 {completed?.reps ?? targetReps}
               </span>
               <span className="text-right text-ink-muted" aria-hidden>
@@ -186,12 +215,12 @@ export function SetCheckList({
         </button>
       </div>
       {activeSet ? (
-        <div className="sticky bottom-app-cta z-20 mt-5 space-y-2 rounded-2xl bg-canvas/95 p-3 shadow-card md:static md:bg-transparent md:p-0 md:shadow-none">
+        <div className="mt-4 space-y-2 rounded-2xl bg-surface p-3 ring-1 ring-line">
           <Button
             size="lg"
             className="min-h-12 rounded-lg text-base font-bold"
             onClick={onCompleteSet}
-            disabled={busy || !weight.trim()}
+            disabled={busy || !weight.trim() || !hasValidReps(reps)}
             data-testid="complete-set-button"
           >
             {SESSION_COPY.completeSetCta(activeSet)}

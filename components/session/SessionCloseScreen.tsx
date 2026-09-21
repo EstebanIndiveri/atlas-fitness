@@ -139,12 +139,12 @@ function CloseStats({ summary }: { summary: GuidedCloseSummary }) {
   ].filter((item) => item !== null);
 
   return (
-    <div className="grid grid-cols-3 gap-2">
+    <div className="grid grid-cols-1 gap-2 min-[380px]:grid-cols-2" data-testid="close-stats">
       {stats.map((item) => (
         <div
           key={item.label}
           aria-label={item.label}
-          className="rounded-xl bg-surface p-3 text-center ring-1 ring-line"
+          className="flex min-h-24 flex-col items-start justify-center rounded-xl bg-surface p-3 text-left ring-1 ring-line"
         >
           <p className="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-ink-muted">
             {item.label}
@@ -153,7 +153,7 @@ function CloseStats({ summary }: { summary: GuidedCloseSummary }) {
             metric={metric(item.value, 'atlas_computed')}
             label={item.label}
             showSource
-            className="mt-1 flex-col items-center gap-0 text-sm"
+            className="mt-1 flex-col items-start gap-0 text-base"
           />
         </div>
       ))}

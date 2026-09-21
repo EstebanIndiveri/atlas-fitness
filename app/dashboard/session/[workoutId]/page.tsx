@@ -217,16 +217,6 @@ export default function GuidedSessionPlayerPage() {
         />
       ) : (
         <>
-          {rest.active ? (
-            <RestTimer
-              remaining={rest.remaining}
-              totalSeconds={restTotalSeconds || session.routine.restSeconds}
-              motivator={motivator}
-              onSkip={rest.skip}
-              onAddThirtySeconds={handleAddRestThirtySeconds}
-            />
-          ) : null}
-
           {session.suggestion?.nextExerciseId ? (
             <Card className="mb-4 p-4" data-testid="next-exercise-banner">
               <p className="text-sm font-medium text-ink">
@@ -244,9 +234,24 @@ export default function GuidedSessionPlayerPage() {
                 completedSets={completedSetsForCurrent}
                 weight={session.weight}
                 onWeightChange={session.setWeight}
+                reps={session.reps}
+                onRepsChange={session.setReps}
                 onCompleteSet={() => void handleCompleteSet()}
+                onReplace={() => void handleSkip()}
+                onHold={() => void handleHold()}
                 busy={session.busy || rest.active}
                 nextExerciseName={nextExerciseName}
+                focusSlot={
+                  rest.active ? (
+                    <RestTimer
+                      remaining={rest.remaining}
+                      totalSeconds={restTotalSeconds || session.routine.restSeconds}
+                      motivator={motivator}
+                      onSkip={rest.skip}
+                      onAddThirtySeconds={handleAddRestThirtySeconds}
+                    />
+                  ) : null
+                }
               />
               <SessionQueueActions
                 items={session.queueItems}

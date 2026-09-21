@@ -64,6 +64,8 @@ const mockSession = {
   completedCount: 1,
   weight: '40',
   setWeight: jest.fn(),
+  reps: '8',
+  setReps: jest.fn(),
   completeSet: jest.fn(),
   skipCurrent: mockSkipCurrent,
   holdCurrent: mockHoldCurrent,
