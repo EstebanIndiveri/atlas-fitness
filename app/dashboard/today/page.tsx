@@ -54,10 +54,13 @@ export default function TodayPage() {
   const coachRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!onboardingDone) {
+    // Read the live store value (not the hydration snapshot) so already-onboarded
+    // users are never bounced to the wizard on a hard load/refresh, where the
+    // server snapshot (false) briefly precedes the client snapshot (true).
+    if (!isOnboardingDone()) {
       router.replace('/onboarding');
     }
-  }, [onboardingDone, router]);
+  }, [router]);
 
   useEffect(() => {
     let cancelled = false;
