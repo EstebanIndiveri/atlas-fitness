@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react';
-import { AppInstallPrompt } from '@/components/pwa/AppInstallPrompt';
 import { UI_COPY_TEST_IDS } from '@/lib/copy/ui';
 import { cn } from '@/lib/ui/cn';
 import { AppBottomNav } from './AppBottomNav';
@@ -27,11 +26,6 @@ export function AppShell({ variant, children }: AppShellProps) {
         tabIndex={-1}
         className={cn('flex-1 bg-canvas outline-none', variant === 'app' && 'pb-app-nav')}
       >
-        {variant === 'app' ? (
-          <div className="mx-auto w-full max-w-3xl px-4 sm:px-6">
-            <AppInstallPrompt />
-          </div>
-        ) : null}
         {children}
       </main>
       {variant === 'app' ? <AppBottomNav /> : null}
