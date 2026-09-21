@@ -1,0 +1,79 @@
+import type { ProgressPeriod } from '@/lib/services/progress-summary';
+
+/** Product copy for the Progreso screen (es-AR). */
+export const PROGRESS_COPY = {
+  brand: 'Atlas',
+  title: 'Progreso',
+  subtitle: '¿Estoy avanzando?',
+  updatedToday: 'Actualizado hoy',
+  periodAria: 'Rango de progreso',
+  periods: {
+    week: 'Semana',
+    month: 'Mes',
+    quarter: '3 meses',
+  } satisfies Record<ProgressPeriod, string>,
+  interpretation: {
+    title: 'Interpretación de Atlas',
+    eyebrow: 'Coach Atlas',
+    empty: 'Todavía no hay suficientes datos reales para interpretar una tendencia. Registrá sesiones o check-ins y Atlas va a leerlos acá.',
+  },
+  summary: {
+    titles: {
+      week: 'Resumen de la semana',
+      month: 'Resumen del mes',
+      quarter: 'Resumen de 3 meses',
+    } satisfies Record<ProgressPeriod, string>,
+    sessions: 'Sesiones',
+    completedSessionsLabel: 'Sesiones completadas',
+    totalTime: 'Tiempo total',
+    totalTimeLabel: 'Tiempo total',
+    consistency: 'Consistencia',
+    consistencyUnavailable: 'Sin datos',
+    consistencyUnavailableBody: 'Atlas necesita días activos de la semana para calcularla.',
+  },
+  week: {
+    title: 'Consistencia semanal',
+    body: 'Días con entrenamiento terminado o check-in esta semana.',
+    activeLabel: 'Días activos esta semana',
+    percentLabel: 'Consistencia semanal',
+    emptyTitle: 'Sin consistencia semanal',
+    emptyBody: 'Cuando haya datos reales de esta semana, Atlas los va a mostrar acá.',
+  },
+  strength: {
+    title: 'Evolución de fuerza',
+    emptyTitle: 'Sin gráfico de fuerza todavía',
+    emptyBody: 'Todavía no hay suficientes registros para graficar tu fuerza.',
+    emptyWhy: 'La pantalla no tiene una fuente de PR/volumen disponible; Atlas no inventa series ni pesos.',
+  },
+  wellbeing: {
+    title: 'Bienestar registrado',
+    moodLabel: 'Ánimo registrado',
+    energyLabel: 'Energía registrada',
+    noteLabel: 'Nota',
+    emptyTitle: 'Sin check-in de bienestar',
+    emptyBody: 'Todavía no registraste ánimo o energía hoy.',
+    low: 'Baja',
+    medium: 'Media',
+    high: 'Alta',
+  },
+  habits: {
+    title: 'Hábitos consistentes',
+    emptyTitle: 'Sin histórico de hábitos',
+    emptyBody: 'Todavía no hay historial suficiente para calcular consistencia por hábito.',
+    todayOnly: (done: number, total: number) => `Hoy registraste ${done} de ${total} hábitos; eso no se muestra como porcentaje histórico.`,
+  },
+  sessions: {
+    title: 'Sesiones recientes',
+    emptyTitle: 'Todavía no hay entrenos',
+    emptyBody: 'No tienes entrenamientos registrados aún.',
+    startFirstWorkout: 'Iniciar tu primer entrenamiento',
+    freeWorkout: 'Entrenamiento libre',
+    durationLabel: 'Duración de la sesión',
+    durationUnavailable: 'Duración no registrada',
+    volumeUnavailable: 'Volumen no disponible',
+  },
+  states: {
+    loading: 'Cargando…',
+    errorTitle: 'Algo salió mal',
+  },
+} as const;
