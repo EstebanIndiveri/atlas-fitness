@@ -30,22 +30,55 @@ function oembedUrlFor(videoId: string): string {
 }
 
 /**
- * Returns true when the video title shares at least one keyword with the exercise,
- * guarding against confidently-wrong AI suggestions. Keywords are normalized/accent-free.
+ * Structural stopwords plus generic gym vocabulary that, on their own, do not
+ * identify a specific movement. A title sharing ONLY these with the exercise
+ * (e.g. "leg press" vs "bench press") must not count as a match.
  */
-export function titleMatchesExercise(title: string, keywords: string[]): boolean {
-  const normalizedTitle = title
+const GENERIC_TITLE_TOKENS = new Set([
+  // structural (es/en)
+  'de', 'la', 'el', 'los', 'las', 'con', 'para', 'por', 'del', 'the', 'a', 'an',
+  'to', 'of', 'for', 'how', 'your', 'you', 'and', 'que', 'como', 'en', 'un', 'una',
+  // generic gym words
+  'press', 'barbell', 'dumbbell', 'barra', 'mancuerna', 'machine', 'maquina',
+  'peso', 'pesa', 'pesas', 'weight',
+  'ejercicio', 'exercise', 'gym', 'fitness', 'workout', 'rutina', 'full', 'body',
+  'tecnica', 'technique', 'tutorial', 'correcta', 'correcto', 'perfecta', 'perfecto',
+  'form', 'guide', 'guia', 'over',
+]);
+
+/** Accent/case-normalized significant tokens (length ≥ 3, minus generic words). */
+function significantTokens(value: string): Set<string> {
+  const normalized = value
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase();
-  return keywords.some((keyword) => {
-    const normalized = keyword
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      .trim();
-    return normalized.length > 0 && normalizedTitle.includes(normalized);
-  });
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ');
+  return new Set(
+    normalized
+      .split(' ')
+      .filter((token) => token.length >= 3 && !GENERIC_TITLE_TOKENS.has(token)),
+  );
+}
+
+/**
+ * Returns true when the video title shares at least one *distinctive* token with
+ * the exercise keywords (generic gym words are ignored), guarding against
+ * confidently-wrong AI suggestions while accepting real titles that omit the full
+ * stored phrase (e.g. "The Bench Press" for "barbell bench press"). Accent/case-insensitive.
+ */
+export function titleMatchesExercise(title: string, keywords: string[]): boolean {
+  const titleTokens = significantTokens(title);
+  if (titleTokens.size === 0) {
+    return false;
+  }
+  for (const keyword of keywords) {
+    for (const token of significantTokens(keyword)) {
+      if (titleTokens.has(token)) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 /**

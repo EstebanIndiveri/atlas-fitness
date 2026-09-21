@@ -10,10 +10,17 @@ const QA_USER_PASSWORD = 'Test1234!';
 /**
  * Base URL for free-exercise-db (yuhonas) demonstration images.
  * Real, stable, openly-licensed photos so exercises never ship with a placeholder.
- * Videos are populated by the media enrichment job (validated), never as search links.
  */
 const FREE_EXERCISE_DB_IMAGE_BASE =
   'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises';
+
+/**
+ * Curated technique videos for the system exercises. Each YouTube id was verified
+ * via the oEmbed check (exists, embeddable, title matches the movement) so they play
+ * in-app instead of shipping as search links. User exercises are filled by the media
+ * enrichment job (Gemini suggestion + oEmbed validation), never as unvalidated links.
+ */
+const YOUTUBE_WATCH_BASE = 'https://www.youtube.com/watch?v=';
 
 /**
  * System exercises with fixed slugs for testing
@@ -26,7 +33,7 @@ const SYSTEM_EXERCISES = [
     instructions:
       'Acostado en un banco plano, baja la barra hasta el pecho y empuja hacia arriba con control.',
     imageUrl: `${FREE_EXERCISE_DB_IMAGE_BASE}/Barbell_Bench_Press_-_Medium_Grip/0.jpg`,
-    videoUrl: null,
+    videoUrl: `${YOUTUBE_WATCH_BASE}SCVCLChPQFY`,
     isSystem: true,
   },
   {
@@ -36,7 +43,7 @@ const SYSTEM_EXERCISES = [
     instructions:
       'Con la barra en los hombros, baja doblando rodillas y caderas hasta que los muslos estén paralelos al suelo.',
     imageUrl: `${FREE_EXERCISE_DB_IMAGE_BASE}/Barbell_Full_Squat/0.jpg`,
-    videoUrl: null,
+    videoUrl: `${YOUTUBE_WATCH_BASE}UFs6E3Ti1jg`,
     isSystem: true,
   },
   {
@@ -46,7 +53,7 @@ const SYSTEM_EXERCISES = [
     instructions:
       'Con la barra en el suelo, agáchate y levántala manteniendo la espalda recta hasta estar de pie.',
     imageUrl: `${FREE_EXERCISE_DB_IMAGE_BASE}/Barbell_Deadlift/0.jpg`,
-    videoUrl: null,
+    videoUrl: `${YOUTUBE_WATCH_BASE}wYREQkVtvEc`,
     isSystem: true,
   },
   {
@@ -56,7 +63,7 @@ const SYSTEM_EXERCISES = [
     instructions:
       'De pie, empuja la barra desde los hombros hacia arriba hasta extender completamente los brazos.',
     imageUrl: `${FREE_EXERCISE_DB_IMAGE_BASE}/Standing_Military_Press/0.jpg`,
-    videoUrl: null,
+    videoUrl: `${YOUTUBE_WATCH_BASE}wol7Hko8RhY`,
     isSystem: true,
   },
   {
@@ -66,7 +73,7 @@ const SYSTEM_EXERCISES = [
     instructions:
       'Inclinado hacia adelante, tira de la barra hacia tu abdomen manteniendo los codos cerca del cuerpo.',
     imageUrl: `${FREE_EXERCISE_DB_IMAGE_BASE}/Bent_Over_Barbell_Row/0.jpg`,
-    videoUrl: null,
+    videoUrl: `${YOUTUBE_WATCH_BASE}9efgcAjQe7E`,
     isSystem: true,
   },
 ];
