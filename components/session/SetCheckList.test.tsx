@@ -13,6 +13,8 @@ describe('SetCheckList', () => {
         completedSets={[{ setIndex: 1, weightKg: '70.0', reps: 10 }]}
         weight="75"
         onWeightChange={onWeightChange}
+        reps="8"
+        onRepsChange={jest.fn()}
         onCompleteSet={jest.fn()}
         busy={false}
       />,
@@ -40,6 +42,8 @@ describe('SetCheckList', () => {
         completedSets={[{ setIndex: 7, weightKg: '82.5', reps: 6 }]}
         weight="85"
         onWeightChange={jest.fn()}
+        reps="8"
+        onRepsChange={jest.fn()}
         onCompleteSet={jest.fn()}
         busy={false}
       />,
@@ -51,7 +55,7 @@ describe('SetCheckList', () => {
   });
 
 
-  it('keeps the complete-set control labeled and in the thumb-reach cluster', () => {
+  it('keeps the complete-set control labeled in a non-overlapping footer', () => {
     render(
       <SetCheckList
         targetSets={3}
@@ -60,6 +64,8 @@ describe('SetCheckList', () => {
         completedSets={[]}
         weight="40"
         onWeightChange={jest.fn()}
+        reps="8"
+        onRepsChange={jest.fn()}
         onCompleteSet={jest.fn()}
         busy={false}
         nextExerciseName="Sentadilla"
@@ -69,7 +75,57 @@ describe('SetCheckList', () => {
     const complete = screen.getByTestId('complete-set-button');
     expect(complete.textContent).toContain('COMPLETAR SERIE 1');
     expect(complete.className).toContain('min-h-12');
-    expect(complete.closest('div')?.className).toContain('bottom-app-cta');
+    expect(complete.closest('div')?.className).not.toContain('sticky');
+    expect(complete.closest('div')?.className).not.toContain('bottom-app-cta');
     expect(screen.getByText('Siguiente: Sentadilla')).toBeTruthy();
+  });
+
+  it('lets the user edit active-set reps with stepper controls and input', () => {
+    const onRepsChange = jest.fn();
+    render(
+      <SetCheckList
+        targetSets={3}
+        targetReps={8}
+        completedCount={0}
+        completedSets={[]}
+        weight="40"
+        onWeightChange={jest.fn()}
+        reps="8"
+        onRepsChange={onRepsChange}
+        onCompleteSet={jest.fn()}
+        busy={false}
+      />,
+    );
+
+    const repsInput = screen.getByLabelText('Repeticiones') as HTMLInputElement;
+    expect(repsInput.value).toBe('8');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Subir repeticiones 1' }));
+    expect(onRepsChange).toHaveBeenCalledWith('9');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Bajar repeticiones 1' }));
+    expect(onRepsChange).toHaveBeenCalledWith('7');
+
+    fireEvent.change(repsInput, { target: { value: '12' } });
+    expect(onRepsChange).toHaveBeenCalledWith('12');
+  });
+
+  it('does not allow completing a set with non-positive reps', () => {
+    render(
+      <SetCheckList
+        targetSets={3}
+        targetReps={8}
+        completedCount={0}
+        completedSets={[]}
+        weight="40"
+        onWeightChange={jest.fn()}
+        reps="0"
+        onRepsChange={jest.fn()}
+        onCompleteSet={jest.fn()}
+        busy={false}
+      />,
+    );
+
+    expect((screen.getByTestId('complete-set-button') as HTMLButtonElement).disabled).toBe(true);
   });
 });

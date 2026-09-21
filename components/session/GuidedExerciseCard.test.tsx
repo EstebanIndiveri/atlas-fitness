@@ -1,5 +1,5 @@
 import { describe, expect, it, jest } from '@jest/globals';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { GuidedExerciseCard } from './GuidedExerciseCard';
 import { SESSION_COPY } from '@/lib/copy/session';
 import type { RoutineExerciseItem } from '@/types/routine';
@@ -25,6 +25,8 @@ const cardProps = {
   completedCount: 0,
   weight: '40',
   onWeightChange: jest.fn(),
+  reps: '8',
+  onRepsChange: jest.fn(),
   onCompleteSet: jest.fn(),
   busy: false,
 };
@@ -32,6 +34,9 @@ const cardProps = {
 describe('GuidedExerciseCard', () => {
   it('keeps guided-exercise-image visible when imageUrl is null', () => {
     render(<GuidedExerciseCard exercise={exercise({ imageUrl: null })} {...cardProps} />);
+
+    expect(screen.queryByTestId('guided-exercise-image')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Mostrar técnica' }));
 
     const media = screen.getByTestId('guided-exercise-image');
     expect(media.tagName).not.toBe('IMG');
@@ -42,6 +47,8 @@ describe('GuidedExerciseCard', () => {
 
   it('keeps guided-exercise-image visible when imageUrl is empty', () => {
     render(<GuidedExerciseCard exercise={exercise({ imageUrl: '   ' })} {...cardProps} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Mostrar técnica' }));
 
     const media = screen.getByTestId('guided-exercise-image');
     expect(media.tagName).not.toBe('IMG');
@@ -55,6 +62,8 @@ describe('GuidedExerciseCard', () => {
         {...cardProps}
       />,
     );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Mostrar técnica' }));
 
     const media = screen.getByTestId('guided-exercise-image');
     expect(media.tagName).toBe('IMG');
@@ -76,7 +85,9 @@ describe('GuidedExerciseCard', () => {
     expect(screen.getByText('70.0')).toBeTruthy();
   });
 
-  it('renders Figma exercise metadata and disabled honest action chips', () => {
+  it('renders Figma exercise metadata and functional exclusive action chips', () => {
+    const onReplace = jest.fn();
+    const onHold = jest.fn();
     render(
       <GuidedExerciseCard
         exercise={exercise({
@@ -91,6 +102,8 @@ describe('GuidedExerciseCard', () => {
           { setIndex: 1, weightKg: '70.0', reps: 10 },
           { setIndex: 2, weightKg: '75.0', reps: 8 },
         ]}
+        onReplace={onReplace}
+        onHold={onHold}
       />,
     );
 
@@ -98,14 +111,47 @@ describe('GuidedExerciseCard', () => {
     expect(screen.getByText('Serie 3 de 4')).toBeTruthy();
     expect(screen.getByText('Press de banca con barra')).toBeTruthy();
     expect(screen.queryByText('Ejercicio compuesto')).toBeNull();
-    expect(
-      (screen.getByRole('button', { name: 'Técnica no disponible en esta versión' }) as HTMLButtonElement).disabled,
-    ).toBe(true);
-    expect(
-      (screen.getByRole('button', { name: 'Reemplazar ejercicio desde los controles de cola' }) as HTMLButtonElement).disabled,
-    ).toBe(true);
-    expect(
-      (screen.getByRole('button', { name: 'Notas no disponibles en esta versión' }) as HTMLButtonElement).disabled,
-    ).toBe(true);
+    expect(screen.queryByTestId('guided-exercise-image')).toBeNull();
+
+    const technique = screen.getByRole('button', { name: 'Mostrar técnica' });
+    const replace = screen.getByRole('button', { name: 'Mostrar reemplazo' });
+    const notes = screen.getByRole('button', { name: 'Mostrar notas' });
+
+    expect((technique as HTMLButtonElement).disabled).toBe(false);
+    expect(technique.getAttribute('aria-pressed')).toBe('false');
+
+    fireEvent.click(technique);
+    expect(technique.getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByTestId('guided-exercise-image')).toBeTruthy();
+
+    fireEvent.click(notes);
+    expect(technique.getAttribute('aria-pressed')).toBe('false');
+    expect(notes.getAttribute('aria-pressed')).toBe('true');
+    expect(screen.queryByTestId('guided-exercise-image')).toBeNull();
+    expect(screen.getByText('Sin notas cargadas para este ejercicio.')).toBeTruthy();
+
+    fireEvent.click(replace);
+    expect(notes.getAttribute('aria-pressed')).toBe('false');
+    expect(screen.getByText('Saltar este ejercicio')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Saltar este ejercicio y pasar al siguiente' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Posponer este ejercicio para más adelante. Conservamos las series ya hechas.' }));
+    expect(onReplace).toHaveBeenCalledTimes(1);
+    expect(onHold).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders the rest timer inside the card focus area before the set counter', () => {
+    render(
+      <GuidedExerciseCard
+        exercise={exercise()}
+        {...cardProps}
+        focusSlot={<div data-testid="rest-timer">01:30</div>}
+      />,
+    );
+
+    const card = screen.getByTestId('guided-exercise-card');
+    expect(card.contains(screen.getByTestId('rest-timer'))).toBe(true);
+    expect(card.textContent?.indexOf('01:30')).toBeLessThan(
+      card.textContent?.indexOf('SERIE 1 EN CURSO') ?? Number.MAX_SAFE_INTEGER,
+    );
   });
 });

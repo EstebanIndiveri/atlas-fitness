@@ -45,6 +45,16 @@ describe('SessionCloseScreen', () => {
     expect(screen.getAllByText(MetricSourceLabel.atlas_computed)).toHaveLength(3);
   });
 
+  it('lays out close stats as readable mobile cards instead of cramped three-up cards', () => {
+    render(<SessionCloseScreen {...baseProps} summary={summary} />);
+
+    const stats = screen.getByTestId('close-stats');
+    expect(stats.className).toContain('grid-cols-1');
+    expect(stats.className).toContain('min-[380px]:grid-cols-2');
+    expect(screen.getByLabelText('Series').className).toContain('items-start');
+    expect(screen.getByLabelText('Volumen').textContent).toContain('0.7 kg');
+  });
+
   it('omits duration when the summary cannot honestly derive it', () => {
     render(
       <SessionCloseScreen

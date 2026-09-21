@@ -8,6 +8,7 @@ import type { RoutineExerciseItem, RoutineSummary } from '@/types/routine';
 import type { WorkoutSet } from '@/lib/db/schema';
 
 type FetchInit = { method?: string; body?: string };
+type PostedSetBody = Record<string, unknown>;
 
 function jsonResponse(body: unknown, status = 200): Response {
   return {
@@ -90,6 +91,14 @@ function suggestion(nextExerciseId: number | null, extra: { isLast?: boolean } =
 
 function readMethod(init?: FetchInit): string {
   return init?.method ?? 'GET';
+}
+
+function parsePostedBody(body: string | undefined): PostedSetBody {
+  const parsed: unknown = JSON.parse(String(body ?? '{}'));
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return {};
+  }
+  return Object.fromEntries(Object.entries(parsed));
 }
 
 describe('useGuidedSession skip/hold', () => {
@@ -246,5 +255,65 @@ describe('useGuidedSession skip/hold', () => {
     expect(result.current.actionError).toBe('El entrenamiento no está activo.');
     expect(result.current.current?.exerciseId).toBe(10);
     expect(result.current.workout?.sets).toEqual(finishedSets);
+  });
+
+  it('posts edited reps for completed sets and resets reps after the set index advances', async () => {
+    const postedBodies: PostedSetBody[] = [];
+    const emptyWorkout = { ...workout, sets: [] };
+    const updatedWorkout = {
+      ...workout,
+      sets: [
+        {
+          id: 3,
+          workoutId: 8,
+          exerciseId: 10,
+          setIndex: 1,
+          reps: 12,
+          weightKg: '40',
+          completed: true,
+          deletedAt: null,
+        },
+      ],
+    };
+
+    global.fetch = jest.fn(async (input: string, init?: FetchInit) => {
+      const url = String(input);
+      const method = readMethod(init);
+      if (url === '/api/workouts/8' && method === 'GET') {
+        return jsonResponse(postedBodies.length > 0 ? updatedWorkout : emptyWorkout);
+      }
+      if (url === '/api/routines/1') {
+        return jsonResponse(routine);
+      }
+      if (url === '/api/workouts/8/sets' && method === 'POST') {
+        postedBodies.push(parsePostedBody(init?.body));
+        return jsonResponse({ id: 3 }, 201);
+      }
+      return jsonResponse({ code: 'NOT_FOUND', message: url }, 404);
+    }) as unknown as typeof fetch;
+
+    const { result } = renderHook(() => useGuidedSession('8'));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    act(() => {
+      result.current.setWeight('40');
+      result.current.setReps('12');
+    });
+    await waitFor(() => expect(result.current.reps).toBe('12'));
+
+    await act(async () => {
+      await result.current.completeSet();
+    });
+
+    expect(postedBodies).toEqual([
+      {
+        exerciseId: 10,
+        setIndex: 1,
+        reps: 12,
+        weightKg: '40',
+      },
+    ]);
+    expect(result.current.completedCount).toBe(1);
+    expect(result.current.reps).toBe('8');
   });
 });

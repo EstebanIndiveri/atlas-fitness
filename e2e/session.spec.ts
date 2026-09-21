@@ -50,7 +50,8 @@ test.describe('Guided session (Epic-E Must)', () => {
     await page.waitForURL(/\/dashboard\/session\/\d+/, { timeout: 10000 });
 
     await expect(page.getByTestId('guided-exercise-name')).toHaveText('Press Banca');
-    // Media region is always rendered (placeholder when catalog imageUrl is null).
+    // Media lives behind the Técnica toggle so the set counter stays in focus by default.
+    await page.getByRole('button', { name: 'Mostrar técnica' }).click();
     await expect(page.getByTestId('guided-exercise-image')).toBeVisible();
     await expect(page.getByTestId('session-skip')).toBeVisible();
     await expect(page.getByTestId('session-hold')).toBeVisible();
