@@ -21,14 +21,18 @@ interface SummaryStatProps {
 
 function SummaryStat({ label, metricLabel, value, hint }: SummaryStatProps) {
   return (
-    <div aria-label={metricLabel} className="rounded-xl bg-canvas p-3">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-muted">{label}</p>
+    <div
+      aria-label={metricLabel}
+      data-testid="progress-summary-stat"
+      className="flex h-full min-w-0 flex-col overflow-hidden rounded-xl bg-canvas p-3"
+    >
+      <p className="break-words text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-muted">{label}</p>
       <MetricValue
         metric={metric(value, 'atlas_computed')}
         label={metricLabel}
-        className="mt-2 text-lg"
+        className="mt-2 flex w-full flex-wrap text-base leading-tight [overflow-wrap:anywhere]"
       />
-      {hint ? <p className="mt-1 text-[11px] leading-snug text-ink-muted">{hint}</p> : null}
+      {hint ? <p className="mt-1 break-words text-[11px] leading-snug text-ink-muted">{hint}</p> : null}
     </div>
   );
 }
@@ -50,7 +54,7 @@ export function ProgressSummaryCard({
   return (
     <Card className="space-y-4 rounded-2xl p-5">
       <h2 className="text-base font-semibold text-ink">{PROGRESS_COPY.summary.titles[period]}</h2>
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-3 items-stretch gap-2">
         <SummaryStat
           label={PROGRESS_COPY.summary.sessions}
           metricLabel={PROGRESS_COPY.summary.completedSessionsLabel}

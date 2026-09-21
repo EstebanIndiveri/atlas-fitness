@@ -77,12 +77,18 @@ export const ROUTINE_COPY = {
   seeVideo: 'Ver video',
   imageUrlLabel: 'URL de imagen',
   videoUrlLabel: 'URL de video',
-  mediaUrlHint: 'Solo URLs https://. El servidor limita a 2048 caracteres; no hay subida de archivos.',
+  mediaUrlHint: 'Solo URLs https://. El servidor limita a 2048 caracteres. También podés subir un archivo en ejercicios propios.',
   mediaUrlLengthHint: 'La URL de media no puede superar 2048 caracteres.',
   uploadLabel: 'Subir archivo',
-  uploadDisabled:
-    'La subida de archivos no está disponible. Pegá una URL en los campos de media o esperá el endpoint de upload.',
-  uploadTodo: 'TODO BE: no hay POST de upload de media; solo imageUrl/videoUrl en ejercicios propios.',
+  uploadImageLabel: 'Subir imagen',
+  uploadVideoLabel: 'Subir video',
+  uploadHint:
+    'Subida directa hasta 4 MB. Para videos grandes hace falta subida directa a Blob; si no está configurado, pegá una URL https://.',
+  uploadDisabled: 'La media de este ejercicio no se puede cambiar. Pegá URLs solo en ejercicios propios.',
+  uploadUploading: 'Subiendo archivo…',
+  uploadSuccess: 'Archivo subido. Revisá la URL cargada antes de guardar.',
+  uploadInvalidUrl: 'La subida devolvió una URL inválida. Probá pegando una URL https://.',
+  uploadGenericError: 'No se pudo subir el archivo. Probá de nuevo o pegá una URL https://.',
   systemMediaLocked: 'La media de un ejercicio del sistema no se puede cambiar.',
 } as const;
 
@@ -109,6 +115,8 @@ export const ROUTINE_TEST_IDS = {
   media: 'routine-exercise-media',
   video: 'routine-exercise-video',
   upload: 'routine-media-upload',
+  uploadImage: 'routine-media-upload-image',
+  uploadVideo: 'routine-media-upload-video',
   imageUrl: 'routine-exercise-image-url',
   videoUrl: 'routine-exercise-video-url',
   detail: 'routine-detail',

@@ -90,6 +90,7 @@ describe('ProgressPage', () => {
         toLocalDate: '2026-09-30',
         completedSessions: 14,
         totalDurationMinutes: 915,
+        strength: { hasLoggedSets: false, latestVolumeKg: null, trendLabel: 'Sin datos de fuerza', points: [] },
         sessions: [{ workoutId: 3, startedAt: '2026-09-20T12:00:00.000Z', durationMinutes: 50, routineName: 'Empuje' }],
       },
     });
@@ -104,7 +105,7 @@ describe('ProgressPage', () => {
     expect(screen.getByRole('heading', { name: 'Bienestar registrado' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Hábitos consistentes' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Sesiones recientes' })).toBeTruthy();
-    expect(screen.getByText('Todavía no hay suficientes registros para graficar tu fuerza.')).toBeTruthy();
+    expect(screen.getByText('Todavía no hay series completadas para graficar tu fuerza.')).toBeTruthy();
   });
 
   it('renders weekly consistency in the period summary only for the week period', () => {
@@ -120,6 +121,18 @@ describe('ProgressPage', () => {
         toLocalDate: '2026-09-20',
         completedSessions: 2,
         totalDurationMinutes: 120,
+        strength: {
+          hasLoggedSets: true,
+          latestVolumeKg: '810',
+          trendLabel: 'Punto de partida',
+          points: [{
+            workoutId: 3,
+            startedAt: '2026-09-20T12:00:00.000Z',
+            localDate: '2026-09-20',
+            totalVolumeKg: '810',
+            completedSets: 4,
+          }],
+        },
         sessions: [],
       },
     });
@@ -128,6 +141,7 @@ describe('ProgressPage', () => {
 
     expect(screen.getByRole('heading', { name: 'Resumen de la semana' })).toBeTruthy();
     expect(screen.getByLabelText('Consistencia').textContent).toContain('57%');
+    expect(screen.getByLabelText('Volumen de la última sesión').textContent).toContain('810 kg');
   });
 
   it('renders empty state when progress summary has no sessions', () => {
@@ -143,6 +157,7 @@ describe('ProgressPage', () => {
         toLocalDate: '2026-09-20',
         completedSessions: 0,
         totalDurationMinutes: 0,
+        strength: { hasLoggedSets: false, latestVolumeKg: null, trendLabel: 'Sin datos de fuerza', points: [] },
         sessions: [],
       },
     });

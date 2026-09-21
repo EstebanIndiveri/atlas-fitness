@@ -22,4 +22,17 @@ describe('ProgressSummaryCard', () => {
     expect(screen.getByText('Sin datos')).toBeTruthy();
     expect(screen.getByText('Atlas necesita días activos de la semana para calcularla.')).toBeTruthy();
   });
+
+  it('contains long unavailable consistency copy inside equal-height stat cards', () => {
+    render(<ProgressSummaryCard period="month" completedSessions={0} totalDurationMinutes={0} consistencyPercent={null} />);
+
+    const stats = screen.getAllByTestId('progress-summary-stat');
+    expect(stats).toHaveLength(3);
+    for (const stat of stats) {
+      expect(stat.className).toContain('min-w-0');
+      expect(stat.className).toContain('h-full');
+      expect(stat.className).toContain('overflow-hidden');
+    }
+    expect(screen.getByText('Atlas necesita días activos de la semana para calcularla.').className).toContain('break-words');
+  });
 });

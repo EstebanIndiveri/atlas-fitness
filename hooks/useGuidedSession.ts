@@ -28,6 +28,11 @@ interface WorkoutPayload {
   queue?: unknown;
 }
 
+function parseReps(value: string, fallback: number): number {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
 export function useGuidedSession(workoutId: string) {
   const [workout, setWorkout] = useState<WorkoutPayload | null>(null);
   const [routine, setRoutine] = useState<RoutineSummary | null>(null);
@@ -37,6 +42,7 @@ export function useGuidedSession(workoutId: string) {
   const [actionError, setActionError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [weight, setWeight] = useState('');
+  const [repsDraft, setRepsDraft] = useState<{ key: string; value: string } | null>(null);
   const [suggestion, setSuggestion] = useState<NextExerciseSuggestion | null>(null);
   const [phase, setPhase] = useState<'train' | 'close'>('train');
   const [mood, setMood] = useState<number | null>(null);
@@ -115,6 +121,16 @@ export function useGuidedSession(workoutId: string) {
     return workout.sets.filter((set) => set.exerciseId === current.exerciseId).length;
   }, [current, workout]);
 
+  const repsKey = current ? `${current.exerciseId}:${completedCount}` : null;
+  const reps = current
+    ? repsDraft?.key === repsKey
+      ? repsDraft.value
+      : String(current.targetReps)
+    : '';
+  const setReps = useCallback((value: string) => {
+    setRepsDraft(repsKey ? { key: repsKey, value } : null);
+  }, [repsKey]);
+
   const queueItems = useMemo(() => {
     if (!routine) return [];
     return queueItemsFromRoutine(routine.exercises, queue, current?.exerciseId ?? null);
@@ -146,7 +162,7 @@ export function useGuidedSession(workoutId: string) {
         body: JSON.stringify({
           exerciseId: current.exerciseId,
           setIndex,
-          reps: current.targetReps,
+          reps: parseReps(reps, current.targetReps),
           weightKg: weight,
         }),
       });
@@ -178,7 +194,7 @@ export function useGuidedSession(workoutId: string) {
     } finally {
       setBusy(false);
     }
-  }, [workout, current, routine, weight, load, enterCloseIfNeeded, queue]);
+  }, [workout, current, routine, reps, weight, load, enterCloseIfNeeded, queue]);
 
   const runQueueAction = useCallback(
     async (action: 'skip' | 'hold') => {
@@ -260,6 +276,8 @@ export function useGuidedSession(workoutId: string) {
     completedCount,
     weight,
     setWeight,
+    reps,
+    setReps,
     busy,
     suggestion,
     phase,
