@@ -24,6 +24,7 @@ describe('RecentSessionsCard', () => {
     );
     expect(screen.getByText(/1h 5m/)).toBeTruthy();
     expect(screen.getByText(/24 de sept de 2026/)).toBeTruthy();
+    expect(screen.getByText('Volumen no disponible')).toBeTruthy();
   });
 
   it('uses an empty state with a dashboard action when there are no sessions', () => {
@@ -42,7 +43,7 @@ describe('RecentSessionsCard', () => {
           {
             workoutId: 8,
             startedAt: '2026-09-23T12:00:00.000Z',
-            durationMinutes: 30,
+            durationMinutes: null,
             routineName: null,
           },
         ]}
@@ -50,5 +51,6 @@ describe('RecentSessionsCard', () => {
     );
 
     expect(screen.getByRole('link', { name: /Entrenamiento libre/ })).toBeTruthy();
+    expect(screen.getByText('Duración no registrada')).toBeTruthy();
   });
 });
