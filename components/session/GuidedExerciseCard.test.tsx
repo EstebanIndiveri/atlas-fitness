@@ -68,9 +68,44 @@ describe('GuidedExerciseCard', () => {
         exercise={exercise({ targetSets: 3, targetReps: 8 })}
         {...cardProps}
         completedCount={1}
+        completedSets={[{ setIndex: 1, weightKg: '70.0', reps: 10 }]}
       />,
     );
 
-    expect(screen.getByText('1 de 3 series')).toBeTruthy();
+    expect(screen.getByText('Serie 2 de 3')).toBeTruthy();
+    expect(screen.getByText('70.0')).toBeTruthy();
+  });
+
+  it('renders Figma exercise metadata and disabled honest action chips', () => {
+    render(
+      <GuidedExerciseCard
+        exercise={exercise({
+          targetSets: 4,
+          targetReps: 6,
+          exerciseName: 'Press de banca con barra',
+          muscleGroup: 'Pecho y tríceps',
+        })}
+        {...cardProps}
+        completedCount={2}
+        completedSets={[
+          { setIndex: 1, weightKg: '70.0', reps: 10 },
+          { setIndex: 2, weightKg: '75.0', reps: 8 },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText('Pecho y tríceps')).toBeTruthy();
+    expect(screen.getByText('Serie 3 de 4')).toBeTruthy();
+    expect(screen.getByText('Press de banca con barra')).toBeTruthy();
+    expect(screen.queryByText('Ejercicio compuesto')).toBeNull();
+    expect(
+      (screen.getByRole('button', { name: 'Técnica no disponible en esta versión' }) as HTMLButtonElement).disabled,
+    ).toBe(true);
+    expect(
+      (screen.getByRole('button', { name: 'Reemplazar ejercicio desde los controles de cola' }) as HTMLButtonElement).disabled,
+    ).toBe(true);
+    expect(
+      (screen.getByRole('button', { name: 'Notas no disponibles en esta versión' }) as HTMLButtonElement).disabled,
+    ).toBe(true);
   });
 });

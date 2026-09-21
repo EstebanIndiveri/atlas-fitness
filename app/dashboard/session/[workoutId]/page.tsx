@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { GuidedExerciseCard } from '@/components/session/GuidedExerciseCard';
 import { GuidedSessionHeader } from '@/components/session/GuidedSessionHeader';
 import { RestTimer } from '@/components/session/RestTimer';
@@ -29,6 +29,35 @@ const moodToSensation: Record<number, WorkoutSensation> = {
   5: 'great',
 };
 
+function readStartedAt(workout: unknown): Date | null {
+  if (!workout || typeof workout !== 'object' || !('startedAt' in workout)) {
+    return null;
+  }
+  const value = workout.startedAt;
+  if (value instanceof Date) {
+    return value;
+  }
+  if (typeof value === 'string' || typeof value === 'number') {
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+  return null;
+}
+
+function useElapsedSeconds(startedAt: Date | null): number {
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  if (!startedAt) {
+    return 0;
+  }
+  return Math.max(0, Math.floor((now - startedAt.getTime()) / 1000));
+}
+
 export default function GuidedSessionPlayerPage() {
   const params = useParams();
   const router = useRouter();
@@ -43,6 +72,8 @@ export default function GuidedSessionPlayerPage() {
   const [discomfort, setDiscomfort] = useState<DiscomfortEntry[]>([]);
   const [feedbackSaving, setFeedbackSaving] = useState(false);
   const [feedbackError, setFeedbackError] = useState<string | null>(null);
+  const [restTotalSeconds, setRestTotalSeconds] = useState(0);
+  const elapsedSeconds = useElapsedSeconds(readStartedAt(session.workout ?? {}));
 
   const handleCompleteSet = async () => {
     try {
@@ -52,7 +83,9 @@ export default function GuidedSessionPlayerPage() {
       if (result.wentToClose) {
         return;
       }
-      rest.start(session.routine?.restSeconds ?? 90);
+      const suggestedRest = session.routine?.restSeconds ?? 90;
+      setRestTotalSeconds(suggestedRest);
+      rest.start(suggestedRest);
     } catch {
       // error state lives in the hook when load fails; keep rest from starting
     }
@@ -94,6 +127,7 @@ export default function GuidedSessionPlayerPage() {
   const handleSkip = async () => {
     const ok = await session.skipCurrent();
     if (ok) {
+      setRestTotalSeconds(0);
       rest.skip();
     }
   };
@@ -101,8 +135,15 @@ export default function GuidedSessionPlayerPage() {
   const handleHold = async () => {
     const ok = await session.holdCurrent();
     if (ok) {
+      setRestTotalSeconds(0);
       rest.skip();
     }
+  };
+
+  const handleAddRestThirtySeconds = () => {
+    const nextRemaining = rest.remaining + 30;
+    setRestTotalSeconds((currentTotal) => Math.max(currentTotal, rest.remaining) + 30);
+    rest.start(nextRemaining);
   };
 
   if (session.loading) {
@@ -140,6 +181,12 @@ export default function GuidedSessionPlayerPage() {
   const muscleGroups = Array.from(
     new Set(session.routine.exercises.map((exercise) => exercise.muscleGroup)),
   ).filter((muscleGroup) => muscleGroup.trim().length > 0);
+  const completedSetsForCurrent = session.current
+    ? session.workout.sets
+        .filter((set) => set.exerciseId === session.current?.exerciseId)
+        .map((set) => ({ setIndex: set.setIndex, weightKg: set.weightKg, reps: set.reps }))
+    : [];
+  const nextExerciseName = session.queueItems.find((item) => !item.current)?.name ?? null;
 
   return (
     <PageContainer>
@@ -148,6 +195,7 @@ export default function GuidedSessionPlayerPage() {
         currentIndex={currentIndex}
         totalExercises={session.routine.exercises.length}
         muscleGroup={session.current?.muscleGroup ?? null}
+        elapsedSeconds={elapsedSeconds}
       />
 
       {showClose ? (
@@ -170,7 +218,13 @@ export default function GuidedSessionPlayerPage() {
       ) : (
         <>
           {rest.active ? (
-            <RestTimer remaining={rest.remaining} motivator={motivator} onSkip={rest.skip} />
+            <RestTimer
+              remaining={rest.remaining}
+              totalSeconds={restTotalSeconds || session.routine.restSeconds}
+              motivator={motivator}
+              onSkip={rest.skip}
+              onAddThirtySeconds={handleAddRestThirtySeconds}
+            />
           ) : null}
 
           {session.suggestion?.nextExerciseId ? (
@@ -187,10 +241,12 @@ export default function GuidedSessionPlayerPage() {
               <GuidedExerciseCard
                 exercise={session.current}
                 completedCount={session.completedCount}
+                completedSets={completedSetsForCurrent}
                 weight={session.weight}
                 onWeightChange={session.setWeight}
                 onCompleteSet={() => void handleCompleteSet()}
                 busy={session.busy || rest.active}
+                nextExerciseName={nextExerciseName}
               />
               <SessionQueueActions
                 items={session.queueItems}

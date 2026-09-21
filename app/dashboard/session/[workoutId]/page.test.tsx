@@ -12,8 +12,38 @@ const mockSession = {
   loading: false,
   error: null,
   actionError: null as string | null,
-  workout: { id: 8, endedAt: null as string | null },
-  routine: { name: 'Empuje', restSeconds: 90, exercises: [] },
+  workout: {
+    id: 8,
+    endedAt: null as string | null,
+    startedAt: '2026-09-20T22:00:00.000Z',
+    sets: [{ exerciseId: 10, setIndex: 1, reps: 10, weightKg: '70.0' }],
+  },
+  routine: {
+    name: 'Empuje',
+    restSeconds: 90,
+    exercises: [
+      {
+        exerciseId: 10,
+        exerciseName: 'Press Banca',
+        muscleGroup: 'Pecho',
+        targetSets: 3,
+        targetReps: 8,
+        instructions: '',
+        imageUrl: null,
+        videoUrl: null,
+      },
+      {
+        exerciseId: 20,
+        exerciseName: 'Sentadilla',
+        muscleGroup: 'Piernas',
+        targetSets: 3,
+        targetReps: 8,
+        instructions: '',
+        imageUrl: null,
+        videoUrl: null,
+      },
+    ],
+  },
   phase: 'close' as 'train' | 'close',
   summary: null,
   mood: 4,
@@ -68,6 +98,7 @@ jest.mock('@/lib/api/post-workout-feedback', () => ({
 describe('GuidedSessionPlayerPage', () => {
   afterEach(() => {
     mockSession.workout.endedAt = null;
+    mockSession.phase = 'close';
     mockPush.mockClear();
     mockSaveAndClose.mockClear();
     mockSkipCurrent.mockClear();
@@ -120,6 +151,9 @@ describe('GuidedSessionPlayerPage', () => {
     const { default: GuidedSessionPlayerPage } = await import('./page');
     render(<GuidedSessionPlayerPage />);
 
+    expect(screen.getByText(/EJERCICIO 1 DE 2/)).toBeTruthy();
+    expect(screen.getByText('SERIE 2 EN CURSO')).toBeTruthy();
+    expect(screen.getByText('70.0')).toBeTruthy();
     fireEvent.click(screen.getByTestId('session-skip'));
     fireEvent.click(screen.getByTestId('session-hold'));
     await waitFor(() => expect(mockSkipCurrent).toHaveBeenCalledTimes(1));
