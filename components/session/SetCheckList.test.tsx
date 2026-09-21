@@ -23,6 +23,7 @@ describe('SetCheckList', () => {
     expect(screen.getByText('SERIE')).toBeTruthy();
     expect(screen.getByText('CARGA (KG)')).toBeTruthy();
     expect(screen.getByText('REPS')).toBeTruthy();
+    expect(screen.getByText('ESTADO')).toBeTruthy();
     expect(screen.getByText('SERIE 2 EN CURSO')).toBeTruthy();
     expect(screen.getByText('Objetivo: 8 reps')).toBeTruthy();
     expect(screen.getByText('70.0')).toBeTruthy();
@@ -31,6 +32,32 @@ describe('SetCheckList', () => {
     expect(screen.getByText('Calentamiento')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Subir peso 2.5 kg' }));
     expect(onWeightChange).toHaveBeenCalledWith('77.5');
+  });
+
+  it('uses the same compact four-column grid for header and completed rows on mobile', () => {
+    render(
+      <SetCheckList
+        targetSets={3}
+        targetReps={8}
+        completedCount={1}
+        completedSets={[{ setIndex: 1, weightKg: '70.0', reps: 10 }]}
+        weight="75"
+        onWeightChange={jest.fn()}
+        reps="8"
+        onRepsChange={jest.fn()}
+        onCompleteSet={jest.fn()}
+        busy={false}
+      />,
+    );
+
+    const header = screen.getByText('SERIE').closest('[role="row"]') as HTMLElement;
+    const completedRow = screen.getByTestId('set-complete');
+
+    expect(header.textContent).toContain('ESTADO');
+    expect(header.className).toContain('grid-cols-[2.5rem_minmax(0,1fr)_minmax(2.75rem,0.65fr)_2.75rem]');
+    expect(completedRow.className).toContain('grid-cols-[2.5rem_minmax(0,1fr)_minmax(2.75rem,0.65fr)_2.75rem]');
+    expect(header.className).not.toContain('minmax(7rem');
+    expect(completedRow.className).not.toContain('minmax(6.5rem');
   });
 
   it('displays completed set values by exercise order, not global workout setIndex', () => {
@@ -127,8 +154,9 @@ describe('SetCheckList', () => {
     );
 
     const activeRow = screen.getByTestId('set-active');
-    const steppers = activeRow.querySelector('.grid.grid-cols-2');
+    const steppers = activeRow.querySelector('.grid.grid-cols-1');
     expect(steppers).not.toBeNull();
+    expect(steppers?.className).toContain('min-[430px]:grid-cols-2');
 
     const weightInput = screen.getByTestId('guided-weight-input');
     expect((weightInput as HTMLInputElement).value).toBe('15');
@@ -137,6 +165,8 @@ describe('SetCheckList', () => {
     expect(weightButtons).toHaveLength(2);
     weightButtons.forEach((button) => expect(button.className).toContain('shrink-0'));
     expect(weightInput.className).toContain('w-full');
+    expect(weightInput.className).toContain('min-w-[3.25rem]');
+    expect(weightInput.className).toContain('tabular-nums');
   });
 
   it('does not allow completing a set with non-positive reps', () => {

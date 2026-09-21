@@ -87,8 +87,10 @@ export function GuidedExerciseCard({
   focusSlot,
 }: GuidedExerciseCardProps) {
   const [panel, setPanel] = useState<SecondaryPanel | null>(null);
+  const [noteText, setNoteText] = useState('');
   const safeCompletedCount = Math.min(completedCount, exercise.targetSets);
   const activeSet = Math.min(safeCompletedCount + 1, exercise.targetSets);
+  const noteInputId = `guided-exercise-note-${exercise.id}`;
   const togglePanel = (nextPanel: SecondaryPanel): void => {
     setPanel((currentPanel) => (currentPanel === nextPanel ? null : nextPanel));
   };
@@ -151,8 +153,26 @@ export function GuidedExerciseCard({
         </div>
       ) : null}
       {panel === 'notes' ? (
-        <div className="mx-4 mt-4 rounded-2xl bg-canvas p-3 text-sm text-ink-muted">
-          {SESSION_COPY.notesEmpty}
+        <div className="mx-4 mt-4 rounded-2xl bg-canvas p-3">
+          <label
+            htmlFor={noteInputId}
+            className="text-xs font-semibold uppercase tracking-[0.06em] text-ink-muted"
+          >
+            Nota de la sesión para {exercise.exerciseName}
+          </label>
+          <textarea
+            id={noteInputId}
+            className="mt-2 min-h-24 w-full resize-none rounded-xl bg-surface px-3 py-3 text-base leading-6 text-ink outline-none ring-1 ring-line placeholder:text-ink-muted focus:ring-2 focus:ring-brand"
+            value={noteText}
+            onChange={(event) => setNoteText(event.target.value)}
+            maxLength={280}
+            placeholder={SESSION_COPY.notesEmpty}
+            aria-describedby={`${noteInputId}-helper`}
+          />
+          <div id={`${noteInputId}-helper`} className="mt-2 flex items-center justify-between gap-3 text-xs text-ink-muted">
+            <span>Nota local de esta sesión.</span>
+            <span className="tabular-nums">{noteText.length}/280</span>
+          </div>
         </div>
       ) : null}
       {panel === 'replace' ? (
