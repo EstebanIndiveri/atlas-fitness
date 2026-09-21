@@ -19,7 +19,7 @@ export interface UseCoachAdaptResult {
   previewing: boolean;
   starting: boolean;
   previewWithContext: (freeText: string) => Promise<void>;
-  startWorkout: () => Promise<void>;
+  startWorkout: (applyAdaptation?: boolean) => Promise<void>;
   adjustAgain: () => void;
 }
 
@@ -44,6 +44,7 @@ export function useCoachAdapt({ routineId }: UseCoachAdaptInput): UseCoachAdaptR
   const [previewing, setPreviewing] = useState(false);
   const [starting, setStarting] = useState(false);
   const startingRef = useRef(false);
+  const adaptationRef = useRef<{ result: CoachAdaptationResult; freeText: string } | null>(null);
 
   const previewWithContext = useCallback(
     async (freeText: string): Promise<void> => {
@@ -57,6 +58,7 @@ export function useCoachAdapt({ routineId }: UseCoachAdaptInput): UseCoachAdaptR
           ...(trimmed ? { freeText: trimmed } : {}),
         });
         setResult(preview);
+        adaptationRef.current = { result: preview, freeText: trimmed };
         setStep('comparacion');
       } catch (caught) {
         setError(mapPreviewError(caught));
@@ -68,7 +70,7 @@ export function useCoachAdapt({ routineId }: UseCoachAdaptInput): UseCoachAdaptR
     [routineId],
   );
 
-  const startWorkout = useCallback(async (): Promise<void> => {
+  const startWorkout = useCallback(async (applyAdaptation: boolean = true): Promise<void> => {
     if (startingRef.current) {
       return;
     }
@@ -76,10 +78,20 @@ export function useCoachAdapt({ routineId }: UseCoachAdaptInput): UseCoachAdaptR
     setStarting(true);
     setError(null);
     try {
+      const adaptation = applyAdaptation ? adaptationRef.current : null;
+      const payload = adaptation
+        ? {
+            routineId,
+            adaptation: {
+              result: adaptation.result,
+              ...(adaptation.freeText ? { freeText: adaptation.freeText } : {}),
+            },
+          }
+        : { routineId };
       const response = await fetch('/api/workouts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ routineId }),
+        body: JSON.stringify(payload),
       });
       const body: unknown = await response.json();
       if (response.status === 409) {
@@ -107,6 +119,7 @@ export function useCoachAdapt({ routineId }: UseCoachAdaptInput): UseCoachAdaptR
     setStep('motivo');
     setResult(null);
     setError(null);
+    adaptationRef.current = null;
   }, []);
 
   return { step, result, error, previewing, starting, previewWithContext, startWorkout, adjustAgain };

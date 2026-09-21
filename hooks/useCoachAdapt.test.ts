@@ -101,6 +101,57 @@ describe('useCoachAdapt', () => {
     expect(pushMock).toHaveBeenCalledWith('/dashboard/session/88');
   });
 
+  it('applies the previewed adaptation when starting the guided session', async () => {
+    const fetchMock = jest
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(textResponse(preview))
+      .mockResolvedValueOnce(textResponse({ id: 91 }));
+    global.fetch = fetchMock as unknown as typeof fetch;
+    const { useCoachAdapt } = await import('./useCoachAdapt');
+    const { result } = renderHook(() => useCoachAdapt({ routineId: 12 }));
+
+    await act(async () => {
+      await result.current.previewWithContext('Tengo 30 minutos');
+    });
+    await act(async () => {
+      await result.current.startWorkout();
+    });
+
+    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/workouts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        routineId: 12,
+        adaptation: { result: preview, freeText: 'Tengo 30 minutos' },
+      }),
+    });
+    expect(pushMock).toHaveBeenCalledWith('/dashboard/session/91');
+  });
+
+  it('keeps the original workout when starting without applying the adaptation', async () => {
+    const fetchMock = jest
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(textResponse(preview))
+      .mockResolvedValueOnce(textResponse({ id: 92 }));
+    global.fetch = fetchMock as unknown as typeof fetch;
+    const { useCoachAdapt } = await import('./useCoachAdapt');
+    const { result } = renderHook(() => useCoachAdapt({ routineId: 12 }));
+
+    await act(async () => {
+      await result.current.previewWithContext('Tengo 30 minutos');
+    });
+    await act(async () => {
+      await result.current.startWorkout(false);
+    });
+
+    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/workouts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ routineId: 12 }),
+    });
+    expect(pushMock).toHaveBeenCalledWith('/dashboard/session/92');
+  });
+
   it('resets comparison state when adjusting another thing', async () => {
     global.fetch = jest.fn<typeof fetch>().mockResolvedValue(textResponse(preview)) as unknown as typeof fetch;
     const { useCoachAdapt } = await import('./useCoachAdapt');

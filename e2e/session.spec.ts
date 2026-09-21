@@ -74,7 +74,8 @@ test.describe('Guided session (Epic-E Must)', () => {
     await expect(page.getByTestId('session-close')).toContainText('¡Sesión completada!');
     await expect(page.getByTestId('close-improvement').first()).toBeVisible();
 
-    await page.click('[data-testid="close-mood-4"]');
+    await page.click('[data-testid="close-effort-exigente"]');
+    await page.click('[data-testid="close-mood-good"]');
     await page.click('[data-testid="close-save"]');
     await page.waitForResponse((resp) => resp.url().includes('/api/workouts/') && resp.status() === 200);
 

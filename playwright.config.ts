@@ -21,6 +21,10 @@ export default defineConfig({
   use: {
     baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',
+    // Pre-seed the onboarding completion flag so specs that land on the
+    // dashboard are not redirected to the first-run onboarding wizard. A
+    // dedicated onboarding spec can override this via test.use({ storageState }).
+    storageState: './e2e/storage/onboarded.json',
   },
 
   projects: [

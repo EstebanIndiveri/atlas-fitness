@@ -4,14 +4,28 @@ export const SESSION_COPY = {
   continueGuided: 'Continuar sesión guiada',
   guidedCta: 'Sesión guiada',
   exerciseProgress: (current: number, total: number) => `Ejercicio ${current} de ${total}`,
+  exerciseProgressTimer: (current: number, total: number, elapsed: string) =>
+    `EJERCICIO ${current} DE ${total} · ${elapsed}`,
   currentExercise: 'Ejercicio actual',
   completedSetProgress: (done: number, total: number) => `${done} de ${total} series`,
+  activeSetProgress: (current: number, total: number) => `Serie ${current} de ${total}`,
+  activeSetLabel: (current: number) => `SERIE ${current} EN CURSO`,
   setProgress: (done: number, total: number) => `Serie ${done} de ${total}`,
+  targetReps: (reps: number) => `Objetivo: ${reps} reps`,
   targetSets: (sets: number, reps: number) => `${sets} × ${reps} reps`,
   completeSet: 'Completar serie',
+  completeSetCta: (setIndex: number) => `✓ COMPLETAR SERIE ${setIndex}`,
   weightLabel: 'Peso (kg)',
-  restTitle: 'Descanso',
+  restTitle: 'DESCANSO SUGERIDO',
+  addSet: '+ Añadir serie',
+  warmup: 'Calentamiento',
+  technique: 'Técnica',
+  replace: 'Reemplazar',
+  notes: 'Notas',
+  compoundExercise: 'Ejercicio compuesto',
+  pause: '← Pausar',
   skipRest: 'Saltar descanso',
+  addRestThirty: '+30 s',
   skipExercise: 'Saltar',
   holdExercise: 'Posponer',
   skipExerciseAria: 'Saltar este ejercicio y pasar al siguiente',
@@ -40,7 +54,20 @@ export const SESSION_COPY = {
   streakLabel: 'Racha',
   streakDays: (n: number) => (n === 1 ? '1 día seguido' : `${n} días seguidos`),
   moodLabel: '¿Cómo te sentís?',
-  saveAndClose: 'Guardar y cerrar',
+  feedbackTitle: '¿Cómo te sentiste?',
+  feedbackHelper: 'Atlas usa este feedback para calibrar la recuperación y tus próximas cargas.',
+  effortLabel: '¿Qué tan exigente fue?',
+  effortOptionLabel: (label: string, rpeCaption: string) => `${label} ${rpeCaption}`,
+  sensationLabel: 'Sensación general',
+  discomfortTitle: 'Molestias o dolores físicos',
+  discomfortEmpty: 'Sin dolores registrados por ahora.',
+  discomfortAreaLabel: 'Zona con molestia',
+  discomfortIntensityLabel: 'Intensidad',
+  discomfortAdd: 'Agregar molestia',
+  discomfortRemove: (label: string) => `Quitar molestia ${label}`,
+  discomfortMaxReached: 'Podés registrar hasta 5 molestias.',
+  feedbackSaveError: 'No se pudo guardar el feedback post-entrenamiento. Probá de nuevo.',
+  saveAndClose: 'Finalizar y guardar',
   improvementNone: 'Sin dato previo para comparar.',
   improvementSame: (name: string) => `${name}: mismo peso tope que la última sesión.`,
   improvementUp: (name: string, delta: string) => `${name}: +${delta} kg vs la última sesión.`,
@@ -62,6 +89,43 @@ export const MOOD_EMOJIS = [
   { value: 3, emoji: '😐', label: 'Normal' },
   { value: 4, emoji: '😊', label: 'Bien' },
   { value: 5, emoji: '😄', label: 'Excelente' },
+] as const;
+
+export const POST_WORKOUT_SENSATIONS = [
+  { value: 'bad', legacyMood: 1, emoji: '😮‍💨', label: 'Agotado' },
+  { value: 'neutral', legacyMood: 3, emoji: '😐', label: 'Normal' },
+  { value: 'good', legacyMood: 4, emoji: '🙂', label: 'Bien' },
+  { value: 'great', legacyMood: 5, emoji: '😄', label: 'Muy bien' },
+] as const;
+
+export const POST_WORKOUT_RPE_OPTIONS = [
+  { id: 'liviano', label: 'Liviano', rpeCaption: 'RPE 6', effort: 6 },
+  { id: 'normal', label: 'Normal', rpeCaption: 'RPE 7', effort: 7 },
+  { id: 'exigente', label: 'Exigente', rpeCaption: 'RPE 8.5', effort: 9 },
+  { id: 'muy-exigente', label: 'Muy exigente', rpeCaption: 'RPE 9.5', effort: 10 },
+] as const;
+
+export const POST_WORKOUT_DISCOMFORT_TOGGLE = {
+  noneLabel: 'No, todo bien',
+  registerLabel: 'Registrar zona',
+} as const;
+
+export const DISCOMFORT_AREA_OPTIONS = [
+  { value: 'neck', label: 'Cuello' },
+  { value: 'shoulder', label: 'Hombro' },
+  { value: 'elbow', label: 'Codo' },
+  { value: 'wrist', label: 'Muñeca' },
+  { value: 'back', label: 'Espalda' },
+  { value: 'hip', label: 'Cadera' },
+  { value: 'knee', label: 'Rodilla' },
+  { value: 'ankle', label: 'Tobillo' },
+  { value: 'other', label: 'Otra' },
+] as const;
+
+export const DISCOMFORT_INTENSITY_OPTIONS = [
+  { value: 'mild', label: 'Leve' },
+  { value: 'moderate', label: 'Moderada' },
+  { value: 'strong', label: 'Fuerte' },
 ] as const;
 
 export function motivatorForSet(setNumber: number): string {

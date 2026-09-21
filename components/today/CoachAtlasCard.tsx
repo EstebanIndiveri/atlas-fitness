@@ -2,14 +2,18 @@
 
 import { FormEvent, useState } from 'react';
 import { Button } from '@/components/ui/Button';
+import { CoachResult } from '@/components/today/CoachAtlasCardResult';
 import { Card } from '@/components/ui/Card';
 import { ErrorState, LoadingState } from '@/components/ui/states';
 import * as coachPreview from '@/lib/api/coach-preview';
+import * as coachRecommendations from '@/lib/api/coach-recommendations';
 import { cn } from '@/lib/ui/cn';
-import type { CoachAdaptationResult, CoachRoutineSummary } from '@/types/coach';
+import type { CoachAdaptationResult } from '@/types/coach';
+import type { CoachDecisionAction, CoachDecisionStatus } from '@/components/today/CoachAtlasCardResult';
 
 type CoachAtlasCardProps = {
   routineId: number | null;
+  workoutId?: number | null;
   onResult?: (result: CoachAdaptationResult) => void;
 };
 
@@ -26,10 +30,10 @@ const COPY = {
   inputPlaceholder: 'Preguntarle algo a Atlas',
   submitAria: 'Enviar pregunta a Atlas',
   loading: 'Atlas está ajustando la rutina…',
+  saving: 'Guardando decisión de Atlas…',
   provenance: 'Sugerencia de Atlas',
-  original: 'Original',
-  adapted: 'Adaptado',
   defaultError: 'No se pudo cargar la adaptación de Coach Atlas.',
+  defaultDecisionError: 'No se pudo guardar la recomendación de Coach Atlas.',
 } as const;
 
 const PRESETS: readonly Preset[] = [
@@ -43,18 +47,24 @@ const PRESETS: readonly Preset[] = [
  * Renders Coach Atlas quick-adaptation controls for today's workout routine.
  *
  * @param props.routineId Today's workout routine id, or null when there is nothing honest to adapt.
+ * @param props.workoutId Optional real workout id required to persist and decide recommendations.
  * @param props.onResult Optional callback invoked with the preview returned by the typed Coach client.
  * @returns A mobile-first Coach Atlas adaptation card.
  * @example
- * <CoachAtlasCard routineId={today.kind === 'workout' ? today.routineId : null} />
+ * <CoachAtlasCard routineId={today.kind === 'workout' ? today.routineId : null} workoutId={today.workoutId} />
  */
-export function CoachAtlasCard({ routineId, onResult }: CoachAtlasCardProps) {
+export function CoachAtlasCard({ routineId, workoutId = null, onResult }: CoachAtlasCardProps) {
   const [loadingKey, setLoadingKey] = useState<string | null>(null);
+  const [decisionLoading, setDecisionLoading] = useState<CoachDecisionAction | null>(null);
+  const [decisionStatus, setDecisionStatus] = useState<CoachDecisionStatus | null>(null);
   const [result, setResult] = useState<CoachAdaptationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [freeText, setFreeText] = useState('');
   const canAdapt = routineId !== null;
+  const canDecide = typeof workoutId === 'number' && Number.isInteger(workoutId) && workoutId > 0;
   const loading = loadingKey !== null;
+  const deciding = decisionLoading !== null;
+  const busy = loading || deciding;
 
   const requestPreview = async (text: string, key: string): Promise<void> => {
     if (!canAdapt) {
@@ -64,6 +74,7 @@ export function CoachAtlasCard({ routineId, onResult }: CoachAtlasCardProps) {
     setLoadingKey(key);
     setError(null);
     setResult(null);
+    setDecisionStatus(null);
     try {
       const preview = await coachPreview.previewCoachAdaptation({ routineId, freeText: text });
       setResult(preview);
@@ -75,17 +86,43 @@ export function CoachAtlasCard({ routineId, onResult }: CoachAtlasCardProps) {
     }
   };
 
+  const decideRecommendation = async (decision: CoachDecisionAction): Promise<void> => {
+    if (!result || !canDecide || deciding) {
+      return;
+    }
+
+    setDecisionLoading(decision);
+    setDecisionStatus(null);
+    setError(null);
+    try {
+      const recommendation = await coachRecommendations.recordCoachRecommendation({
+        workoutId,
+        source: result.source,
+        result,
+      });
+      const decided = await coachRecommendations.decideCoachRecommendation({
+        id: recommendation.id,
+        decision,
+      });
+      setDecisionStatus(decided.decision === 'accepted' ? 'applied' : 'discarded');
+    } catch (caught) {
+      setError(mapRecommendationError(caught));
+    } finally {
+      setDecisionLoading(null);
+    }
+  };
+
   const submitFreeText = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
     const trimmed = freeText.trim();
-    if (!trimmed || !canAdapt || loading) {
+    if (!trimmed || !canAdapt || busy) {
       return;
     }
     void requestPreview(trimmed, 'free-text');
   };
 
   return (
-    <Card className="rounded-xl" data-testid="coach-atlas-card" aria-busy={loading}>
+    <Card className="rounded-xl" data-testid="coach-atlas-card" aria-busy={busy}>
       <div className="flex items-start justify-between gap-3">
         <h2 className="text-sm font-semibold text-ink">✦ Coach Atlas</h2>
         <p className="text-right text-xs text-ink-muted">{COPY.eyebrow}</p>
@@ -94,7 +131,7 @@ export function CoachAtlasCard({ routineId, onResult }: CoachAtlasCardProps) {
       <div className="mt-4 grid grid-cols-2 gap-2" role="group" aria-label="Adaptaciones rápidas de Atlas">
         {PRESETS.map((preset) => {
           const presetLoading = loadingKey === preset.label;
-          const disabled = !canAdapt || loading;
+          const disabled = !canAdapt || busy;
           return (
             <Button
               key={preset.label}
@@ -127,14 +164,14 @@ export function CoachAtlasCard({ routineId, onResult }: CoachAtlasCardProps) {
             value={freeText}
             onChange={(event) => setFreeText(event.target.value)}
             placeholder={COPY.inputPlaceholder}
-            disabled={!canAdapt || loading}
+            disabled={!canAdapt || busy}
             maxLength={180}
             className="min-w-0 flex-1 bg-transparent text-sm text-ink placeholder:text-ink-muted focus:outline-none disabled:cursor-not-allowed"
           />
           <button
             type="submit"
             className="ml-2 rounded-md px-2 py-1 text-lg text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-50"
-            disabled={!canAdapt || loading || freeText.trim().length === 0}
+            disabled={!canAdapt || busy || freeText.trim().length === 0}
             aria-label={COPY.submitAria}
           >
             →
@@ -143,36 +180,19 @@ export function CoachAtlasCard({ routineId, onResult }: CoachAtlasCardProps) {
       </form>
 
       {loading ? <LoadingState label={COPY.loading} compact /> : null}
+      {deciding ? <LoadingState label={COPY.saving} compact /> : null}
       {error ? <div className="mt-4"><ErrorState message={error} /></div> : null}
-      {result ? <CoachResult result={result} /> : null}
+      {result ? (
+        <CoachResult
+          result={result}
+          canDecide={canDecide}
+          decisionLoading={decisionLoading}
+          decisionStatus={decisionStatus}
+          onDecide={decideRecommendation}
+        />
+      ) : null}
     </Card>
   );
-}
-
-function CoachResult({ result }: { result: CoachAdaptationResult }) {
-  return (
-    <section className="mt-4 rounded-xl border border-line bg-canvas p-3" aria-label="Resultado de adaptación de Coach Atlas">
-      <div className="grid grid-cols-2 gap-2 text-sm">
-        <SummaryBlock title={COPY.original} summary={result.original} />
-        <SummaryBlock title={COPY.adapted} summary={result.adapted} />
-      </div>
-      <p className="mt-3 text-sm leading-relaxed text-ink">{result.reason}</p>
-      <p className="mt-2 text-xs text-ink-muted">{COPY.provenance}</p>
-    </section>
-  );
-}
-
-function SummaryBlock({ title, summary }: { title: string; summary: CoachRoutineSummary }) {
-  return (
-    <div className="rounded-lg bg-surface p-3">
-      <p className="text-xs font-medium text-ink-muted">{title}</p>
-      <p className="mt-1 text-sm font-semibold text-ink">{formatSummary(summary)}</p>
-    </div>
-  );
-}
-
-function formatSummary(summary: CoachRoutineSummary): string {
-  return `${summary.exerciseCount} ejercicios · ${summary.setCount} series · ${summary.estMinutes} min`;
 }
 
 function mapPreviewError(caught: unknown): string {
@@ -180,4 +200,11 @@ function mapPreviewError(caught: unknown): string {
     return caught.message || COPY.defaultError;
   }
   return COPY.defaultError;
+}
+
+function mapRecommendationError(caught: unknown): string {
+  if (caught instanceof coachRecommendations.CoachRecommendationsClientError) {
+    return caught.message || COPY.defaultDecisionError;
+  }
+  return COPY.defaultDecisionError;
 }

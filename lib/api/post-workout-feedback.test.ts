@@ -41,7 +41,7 @@ describe('post-workout feedback client', () => {
       createdAt: '2026-09-17T02:31:00.000Z',
       updatedAt: '2026-09-17T02:31:00.000Z',
     } as const;
-    const input: RecordPostWorkoutFeedbackInput = {
+    const input: Omit<RecordPostWorkoutFeedbackInput, 'workoutId'> = {
       effort: 8,
       sensation: 'hard',
       discomfort: [{ area: 'shoulder', intensity: 'mild' }],
@@ -49,7 +49,7 @@ describe('post-workout feedback client', () => {
     };
     global.fetch = jest.fn(async () => jsonResponse(payload)) as unknown as typeof fetch;
 
-    await expect(recordPostWorkoutFeedback(22, input)).resolves.toEqual(payload);
+    await expect(recordPostWorkoutFeedback({ workoutId: 22, ...input })).resolves.toEqual(payload);
     expect(global.fetch).toHaveBeenCalledWith('/api/workouts/22/feedback', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -80,7 +80,7 @@ describe('post-workout feedback client', () => {
     ) as unknown as typeof fetch;
 
     await expect(
-      recordPostWorkoutFeedback(22, { effort: 11, sensation: 'great', discomfort: [] }),
+      recordPostWorkoutFeedback({ workoutId: 22, effort: 11, sensation: 'great', discomfort: [] }),
     ).rejects.toMatchObject({
       name: 'PostWorkoutFeedbackClientError',
       kind: 'validation',

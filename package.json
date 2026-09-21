@@ -1,6 +1,6 @@
 {
   "name": "atlas-fitness",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "private": true,
   "description": "Asistente de fitness personal para registrar entrenamientos, pesos, consejos, media de ejercicios y motivación — vía **web app** y **bot de Telegram** (misma lógica de producto que Hermes Finance: un dominio, dos canales).",
   "scripts": {
@@ -17,6 +17,7 @@
     "db:verify": "tsx scripts/verify-database.ts",
     "db:bootstrap:remote": "tsx scripts/bootstrap-remote.ts",
     "db:seed:qa": "tsx scripts/seed-qa.ts",
+    "db:enrich:media": "tsx scripts/enrich-exercise-media.ts",
     "setup:local": "tsx scripts/setup-local.ts"
   },
   "repository": {

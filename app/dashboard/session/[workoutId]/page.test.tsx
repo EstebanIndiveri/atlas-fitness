@@ -6,13 +6,44 @@ const mockPush = jest.fn();
 const mockSaveAndClose = jest.fn(async () => undefined);
 const mockSkipCurrent = jest.fn(async () => true);
 const mockHoldCurrent = jest.fn(async () => true);
+const mockRecordPostWorkoutFeedback = jest.fn(async (_input: unknown) => undefined);
 
 const mockSession = {
   loading: false,
   error: null,
   actionError: null as string | null,
-  workout: { id: 8, endedAt: null },
-  routine: { name: 'Empuje', restSeconds: 90, exercises: [] },
+  workout: {
+    id: 8,
+    endedAt: null as string | null,
+    startedAt: '2026-09-20T22:00:00.000Z',
+    sets: [{ exerciseId: 10, setIndex: 1, reps: 10, weightKg: '70.0' }],
+  },
+  routine: {
+    name: 'Empuje',
+    restSeconds: 90,
+    exercises: [
+      {
+        exerciseId: 10,
+        exerciseName: 'Press Banca',
+        muscleGroup: 'Pecho',
+        targetSets: 3,
+        targetReps: 8,
+        instructions: '',
+        imageUrl: null,
+        videoUrl: null,
+      },
+      {
+        exerciseId: 20,
+        exerciseName: 'Sentadilla',
+        muscleGroup: 'Piernas',
+        targetSets: 3,
+        targetReps: 8,
+        instructions: '',
+        imageUrl: null,
+        videoUrl: null,
+      },
+    ],
+  },
   phase: 'close' as 'train' | 'close',
   summary: null,
   mood: 4,
@@ -60,23 +91,59 @@ jest.mock('@/hooks/useRestTimer', () => ({
   }),
 }));
 
+jest.mock('@/lib/api/post-workout-feedback', () => ({
+  recordPostWorkoutFeedback: (input: unknown) => mockRecordPostWorkoutFeedback(input),
+}));
+
 describe('GuidedSessionPlayerPage', () => {
   afterEach(() => {
+    mockSession.workout.endedAt = null;
+    mockSession.phase = 'close';
     mockPush.mockClear();
     mockSaveAndClose.mockClear();
     mockSkipCurrent.mockClear();
     mockHoldCurrent.mockClear();
+    mockRecordPostWorkoutFeedback.mockClear();
   });
 
-  it('returns to the dashboard after saving a completed session', async () => {
+  it('records post-workout feedback before returning to the dashboard', async () => {
     mockSession.phase = 'close';
     const { default: GuidedSessionPlayerPage } = await import('./page');
     render(<GuidedSessionPlayerPage />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Guardar y cerrar' }));
+    fireEvent.click(screen.getByTestId('close-effort-exigente'));
+    fireEvent.click(screen.getByTestId('close-mood-good'));
+    fireEvent.click(screen.getByRole('button', { name: 'Finalizar y guardar' }));
 
     await waitFor(() => expect(mockSaveAndClose).toHaveBeenCalledTimes(1));
+    expect(mockRecordPostWorkoutFeedback).toHaveBeenCalledWith({
+      workoutId: 8,
+      effort: 9,
+      sensation: 'good',
+      discomfort: [],
+      note: null,
+    });
     expect(mockPush).toHaveBeenCalledWith('/dashboard/today');
+  });
+
+  it('keeps the close screen visible and shows an error when feedback cannot be saved', async () => {
+    mockSession.phase = 'close';
+    mockSaveAndClose.mockImplementationOnce(async () => {
+      mockSession.workout.endedAt = '2026-09-20T22:00:00.000Z';
+    });
+    mockRecordPostWorkoutFeedback.mockRejectedValueOnce(new Error('feedback'));
+    const { default: GuidedSessionPlayerPage } = await import('./page');
+    const { rerender } = render(<GuidedSessionPlayerPage />);
+
+    fireEvent.click(screen.getByTestId('close-effort-normal'));
+    fireEvent.click(screen.getByTestId('close-mood-bad'));
+    fireEvent.click(screen.getByRole('button', { name: 'Finalizar y guardar' }));
+
+    await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('No se pudo guardar'));
+    rerender(<GuidedSessionPlayerPage />);
+    expect((screen.getByRole('button', { name: 'Finalizar y guardar' }) as HTMLButtonElement).disabled).toBe(false);
+    expect(mockPush).not.toHaveBeenCalled();
+    mockSession.workout.endedAt = null;
   });
 
   it('shows skip and hold controls on the guided train screen', async () => {
@@ -84,6 +151,9 @@ describe('GuidedSessionPlayerPage', () => {
     const { default: GuidedSessionPlayerPage } = await import('./page');
     render(<GuidedSessionPlayerPage />);
 
+    expect(screen.getByText(/EJERCICIO 1 DE 2/)).toBeTruthy();
+    expect(screen.getByText('SERIE 2 EN CURSO')).toBeTruthy();
+    expect(screen.getByText('70.0')).toBeTruthy();
     fireEvent.click(screen.getByTestId('session-skip'));
     fireEvent.click(screen.getByTestId('session-hold'));
     await waitFor(() => expect(mockSkipCurrent).toHaveBeenCalledTimes(1));
