@@ -1,4 +1,12 @@
 const ONBOARDING_DONE_STORAGE_KEY = 'atlas:onboarding:welcome-done';
+const ONBOARDING_ANSWERS_STORAGE_KEY = 'atlas:onboarding:answers';
+
+/** First-run wizard answers persisted for this browser (option ids per step). */
+export interface OnboardingAnswers {
+  readonly goal: string | null;
+  readonly pace: string | null;
+  readonly equipment: string | null;
+}
 
 /**
  * True only when running in a browser environment; false during SSR.
@@ -56,6 +64,60 @@ export function markOnboardingDone(): void {
 
   try {
     storage.setItem(ONBOARDING_DONE_STORAGE_KEY, 'true');
+  } catch {
+    // Storage can be unavailable in private browsing or locked-down webviews.
+  }
+}
+
+function isOnboardingAnswers(value: unknown): value is OnboardingAnswers {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+  const record = value as Record<string, unknown>;
+  return (['goal', 'pace', 'equipment'] as const).every(
+    (key) => record[key] === null || typeof record[key] === 'string',
+  );
+}
+
+/**
+ * Reads the persisted first-run wizard answers for this browser.
+ * @returns The stored answers, or null on SSR, storage failure, or malformed data.
+ * @example
+ * const answers = readOnboardingAnswers();
+ */
+export function readOnboardingAnswers(): OnboardingAnswers | null {
+  const storage = getLocalStorage();
+  if (!storage) {
+    return null;
+  }
+
+  try {
+    const raw = storage.getItem(ONBOARDING_ANSWERS_STORAGE_KEY);
+    if (raw === null) {
+      return null;
+    }
+    const parsed: unknown = JSON.parse(raw);
+    return isOnboardingAnswers(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Persists the first-run wizard answers for this browser without throwing on failure.
+ * @param answers The selected option ids per wizard step.
+ * @returns Nothing.
+ * @example
+ * saveOnboardingAnswers({ goal: 'muscle', pace: 'days-3', equipment: 'gym' });
+ */
+export function saveOnboardingAnswers(answers: OnboardingAnswers): void {
+  const storage = getLocalStorage();
+  if (!storage) {
+    return;
+  }
+
+  try {
+    storage.setItem(ONBOARDING_ANSWERS_STORAGE_KEY, JSON.stringify(answers));
   } catch {
     // Storage can be unavailable in private browsing or locked-down webviews.
   }
