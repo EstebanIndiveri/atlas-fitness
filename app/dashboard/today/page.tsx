@@ -116,7 +116,7 @@ export default function TodayPage() {
   }, []);
 
   const handleCreatePlan = useCallback(() => {
-    router.push('/dashboard/routines/new');
+    router.push('/dashboard/plan/new');
   }, [router]);
 
   if (!onboardingDone || userLoading) {

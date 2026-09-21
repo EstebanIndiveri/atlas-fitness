@@ -54,6 +54,12 @@ const workoutToday: TodayResponse = {
   completion: { completed: 0, total: 0 },
 };
 
+const noPlanToday: TodayResponse = {
+  kind: 'no_plan',
+  localDate: '2026-09-24',
+  dayOfWeek: 4,
+};
+
 function mockHooks(today: TodayResponse | null) {
   useToday.mockReturnValue({ today, loading: false, error: null, reload: jest.fn() });
   useDailyCheckin.mockReturnValue({
@@ -223,6 +229,22 @@ describe('TodayPage', () => {
       String(call[0]).includes('/api/workouts'),
     );
     expect(workoutCall?.[1]).toMatchObject({ method: 'POST', body: JSON.stringify({ routineId: 7 }) });
+  });
+
+  it('navigates to the plan builder when creating a plan from the golden path', async () => {
+    mockHooks(noPlanToday);
+    mockFetch((url) => {
+      if (url.includes('/api/auth/me')) {
+        return jsonResponse({ id: 1, name: 'Esteban', email: 'e@x.com', telegramUserId: null });
+      }
+      return jsonResponse(null, false);
+    });
+
+    render(<TodayPage />);
+    const createButton = await screen.findByRole('button', { name: 'Crear mi plan' });
+    fireEvent.click(createButton);
+
+    expect(push).toHaveBeenCalledWith('/dashboard/plan/new');
   });
 
   it('greets without a name when the profile fails to load', async () => {
