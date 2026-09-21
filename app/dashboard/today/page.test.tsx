@@ -1,17 +1,19 @@
-import { afterEach, describe, expect, it } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it } from '@jest/globals';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 declare const jest: typeof import('@jest/globals').jest;
 
 import type { TodayResponse } from '@/lib/api/today';
-import { ONBOARDING_COPY, ONBOARDING_TEST_IDS } from '@/lib/copy/onboarding';
 import { markOnboardingDone } from '@/lib/onboarding/state';
 
 const push = jest.fn();
+const replace = jest.fn();
 
 jest.mock('next/navigation', () => ({
-  useRouter: () => ({ push }),
+  useRouter: () => ({ push, replace }),
 }));
+
+jest.mock('@/components/pwa/InstallToast', () => ({ InstallToast: () => null }));
 
 jest.mock('@/hooks/useToday', () => ({ useToday: jest.fn() }));
 jest.mock('@/hooks/useDailyCheckin', () => ({ useDailyCheckin: jest.fn() }));
@@ -78,7 +80,12 @@ afterEach(() => {
 });
 
 describe('TodayPage', () => {
-  it('shows onboarding for first-time users on Hoy', async () => {
+  beforeEach(() => {
+    markOnboardingDone();
+  });
+
+  it('redirects first-time users to the onboarding wizard', async () => {
+    window.localStorage.clear();
     mockHooks(workoutToday);
     mockFetch((url) => {
       if (url.includes('/api/auth/me')) {
@@ -95,11 +102,11 @@ describe('TodayPage', () => {
 
     render(<TodayPage />);
 
-    expect(await screen.findByRole('region', { name: ONBOARDING_COPY.title })).toBeTruthy();
-    expect(screen.getByTestId(ONBOARDING_TEST_IDS.card)).toBeTruthy();
+    await waitFor(() => expect(replace).toHaveBeenCalledWith('/onboarding'));
+    expect(screen.queryByRole('heading', { level: 1, name: 'Hola, Esteban' })).toBeNull();
   });
 
-  it('hides onboarding on Hoy after completion was persisted', async () => {
+  it('renders Hoy after onboarding completion was persisted', async () => {
     markOnboardingDone();
     mockHooks(workoutToday);
     mockFetch((url) => {
@@ -118,7 +125,7 @@ describe('TodayPage', () => {
     render(<TodayPage />);
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Hola, Esteban' })).toBeTruthy();
-    expect(screen.queryByTestId(ONBOARDING_TEST_IDS.card)).toBeNull();
+    expect(replace).not.toHaveBeenCalled();
   });
 
   it('greets the loaded user and renders every Today section', async () => {

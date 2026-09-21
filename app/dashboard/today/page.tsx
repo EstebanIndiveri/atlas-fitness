@@ -1,10 +1,10 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
 
-import { OnboardingWelcome } from '@/components/onboarding/OnboardingWelcome';
 import { PageContainer } from '@/components/shell/PageContainer';
+import { InstallToast } from '@/components/pwa/InstallToast';
 import { CoachAtlasCard } from '@/components/today/CoachAtlasCard';
 import { MoodEnergyCheckIn } from '@/components/today/MoodEnergyCheckIn';
 import { TodayHabitsCard } from '@/components/today/TodayHabitsCard';
@@ -13,6 +13,7 @@ import { TodayWeekCard } from '@/components/today/TodayWeekCard';
 import { TodayWorkoutHero } from '@/components/today/TodayWorkoutHero';
 import { LoadingState } from '@/components/ui/states';
 import { useToday } from '@/hooks/useToday';
+import { isOnboardingDone } from '@/lib/onboarding/state';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
@@ -26,6 +27,14 @@ function readWorkoutId(value: unknown): number | null {
   return isRecord(value) && typeof value.id === 'number' ? value.id : null;
 }
 
+function subscribeNoop(): () => void {
+  return () => undefined;
+}
+
+function getServerOnboardingDone(): boolean {
+  return false;
+}
+
 /**
  * Today screen (`/dashboard/today`): greeting, check-in, workout hero, Coach Atlas,
  * habits and weekly progress. Composes existing data hooks and honest empty states;
@@ -37,7 +46,18 @@ export default function TodayPage() {
   const { today } = useToday();
   const [userName, setUserName] = useState<string | null>(null);
   const [userLoading, setUserLoading] = useState(true);
+  const onboardingDone = useSyncExternalStore(
+    subscribeNoop,
+    isOnboardingDone,
+    getServerOnboardingDone,
+  );
   const coachRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!onboardingDone) {
+      router.replace('/onboarding');
+    }
+  }, [onboardingDone, router]);
 
   useEffect(() => {
     let cancelled = false;
@@ -96,14 +116,13 @@ export default function TodayPage() {
     router.push('/dashboard/routines/new');
   }, [router]);
 
-  if (userLoading) {
+  if (!onboardingDone || userLoading) {
     return <LoadingState />;
   }
 
   return (
     <PageContainer className="space-y-6">
       <TodayHeader name={userName} />
-      <OnboardingWelcome />
       <MoodEnergyCheckIn />
       <TodayWorkoutHero
         onStartWorkout={handleStartWorkout}
@@ -115,6 +134,7 @@ export default function TodayPage() {
       </div>
       <TodayHabitsCard />
       <TodayWeekCard />
+      <InstallToast />
     </PageContainer>
   );
 }

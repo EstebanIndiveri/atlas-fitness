@@ -10,6 +10,7 @@ export const PWA_COPY = {
   appInstallBody:
     'Instalá Atlas como app y entrá directo a tus entrenos, hábitos y progreso desde la pantalla de inicio.',
   appInstallCta: 'Aceptar',
+  appInstallDismissAria: 'Cerrar el aviso para instalar Atlas',
   iosTitle: 'Agregar a Inicio',
   iosBody:
     'En Safari de iPhone o iPad: tocá Compartir y después Agregar a Inicio (Home Screen). Así Atlas queda en tu pantalla de inicio como una app.',
