@@ -41,9 +41,12 @@ export const PROGRESS_COPY = {
   },
   strength: {
     title: 'Evolución de fuerza',
+    volumeLabel: 'Volumen de la última sesión',
+    chartLabel: 'Evolución de volumen por sesión',
+    startingPointBody: 'Primer punto real: seguí registrando para ver la tendencia.',
     emptyTitle: 'Sin gráfico de fuerza todavía',
-    emptyBody: 'Todavía no hay suficientes registros para graficar tu fuerza.',
-    emptyWhy: 'La pantalla no tiene una fuente de PR/volumen disponible; Atlas no inventa series ni pesos.',
+    emptyBody: 'Todavía no hay series completadas para graficar tu fuerza.',
+    emptyWhy: 'Atlas solo muestra volumen real calculado desde series guardadas: peso × repeticiones.',
   },
   wellbeing: {
     title: 'Bienestar registrado',

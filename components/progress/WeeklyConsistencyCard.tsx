@@ -34,21 +34,21 @@ export function WeeklyConsistencyCard({ week }: WeeklyConsistencyCardProps) {
   const consistencyPercent = formatWeekConsistencyPercent(week.activeCount);
 
   return (
-    <Card className="space-y-4 rounded-2xl p-5">
-      <div className="flex items-start justify-between gap-3">
-        <div>
+    <Card className="space-y-4 overflow-hidden rounded-2xl p-5">
+      <div data-testid="weekly-consistency-header" className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
           <h2 className="text-base font-semibold text-ink">{PROGRESS_COPY.week.title}</h2>
           <p className="mt-1 text-sm text-ink-muted">{PROGRESS_COPY.week.body}</p>
         </div>
-        <div className="grid gap-1 text-right">
-          <div aria-label={PROGRESS_COPY.week.activeLabel}>
+        <div className="flex shrink-0 flex-col items-end gap-1 text-right">
+          <div aria-label={PROGRESS_COPY.week.activeLabel} className="whitespace-nowrap">
             <MetricValue
               metric={metric(`${week.activeCount} de 7`, 'atlas_computed')}
               label={PROGRESS_COPY.week.activeLabel}
               className="text-sm"
             />
           </div>
-          <div aria-label={PROGRESS_COPY.week.percentLabel}>
+          <div aria-label={PROGRESS_COPY.week.percentLabel} className="whitespace-nowrap">
             <MetricValue
               metric={metric(`${consistencyPercent}%`, 'atlas_computed')}
               label={PROGRESS_COPY.week.percentLabel}

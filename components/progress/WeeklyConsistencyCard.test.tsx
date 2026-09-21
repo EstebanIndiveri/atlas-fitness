@@ -28,6 +28,14 @@ describe('WeeklyConsistencyCard', () => {
     expect(screen.getByLabelText('Jueves (hoy, activo)')).toBeTruthy();
   });
 
+  it('keeps header metrics on one line so the count and percent do not wrap awkwardly', () => {
+    render(<WeeklyConsistencyCard week={{ ...week, activeCount: 1 }} />);
+
+    expect(screen.getByTestId('weekly-consistency-header').className).toContain('items-start');
+    expect(screen.getByLabelText('Días activos esta semana').className).toContain('whitespace-nowrap');
+    expect(screen.getByLabelText('Consistencia semanal').className).toContain('whitespace-nowrap');
+  });
+
   it('renders an empty state when week data is missing', () => {
     render(<WeeklyConsistencyCard week={null} />);
 

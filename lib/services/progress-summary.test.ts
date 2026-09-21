@@ -88,6 +88,12 @@ describe('getProgressSummary', () => {
       toLocalDate: '2026-09-27',
       completedSessions: 0,
       totalDurationMinutes: 0,
+      strength: {
+        hasLoggedSets: false,
+        latestVolumeKg: null,
+        points: [],
+        trendLabel: 'Sin datos de fuerza',
+      },
       sessions: [],
     });
   });

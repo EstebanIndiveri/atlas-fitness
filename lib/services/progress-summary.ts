@@ -8,6 +8,8 @@ import {
   cordobaLocalDateToUtcRange,
   localDateWeekdayIndex,
 } from '@/lib/time/cordoba';
+import { getStrengthProgressSummary } from './strength-progress';
+import type { StrengthProgressSummary } from './strength-progress';
 
 export type ProgressPeriod = 'week' | 'month' | 'quarter';
 
@@ -24,6 +26,7 @@ export interface ProgressSummary {
   toLocalDate: string;
   completedSessions: number;
   totalDurationMinutes: number;
+  strength: StrengthProgressSummary;
   sessions: ProgressSessionSummary[];
 }
 
@@ -92,6 +95,7 @@ export async function getProgressSummary(
       routineName: row.routineName,
     };
   });
+  const strength = await getStrengthProgressSummary(userId, period, now);
 
   return {
     period,
@@ -102,6 +106,7 @@ export async function getProgressSummary(
       (total, session) => total + (session.durationMinutes ?? 0),
       0,
     ),
+    strength,
     sessions,
   };
 }
