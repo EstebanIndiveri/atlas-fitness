@@ -110,6 +110,35 @@ describe('SetCheckList', () => {
     expect(onRepsChange).toHaveBeenCalledWith('12');
   });
 
+  it('lays out the active-set steppers in two non-clipping columns', () => {
+    render(
+      <SetCheckList
+        targetSets={3}
+        targetReps={8}
+        completedCount={0}
+        completedSets={[]}
+        weight="15"
+        onWeightChange={jest.fn()}
+        reps="8"
+        onRepsChange={jest.fn()}
+        onCompleteSet={jest.fn()}
+        busy={false}
+      />,
+    );
+
+    const activeRow = screen.getByTestId('set-active');
+    const steppers = activeRow.querySelector('.grid.grid-cols-2');
+    expect(steppers).not.toBeNull();
+
+    const weightInput = screen.getByTestId('guided-weight-input');
+    expect((weightInput as HTMLInputElement).value).toBe('15');
+    const weightControls = weightInput.parentElement as HTMLElement;
+    const weightButtons = weightControls.querySelectorAll('button');
+    expect(weightButtons).toHaveLength(2);
+    weightButtons.forEach((button) => expect(button.className).toContain('shrink-0'));
+    expect(weightInput.className).toContain('w-full');
+  });
+
   it('does not allow completing a set with non-positive reps', () => {
     render(
       <SetCheckList
