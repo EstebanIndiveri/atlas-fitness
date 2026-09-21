@@ -114,7 +114,7 @@ function buildFallbackDraft(
   return {
     source: 'fallback',
     name: `Coach Atlas · ${shortGoal(brief.goal)}`,
-    description: `Borrador ${brief.location === 'home' ? 'para casa' : 'de gimnasio'} de ${brief.daysPerWeek} día${brief.daysPerWeek === 1 ? '' : 's'} por semana, armado con ejercicios reales del catálogo.`,
+    description: `Plan ${brief.location === 'home' ? 'para casa' : 'de gimnasio'} de ${brief.daysPerWeek} día${brief.daysPerWeek === 1 ? '' : 's'} por semana con ejercicios reales del catálogo.`,
     reason: buildFallbackReason(brief, selected),
     kind: brief.location,
     restSeconds: targets.rest,

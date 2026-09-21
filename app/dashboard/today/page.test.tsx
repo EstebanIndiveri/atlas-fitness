@@ -49,7 +49,7 @@ const workoutToday: TodayResponse = {
   scheduledRoutineId: 2,
   routineId: 7,
   routineName: 'Push A',
-  planGoal: null,
+  planGoal: 'Hipertrofia',
   dayReason: null,
   completion: { completed: 0, total: 0 },
 };
@@ -229,6 +229,33 @@ describe('TodayPage', () => {
       String(call[0]).includes('/api/workouts'),
     );
     expect(workoutCall?.[1]).toMatchObject({ method: 'POST', body: JSON.stringify({ routineId: 7 }) });
+  });
+
+  it('navigates the coach adapt action to the dedicated adaptation screen', async () => {
+    mockHooks(workoutToday);
+    mockFetch((url) => {
+      if (url.includes('/api/auth/me')) {
+        return jsonResponse({ id: 1, name: 'Esteban', email: 'e@x.com', telegramUserId: null });
+      }
+      return jsonResponse({
+        id: 7,
+        slug: 'push-a',
+        name: 'Push A',
+        description: null,
+        kind: 'gym',
+        restSeconds: 90,
+        isSystem: false,
+        exercises: [],
+      });
+    });
+
+    render(<TodayPage />);
+    const adaptButton = await screen.findByRole('button', { name: /Adaptar con Coach Atlas/i });
+    fireEvent.click(adaptButton);
+
+    expect(push).toHaveBeenCalledWith(
+      '/dashboard/session/adapt?routineId=7&routineName=Push%20A&planGoal=Hipertrofia',
+    );
   });
 
   it('navigates to the plan builder when creating a plan from the golden path', async () => {

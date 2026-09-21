@@ -23,6 +23,9 @@ type CompletedSet = {
   reps: number;
 };
 
+const SET_TABLE_GRID_CLASS =
+  'grid-cols-[2.5rem_minmax(0,1fr)_minmax(2.75rem,0.65fr)_2.75rem]';
+
 function formatWeight(value: number): string {
   return Number.isInteger(value) ? String(value) : value.toFixed(1);
 }
@@ -72,13 +75,19 @@ export function SetCheckList({
   return (
     <div data-testid="set-checklist">
       <div
-        className="grid grid-cols-[2.5rem_minmax(7rem,1fr)_minmax(6.5rem,0.9fr)_2.25rem] gap-2 rounded-t-2xl border border-line bg-surface px-3 py-3 text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-muted"
+        className={`grid ${SET_TABLE_GRID_CLASS} gap-1.5 rounded-t-2xl border border-line bg-surface px-2.5 py-3 text-[10px] font-semibold uppercase tracking-[0.06em] text-ink-muted`}
         role="row"
       >
-        <span>SERIE</span>
-        <span className="text-center">CARGA (KG)</span>
-        <span className="text-center">REPS</span>
-        <span className="text-right">ESTADO</span>
+        <span role="columnheader">SERIE</span>
+        <span className="min-w-0 text-center" role="columnheader">
+          CARGA (KG)
+        </span>
+        <span className="text-center" role="columnheader">
+          REPS
+        </span>
+        <span className="text-right" role="columnheader">
+          ESTADO
+        </span>
       </div>
       <ol className="mb-0 divide-y divide-line rounded-b-2xl border-x border-b border-line bg-surface">
         {slots.map((slot) => {
@@ -97,7 +106,7 @@ export function SetCheckList({
                     {SESSION_COPY.targetReps(targetReps)}
                   </span>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 min-[430px]:grid-cols-2">
                   <div className="rounded-xl bg-surface p-3 ring-1 ring-line">
                     <div className="mb-2 flex items-baseline justify-between gap-1">
                       <label htmlFor="guided-weight" className="text-[10px] font-medium uppercase text-ink-muted">
@@ -118,7 +127,7 @@ export function SetCheckList({
                       </button>
                       <input
                         id="guided-weight"
-                        className="w-full min-w-0 rounded-md bg-canvas px-1 py-1.5 text-center text-lg font-bold text-ink outline-none ring-1 ring-line focus:ring-brand"
+                        className="w-full min-w-[3.25rem] rounded-md bg-canvas px-1 py-1.5 text-center text-lg font-bold tabular-nums text-ink outline-none ring-1 ring-line focus:ring-brand"
                         inputMode="decimal"
                         value={weight}
                         onChange={(event) => onWeightChange(event.target.value)}
@@ -157,7 +166,7 @@ export function SetCheckList({
                       </button>
                       <input
                         id="guided-reps"
-                        className="w-full min-w-0 rounded-md bg-canvas px-1 py-1.5 text-center text-lg font-bold text-ink outline-none ring-1 ring-line focus:ring-brand"
+                        className="w-full min-w-[3.25rem] rounded-md bg-canvas px-1 py-1.5 text-center text-lg font-bold tabular-nums text-ink outline-none ring-1 ring-line focus:ring-brand"
                         inputMode="numeric"
                         value={reps}
                         onChange={(event) => onRepsChange(event.target.value)}
@@ -183,14 +192,26 @@ export function SetCheckList({
           return (
             <li
               key={slot}
-              className="grid grid-cols-[2.5rem_minmax(7rem,1fr)_minmax(6.5rem,0.9fr)_2.25rem] items-center gap-2 px-3 py-3 text-sm"
+              className={`grid ${SET_TABLE_GRID_CLASS} items-center gap-1.5 px-2.5 py-3 text-sm`}
               data-testid={done ? 'set-complete' : 'set-pending'}
             >
               <span className={done ? 'text-ink' : 'text-ink-muted'}>{slot}</span>
-              <span className={done ? 'text-center text-xl font-medium text-ink' : 'text-center text-xl text-ink-muted'}>
+              <span
+                className={
+                  done
+                    ? 'min-w-0 text-center text-lg font-medium tabular-nums text-ink'
+                    : 'min-w-0 text-center text-lg tabular-nums text-ink-muted'
+                }
+              >
                 {completed?.weightKg ?? '—'}
               </span>
-              <span className={done ? 'text-center text-xl font-medium text-ink' : 'text-center text-xl text-ink-muted'}>
+              <span
+                className={
+                  done
+                    ? 'text-center text-lg font-medium tabular-nums text-ink'
+                    : 'text-center text-lg tabular-nums text-ink-muted'
+                }
+              >
                 {completed?.reps ?? targetReps}
               </span>
               <span className="text-right text-ink-muted" aria-hidden>

@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { describe, expect, it, jest } from '@jest/globals';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { RoutineEditorForm } from './RoutineEditorForm';
 import { ROUTINE_COPY, ROUTINE_TEST_IDS } from '@/lib/copy/routines';
-import { addExercise, emptyDraft, validateDraft } from '@/lib/routines/form-state';
+import { addExercise, emptyDraft, updateDraftMeta, validateDraft } from '@/lib/routines/form-state';
+import { RoutineEditorForm } from './RoutineEditorForm';
+import type { RoutineDraft } from '@/lib/routines/form-state';
 import type { ExerciseCatalogItem } from '@/types/exercise';
 
 const bench: ExerciseCatalogItem = {
@@ -26,6 +28,41 @@ const curl: ExerciseCatalogItem = {
   videoUrl: null,
   isSystem: false,
 };
+
+function renderEditableForm(
+  initialDraft: RoutineDraft,
+  onMetaChange: jest.Mock<(patch: Partial<Pick<RoutineDraft, 'name' | 'description' | 'kind' | 'restSeconds'>>) => void>,
+): void {
+  function Harness() {
+    const [draft, setDraft] = useState(initialDraft);
+
+    return (
+      <RoutineEditorForm
+        mode="create"
+        draft={draft}
+        catalog={[bench, curl]}
+        selectedExerciseId={null}
+        validation={validateDraft(draft)}
+        error={null}
+        duplicateMessage={null}
+        readOnly={false}
+        busy={false}
+        onMetaChange={(patch) => {
+          onMetaChange(patch);
+          setDraft((currentDraft) => updateDraftMeta(currentDraft, patch));
+        }}
+        onSelectExercise={jest.fn()}
+        onAddExercise={jest.fn()}
+        onUpdateExercise={jest.fn()}
+        onMoveExercise={jest.fn()}
+        onRemoveExercise={jest.fn()}
+        onSubmit={jest.fn()}
+      />
+    );
+  }
+
+  render(<Harness />);
+}
 
 describe('RoutineEditorForm', () => {
   it('exposes labels, empty media, locked system upload and add/remove', () => {
@@ -93,5 +130,61 @@ describe('RoutineEditorForm', () => {
     );
     expect(screen.getByTestId('form-error').textContent).toContain(ROUTINE_COPY.notFound);
     expect(screen.getByText(ROUTINE_COPY.errorName)).toBeTruthy();
+  });
+
+  it('leaves the rest input empty while editing after clearing the default value', () => {
+    const onMetaChange = jest.fn<
+      (patch: Partial<Pick<RoutineDraft, 'name' | 'description' | 'kind' | 'restSeconds'>>) => void
+    >();
+    renderEditableForm(emptyDraft(), onMetaChange);
+
+    const restInput = screen.getByTestId(ROUTINE_TEST_IDS.rest) as HTMLInputElement;
+    fireEvent.change(restInput, { target: { value: '' } });
+
+    expect(restInput.value).toBe('');
+    expect(onMetaChange).not.toHaveBeenCalled();
+  });
+
+  it('shows 30 rather than 030 when typing 30 after clearing the rest input', () => {
+    const onMetaChange = jest.fn<
+      (patch: Partial<Pick<RoutineDraft, 'name' | 'description' | 'kind' | 'restSeconds'>>) => void
+    >();
+    renderEditableForm(emptyDraft(), onMetaChange);
+
+    const restInput = screen.getByTestId(ROUTINE_TEST_IDS.rest) as HTMLInputElement;
+    fireEvent.change(restInput, { target: { value: '' } });
+    fireEvent.change(restInput, { target: { value: '30' } });
+
+    expect(restInput.value).toBe('30');
+    expect(onMetaChange).toHaveBeenCalledTimes(1);
+    expect(onMetaChange).toHaveBeenLastCalledWith({ restSeconds: 30 });
+  });
+
+  it('commits 45 without a leading zero after deleting the default rest value', () => {
+    const onMetaChange = jest.fn<
+      (patch: Partial<Pick<RoutineDraft, 'name' | 'description' | 'kind' | 'restSeconds'>>) => void
+    >();
+    renderEditableForm(emptyDraft(), onMetaChange);
+
+    const restInput = screen.getByTestId(ROUTINE_TEST_IDS.rest) as HTMLInputElement;
+    fireEvent.change(restInput, { target: { value: '' } });
+    fireEvent.change(restInput, { target: { value: '45' } });
+
+    expect(restInput.value).toBe('45');
+    expect(onMetaChange).toHaveBeenCalledTimes(1);
+    expect(onMetaChange).toHaveBeenLastCalledWith({ restSeconds: 45 });
+  });
+
+  it('propagates a valid committed rest value through the draft handler', () => {
+    const onMetaChange = jest.fn<
+      (patch: Partial<Pick<RoutineDraft, 'name' | 'description' | 'kind' | 'restSeconds'>>) => void
+    >();
+    renderEditableForm(emptyDraft(), onMetaChange);
+
+    const restInput = screen.getByTestId(ROUTINE_TEST_IDS.rest) as HTMLInputElement;
+    fireEvent.change(restInput, { target: { value: '030' } });
+
+    expect(restInput.value).toBe('30');
+    expect(onMetaChange).toHaveBeenLastCalledWith({ restSeconds: 30 });
   });
 });

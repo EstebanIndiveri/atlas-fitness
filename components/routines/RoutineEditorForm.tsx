@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { MediaUploadControl } from '@/components/exercises/MediaUploadControl';
 import { RoutineExerciseRow } from '@/components/routines/RoutineExerciseRow';
 import { Button } from '@/components/ui/Button';
@@ -35,9 +36,12 @@ type RoutineExerciseRowUpdate = (
   patch: Partial<{ targetSets: number; targetReps: number; imageUrl: string | null; videoUrl: string | null }>,
 ) => void;
 
-function parseRest(value: string): number {
+function parseRestInput(value: string): number | null {
+  if (!/^\d+$/.test(value)) {
+    return null;
+  }
   const parsed = Number.parseInt(value, 10);
-  return Number.isNaN(parsed) ? 0 : parsed;
+  return Number.isNaN(parsed) ? null : parsed;
 }
 
 export function RoutineEditorForm({
@@ -63,6 +67,16 @@ export function RoutineEditorForm({
   const unusedCatalog = catalog.filter(
     (item) => !draft.exercises.some((exercise) => exercise.exerciseId === item.id),
   );
+  const [restInputValue, setRestInputValue] = useState(() => String(draft.restSeconds));
+  const [syncedRestSeconds, setSyncedRestSeconds] = useState(draft.restSeconds);
+
+  // Reconcile the local editable string with external draft changes during
+  // render (React-recommended pattern) instead of an effect, so parent-driven
+  // rest updates stay in sync without cascading renders.
+  if (draft.restSeconds !== syncedRestSeconds) {
+    setSyncedRestSeconds(draft.restSeconds);
+    setRestInputValue(String(draft.restSeconds));
+  }
 
   return (
     <form
@@ -137,15 +151,29 @@ export function RoutineEditorForm({
       <Input
         id="routine-rest"
         label={ROUTINE_COPY.restLabel}
-        type="number"
+        type="text"
         inputMode="numeric"
-        min={0}
+        pattern="[0-9]*"
         hint={ROUTINE_COPY.restHint}
-        value={draft.restSeconds}
+        value={restInputValue}
         error={validation.restSeconds}
         disabled={readOnly}
         data-testid={ROUTINE_TEST_IDS.rest}
-        onChange={(event) => onMetaChange({ restSeconds: parseRest(event.target.value) })}
+        onBlur={() => {
+          if (parseRestInput(restInputValue) === null) {
+            setRestInputValue(String(draft.restSeconds));
+          }
+        }}
+        onChange={(event) => {
+          const nextValue = event.target.value;
+          const parsed = parseRestInput(nextValue);
+          if (parsed === null) {
+            setRestInputValue(nextValue);
+            return;
+          }
+          setRestInputValue(String(parsed));
+          onMetaChange({ restSeconds: parsed });
+        }}
       />
 
       <fieldset className="space-y-3">

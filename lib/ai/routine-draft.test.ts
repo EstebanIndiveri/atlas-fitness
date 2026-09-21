@@ -25,6 +25,9 @@ describe('generateRoutineDraft', () => {
     expect(first).toEqual(second);
     expect(first.source).toBe('fallback');
     expect(first.name).toContain('Coach Atlas');
+    expect(first.name).not.toMatch(/Borrador/i);
+    expect(first.description).toBe('Plan de gimnasio de 3 días por semana con ejercicios reales del catálogo.');
+    expect(first.description).not.toMatch(/Borrador/i);
     expect(first.kind).toBe('gym');
     expect(first.restSeconds).toBe(120);
     expect(first.reason).toBe('Atlas eligió 4 movimientos de grupos musculares distintos para ganar fuerza sin perder técnica, con volumen intermedio y ejecución viable en gimnasio.');
@@ -151,7 +154,7 @@ describe('generateRoutineDraft', () => {
 
     expect(draft.name).toBe('Coach Atlas · ganar fuerza sin perder técnica');
     expect(draft.name.length).toBeGreaterThanOrEqual(2);
-    expect(draft.description).toBe('Borrador de gimnasio de 3 días por semana, armado con ejercicios reales del catálogo.');
+    expect(draft.description).toBe('Plan de gimnasio de 3 días por semana con ejercicios reales del catálogo.');
     expect(draft.reason).toBe('Usa movimientos reales del catálogo.');
   });
 
