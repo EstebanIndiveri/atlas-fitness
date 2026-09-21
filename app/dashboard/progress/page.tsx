@@ -19,12 +19,20 @@ import { useHabits } from '@/hooks/useHabits';
 import { useProgress } from '@/hooks/useProgress';
 import { PROGRESS_COPY } from '@/lib/copy/progress';
 import type { ProgressPeriod } from '@/lib/services/progress-summary';
+import type { StrengthProgressSummary } from '@/lib/services/strength-progress';
 
 const PERIOD_OPTIONS: ReadonlyArray<{ value: ProgressPeriod; label: string }> = [
   { value: 'week', label: PROGRESS_COPY.periods.week },
   { value: 'month', label: PROGRESS_COPY.periods.month },
   { value: 'quarter', label: PROGRESS_COPY.periods.quarter },
 ];
+
+const EMPTY_STRENGTH: StrengthProgressSummary = {
+  hasLoggedSets: false,
+  latestVolumeKg: null,
+  trendLabel: 'Sin datos de fuerza',
+  points: [],
+};
 
 function isProgressPeriod(value: string): value is ProgressPeriod {
   return value === 'week' || value === 'month' || value === 'quarter';
@@ -51,7 +59,7 @@ export default function ProgressPage() {
   const consistencyPercent = summary?.period === 'week' && week ? formatWeekConsistencyPercent(week.activeCount) : null;
 
   return (
-    <PageContainer className="max-w-md space-y-4 pb-24">
+    <PageContainer className="max-w-md space-y-4 pb-32">
       <ProgressHeader
         fromLocalDate={summary?.fromLocalDate ?? null}
         toLocalDate={summary?.toLocalDate ?? null}
@@ -78,7 +86,7 @@ export default function ProgressPage() {
             consistencyPercent={consistencyPercent}
           />
           <WeeklyConsistencyCard week={week} />
-          <StrengthEvolutionCard />
+          <StrengthEvolutionCard strength={summary.strength ?? EMPTY_STRENGTH} />
           <WellbeingCard
             checkin={checkin.checkin}
             loading={checkin.loading}

@@ -3,6 +3,7 @@ import { MetricValue } from '@/components/ui/MetricValue';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
 import type { HabitDoneMap } from '@/hooks/useHabits';
 import { PROGRESS_COPY } from '@/lib/copy/progress';
+import type { StrengthProgressSummary, StrengthVolumePoint } from '@/lib/services/strength-progress';
 import type { DailyCheckInResponse } from '@/lib/api/checkin';
 import { metric } from '@/types/metric';
 
@@ -18,11 +19,26 @@ interface HabitConsistencyCardProps {
   error: string | null;
 }
 
+interface StrengthEvolutionCardProps {
+  strength: StrengthProgressSummary;
+}
+
 const ENERGY_LABEL = {
   low: PROGRESS_COPY.wellbeing.low,
   medium: PROGRESS_COPY.wellbeing.medium,
   high: PROGRESS_COPY.wellbeing.high,
 } as const;
+
+interface StrengthChartPoint {
+  key: string;
+  x: number;
+  y: number;
+}
+
+interface StrengthChart {
+  path: string | null;
+  points: StrengthChartPoint[];
+}
 
 function formatEnergyLabel(energy: string | null): string {
   if (energy === 'low' || energy === 'medium' || energy === 'high') {
@@ -31,22 +47,89 @@ function formatEnergyLabel(energy: string | null): string {
   return 'Sin dato';
 }
 
+function buildStrengthChart(points: StrengthVolumePoint[]): StrengthChart {
+  if (points.length === 0) {
+    return { path: null, points: [] };
+  }
+
+  const volumes = points.map((point) => Number.parseFloat(point.totalVolumeKg));
+  const minVolume = Math.min(...volumes);
+  const maxVolume = Math.max(...volumes);
+  const volumeRange = maxVolume - minVolume || 1;
+  const chartPoints = points.map((point, index): StrengthChartPoint => {
+    const x = points.length === 1 ? 140 : 16 + (index / (points.length - 1)) * 248;
+    const y = 96 - ((Number.parseFloat(point.totalVolumeKg) - minVolume) / volumeRange) * 72;
+    return { key: `${point.workoutId}-${point.localDate}`, x, y };
+  });
+
+  const path = chartPoints.length > 1
+    ? chartPoints.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ')
+    : null;
+
+  return { path, points: chartPoints };
+}
+
 /**
- * Honest empty state for strength evolution until a PR/volume source exists.
+ * Lightweight SVG line chart for real per-session strength volume.
  *
- * @returns Strength card without fabricated chart data.
+ * @param props Strength progression backed by persisted workout sets.
+ * @returns Strength card with a real volume chart or an honest empty state.
  * @example
- * <StrengthEvolutionCard />
+ * <StrengthEvolutionCard strength={summary.strength} />
  */
-export function StrengthEvolutionCard() {
+export function StrengthEvolutionCard({ strength }: StrengthEvolutionCardProps) {
+  const chart = buildStrengthChart(strength.points);
+
   return (
     <Card className="space-y-3 rounded-2xl p-5">
       <h2 className="text-base font-semibold text-ink">{PROGRESS_COPY.strength.title}</h2>
-      <EmptyState
-        title={PROGRESS_COPY.strength.emptyTitle}
-        description={PROGRESS_COPY.strength.emptyBody}
-      />
-      <p className="text-xs leading-relaxed text-ink-muted">{PROGRESS_COPY.strength.emptyWhy}</p>
+      {!strength.hasLoggedSets ? (
+        <>
+          <EmptyState
+            title={PROGRESS_COPY.strength.emptyTitle}
+            description={PROGRESS_COPY.strength.emptyBody}
+          />
+          <p className="text-xs leading-relaxed text-ink-muted">{PROGRESS_COPY.strength.emptyWhy}</p>
+        </>
+      ) : null}
+      {strength.hasLoggedSets ? (
+        <>
+          <div
+            aria-label={PROGRESS_COPY.strength.volumeLabel}
+            className="flex items-start justify-between gap-3 rounded-xl bg-canvas p-3"
+          >
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-ink-muted">{PROGRESS_COPY.strength.volumeLabel}</p>
+              <MetricValue
+                metric={metric(`${strength.latestVolumeKg ?? '0'} kg`, 'atlas_computed')}
+                label={PROGRESS_COPY.strength.volumeLabel}
+                showSource
+                className="mt-1 flex flex-wrap text-lg leading-tight"
+              />
+            </div>
+            <span className="shrink-0 rounded-full bg-brand px-2.5 py-1 text-xs font-semibold text-brand-foreground">
+              {strength.trendLabel}
+            </span>
+          </div>
+          <svg
+            role="img"
+            aria-label={PROGRESS_COPY.strength.chartLabel}
+            viewBox="0 0 280 120"
+            className="h-32 w-full overflow-visible"
+          >
+            <path d="M16 96H264" className="stroke-line" strokeWidth="1" fill="none" />
+            {chart.path ? (
+              <path d={chart.path} className="stroke-brand" strokeWidth="3" fill="none" strokeLinecap="round" />
+            ) : null}
+            {chart.points.map((point) => (
+              <circle key={point.key} cx={point.x} cy={point.y} r="4.5" className="fill-brand" />
+            ))}
+          </svg>
+          {strength.points.length === 1 ? (
+            <p className="text-xs leading-relaxed text-ink-muted">{PROGRESS_COPY.strength.startingPointBody}</p>
+          ) : null}
+        </>
+      ) : null}
     </Card>
   );
 }
