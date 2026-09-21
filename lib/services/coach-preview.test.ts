@@ -125,6 +125,20 @@ describe('previewCoachAdaptation service', () => {
     expect(result.reason).toContain('energía baja');
   });
 
+  it('uses neutral defaults for free-text presets when there is no check-in or explicit energy and mood', async () => {
+    const result = await previewCoachAdaptation(
+      { routineId: 10, userId: 1, freeText: 'Tengo 15 minutos' },
+      { generateContent: async () => null },
+    );
+
+    expect(mockGetTodayCheckIn).toHaveBeenCalledWith(1);
+    expect(result.source).toBe('deterministic');
+    expect(result.original).toEqual({ exerciseCount: 3, setCount: 10, estMinutes: 30 });
+    expect(result.adapted.estMinutes).toBeLessThanOrEqual(15);
+    expect(result.adapted.setCount).toBeLessThan(result.original.setCount);
+    expect(result.reason).toMatch(/15 min/i);
+  });
+
   it('throws VALIDATION when no real energy or mood source is available', async () => {
     mockGetTodayCheckIn.mockResolvedValue({
       id: 5,

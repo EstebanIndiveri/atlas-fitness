@@ -128,7 +128,7 @@ describe('GuidedExerciseCard', () => {
     expect(technique.getAttribute('aria-pressed')).toBe('false');
     expect(notes.getAttribute('aria-pressed')).toBe('true');
     expect(screen.queryByTestId('guided-exercise-image')).toBeNull();
-    expect(screen.getByText('Sin notas cargadas para este ejercicio.')).toBeTruthy();
+    expect(screen.getByPlaceholderText('Sin notas cargadas para este ejercicio.')).toBeTruthy();
 
     fireEvent.click(replace);
     expect(notes.getAttribute('aria-pressed')).toBe('false');
@@ -137,6 +137,21 @@ describe('GuidedExerciseCard', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Posponer este ejercicio para más adelante. Conservamos las series ya hechas.' }));
     expect(onReplace).toHaveBeenCalledTimes(1);
     expect(onHold).toHaveBeenCalledTimes(1);
+  });
+
+  it('lets the user type a session-local note from the Notas panel', () => {
+    render(<GuidedExerciseCard exercise={exercise()} {...cardProps} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Mostrar notas' }));
+
+    const notes = screen.getByLabelText('Nota de la sesión para Press Banca') as HTMLTextAreaElement;
+    expect(notes.tagName).toBe('TEXTAREA');
+    expect(notes.maxLength).toBe(280);
+    expect(notes.placeholder).toBe('Sin notas cargadas para este ejercicio.');
+
+    fireEvent.change(notes, { target: { value: 'Subir a 42.5 kg si sale liviano.' } });
+
+    expect(notes.value).toBe('Subir a 42.5 kg si sale liviano.');
   });
 
   it('renders the rest timer inside the card focus area before the set counter', () => {

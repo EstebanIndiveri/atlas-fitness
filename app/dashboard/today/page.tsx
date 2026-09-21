@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { PageContainer } from '@/components/shell/PageContainer';
@@ -51,7 +51,6 @@ export default function TodayPage() {
     isOnboardingDone,
     getServerOnboardingDone,
   );
-  const coachRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // Read the live store value (not the hydration snapshot) so already-onboarded
@@ -112,8 +111,13 @@ export default function TodayPage() {
   }, [routineId, router]);
 
   const handleAdapt = useCallback(() => {
-    coachRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, []);
+    if (today?.kind !== 'workout' || !Number.isInteger(today.routineId) || today.routineId <= 0) {
+      return;
+    }
+    router.push(
+      `/dashboard/session/adapt?routineId=${today.routineId}&routineName=${encodeURIComponent(today.routineName)}&planGoal=${encodeURIComponent(today.planGoal ?? '')}`,
+    );
+  }, [router, today]);
 
   const handleCreatePlan = useCallback(() => {
     router.push('/dashboard/plan/new');
@@ -132,9 +136,7 @@ export default function TodayPage() {
         onAdapt={handleAdapt}
         onCreatePlan={handleCreatePlan}
       />
-      <div ref={coachRef}>
-        <CoachAtlasCard routineId={routineId} />
-      </div>
+      <CoachAtlasCard routineId={routineId} />
       <TodayHabitsCard />
       <TodayWeekCard />
       <InstallToast />

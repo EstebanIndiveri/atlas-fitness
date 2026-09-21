@@ -45,12 +45,107 @@ describe('adaptDeterministically', () => {
   });
 
   it.each(['medium', 'high'] as const)('keeps the original routine unchanged for %s energy', (energy) => {
-    const result = adaptDeterministically(context({ energy }));
+    const result = adaptDeterministically(context({ energy, freeText: 'Mantener técnica' }));
 
     expect(result.source).toBe('deterministic');
     expect(result.adapted).toEqual(result.original);
     expect(result.reason).toMatch(/sin cambios/i);
     expect(result.exerciseDeltas.every((delta) => delta.action === 'kept')).toBe(true);
+  });
+
+  it('time-boxes medium-energy routines from free text minutes while preserving main movements', () => {
+    const result = adaptDeterministically(context({ energy: 'medium', mood: 3, freeText: 'Tengo 30 minutos' }));
+
+    expect(result.original).toEqual({ exerciseCount: 4, setCount: 13, estMinutes: 39 });
+    expect(result.adapted).toEqual({ exerciseCount: 3, setCount: 10, estMinutes: 30 });
+    expect(result.reason).toMatch(/30 min/i);
+    expect(result.reason).toMatch(/mantenemos los movimientos principales/i);
+    expect(result.reason).toMatch(/recortamos accesorios/i);
+    expect(result.reason).not.toMatch(/bajamos.*principales/i);
+    expect(result.exerciseDeltas).toEqual([
+      { exerciseId: 10, name: 'Sentadilla', action: 'kept', fromSets: 4, toSets: 4 },
+      { exerciseId: 20, name: 'Press banca', action: 'kept', fromSets: 3, toSets: 3 },
+      { exerciseId: 30, name: 'Curl bíceps', action: 'kept', fromSets: 3, toSets: 3 },
+      { exerciseId: 40, name: 'Extensión tríceps', action: 'removed', fromSets: 3, toSets: 0 },
+    ]);
+  });
+
+  it('detects accent-insensitive fatigue and lighter requests without low energy', () => {
+    const result = adaptDeterministically(context({ energy: 'high', mood: 3, freeText: 'Quiero algo más liviano, poca energía' }));
+
+    expect(result.adapted.setCount).toBeLessThan(result.original.setCount);
+    expect(result.adapted.estMinutes).toBe(result.adapted.setCount * ESTIMATED_MINUTES_PER_SET);
+    expect(result.reason).toMatch(/liviano/i);
+    expect(result.exerciseDeltas.some((delta) => delta.action !== 'kept')).toBe(true);
+  });
+
+  it('handles no-machine requests honestly by compacting accessory volume without claiming swaps', () => {
+    const result = adaptDeterministically(context({ energy: 'medium', mood: 3, freeText: 'Hoy entreno en casa, sin máquinas disponibles' }));
+
+    expect(result.adapted.setCount).toBeLessThan(result.original.setCount);
+    expect(result.reason).toMatch(/máquinas/i);
+    expect(result.reason).toMatch(/accesorios/i);
+    expect(result.reason).not.toMatch(/cambiamos|reemplazamos|swap/i);
+  });
+
+  it('mentions both low energy and the time budget when both intents are present', () => {
+    const result = adaptDeterministically(context({ energy: 'low', freeText: 'Tengo 30 min y estoy cansado' }));
+
+    expect(result.adapted.estMinutes).toBeLessThanOrEqual(30);
+    expect(result.reason).toMatch(/30 min/i);
+    expect(result.reason).toMatch(/energía baja/i);
+  });
+
+  it('does not use a time-box reason when the requested hour already fits and lighter intent caused the reduction', () => {
+    const result = adaptDeterministically(context({ energy: 'medium', freeText: 'Tengo una hora, pero quiero algo suave' }));
+
+    expect(result.original.estMinutes).toBeLessThanOrEqual(60);
+    expect(result.adapted.setCount).toBeLessThan(result.original.setCount);
+    expect(result.reason).toMatch(/liviano/i);
+    expect(result.reason).not.toMatch(/60 min|hora/i);
+  });
+
+  it('keeps unchanged when free text has no actionable intent', () => {
+    const result = adaptDeterministically(context({ energy: 'medium', mood: 4, freeText: 'Mantener técnica y foco' }));
+
+    expect(result.adapted).toEqual(result.original);
+    expect(result.exerciseDeltas.every((delta) => delta.action === 'kept')).toBe(true);
+    expect(result.reason).toMatch(/Sin cambios/i);
+  });
+
+  it('keeps an empty routine valid when free text asks for a time-box', () => {
+    const result = adaptDeterministically(
+      context({ energy: 'medium', freeText: '15 minutos', routine: { exercises: [] } }),
+    );
+
+    expect(result.original).toEqual({ exerciseCount: 0, setCount: 0, estMinutes: 0 });
+    expect(result.adapted).toEqual(result.original);
+    expect(result.exerciseDeltas).toEqual([]);
+    expect(result.reason).toMatch(/Sin cambios/i);
+  });
+
+  it('reduces a single protected main movement only as far as needed for very small time budgets', () => {
+    const result = adaptDeterministically(
+      context({
+        energy: 'medium',
+        freeText: 'Tengo 10 min',
+        routine: { exercises: [{ exerciseId: 10, name: 'Sentadilla', sets: 4, category: 'compound' }] },
+      }),
+    );
+
+    expect(result.adapted).toEqual({ exerciseCount: 1, setCount: 3, estMinutes: 9 });
+    expect(result.reason).toMatch(/bajamos series de los movimientos principales/i);
+    expect(result.reason).not.toMatch(/accesorios/i);
+    expect(result.exerciseDeltas).toEqual([
+      { exerciseId: 10, name: 'Sentadilla', action: 'reduced', fromSets: 4, toSets: 3 },
+    ]);
+  });
+
+  it('ignores unparseable time text without another adaptation intent', () => {
+    const result = adaptDeterministically(context({ energy: 'medium', mood: 3, freeText: 'Entreno un ratito' }));
+
+    expect(result.adapted).toEqual(result.original);
+    expect(result.reason).toMatch(/Sin cambios/i);
   });
 
   it('returns explainable deltas whose adapted set total matches the summary', () => {

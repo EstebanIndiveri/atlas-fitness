@@ -28,6 +28,7 @@ type DetailState =
 const COPY = {
   eyebrow: 'ENTRENAMIENTO DE HOY',
   start: 'Empezar entrenamiento ▷',
+  repeat: 'Entrenar de nuevo',
   adapt: '✦ Adaptar con Coach Atlas',
   retry: 'Reintentar',
   createPlan: 'Crear mi plan',
@@ -120,6 +121,7 @@ export function TodayWorkoutHero({
     case 'workout': {
       const routine = detailState.status === 'loaded' && detailState.routine.id === today.routineId ? detailState.routine : null;
       const metrics = routine ? buildMetrics(routine) : null;
+      const workoutCompleted = today.completion.total > 0 && today.completion.completed >= today.completion.total;
       return (
         <Card tone="brand" className="relative space-y-6 overflow-hidden rounded-xl p-5 sm:p-7">
           <TopographicTexture className="text-brand opacity-[0.06]" />
@@ -164,7 +166,11 @@ export function TodayWorkoutHero({
           ) : null}
 
           <div className="relative space-y-3">
-            <Button size="lg" onClick={onStartWorkout}>{COPY.start}</Button>
+            {workoutCompleted ? (
+              <Button size="lg" variant="secondary" onClick={onStartWorkout}>{COPY.repeat}</Button>
+            ) : (
+              <Button size="lg" onClick={onStartWorkout}>{COPY.start}</Button>
+            )}
             <Button size="lg" variant="secondary" onClick={onAdapt}>{COPY.adapt}</Button>
           </div>
         </Card>

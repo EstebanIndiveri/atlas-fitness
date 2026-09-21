@@ -78,9 +78,21 @@ export const coachAiAdaptationResultSchema = coachAdaptationResultSchema.extend(
 
 export type CoachAiAdaptationResult = z.infer<typeof coachAiAdaptationResultSchema>;
 
+interface CoachTextIntents {
+  targetMinutes: number | null;
+  fatigueOrLighter: boolean;
+  noMachines: boolean;
+}
+
+interface CoachDeltaFacts {
+  accessoryTrimmed: boolean;
+  mainReduced: boolean;
+}
+
 /**
  * Builds an explainable, local Coach Atlas adaptation without network or DB access.
  * Visible time is derived only from input set counts using ESTIMATED_MINUTES_PER_SET.
+ * Free-text requests are interpreted locally for time-box, lighter/fatigue, and no-equipment intents.
  *
  * @param context Routine summary plus user-reported energy, mood, and optional request.
  * @returns A deterministic recommendation preview with original/adapted summaries and deltas.
@@ -89,19 +101,46 @@ export type CoachAiAdaptationResult = z.infer<typeof coachAiAdaptationResultSche
  */
 export function adaptDeterministically(context: CoachAdaptationContext): CoachAdaptationResult {
   const original = summarize(context.routine.exercises);
-  const exerciseDeltas =
-    context.energy === 'low'
-      ? buildLowEnergyDeltas(context.routine.exercises)
-      : keepAllDeltas(context.routine.exercises);
+  const intents = detectTextIntents(context.freeText);
+  const exerciseDeltas = selectDeltas(context.routine.exercises, context.energy, intents);
   const adapted = summarizeDeltas(exerciseDeltas);
 
   return {
     original,
     adapted,
     exerciseDeltas,
-    reason: buildReason(context.energy, original, adapted),
+    reason: buildReason(
+      context.routine.exercises,
+      context.energy,
+      intents,
+      original,
+      adapted,
+      exerciseDeltas,
+    ),
     source: 'deterministic',
   };
+}
+
+function selectDeltas(
+  exercises: readonly CoachRoutineExerciseSummary[],
+  energy: CoachAdaptationContext['energy'],
+  intents: CoachTextIntents,
+): CoachExerciseDelta[] {
+  const candidates: CoachExerciseDelta[][] = [keepAllDeltas(exercises)];
+
+  if (energy === 'low' || intents.fatigueOrLighter || intents.noMachines) {
+    candidates.push(buildLowEnergyDeltas(exercises));
+  }
+
+  if (intents.targetMinutes !== null) {
+    candidates.push(buildTimeBoxDeltas(exercises, intents.targetMinutes));
+  }
+
+  return candidates.reduce((best, candidate) => {
+    const bestSummary = summarizeDeltas(best);
+    const candidateSummary = summarizeDeltas(candidate);
+    return candidateSummary.setCount < bestSummary.setCount ? candidate : best;
+  });
 }
 
 function buildLowEnergyDeltas(exercises: readonly CoachRoutineExerciseSummary[]): CoachExerciseDelta[] {
@@ -122,6 +161,28 @@ function buildLowEnergyDeltas(exercises: readonly CoachRoutineExerciseSummary[])
     if (isMainMovement(exercises[index], index)) {
       continue;
     }
+    remainingReduction -= reduceSetsWithoutRemoving(deltas[index], remainingReduction);
+  }
+
+  return deltas;
+}
+
+function buildTimeBoxDeltas(
+  exercises: readonly CoachRoutineExerciseSummary[],
+  targetMinutes: number,
+): CoachExerciseDelta[] {
+  const deltas = keepAllDeltas(exercises);
+  const maxSets = Math.max(0, Math.floor(targetMinutes / ESTIMATED_MINUTES_PER_SET));
+  let remainingReduction = Math.max(0, summarizeDeltas(deltas).setCount - maxSets);
+
+  for (let index = exercises.length - 1; index >= 0 && remainingReduction > 0; index -= 1) {
+    if (isMainMovement(exercises[index], index)) {
+      continue;
+    }
+    remainingReduction -= trimAccessoryDelta(deltas[index], remainingReduction);
+  }
+
+  for (let index = exercises.length - 1; index >= 0 && remainingReduction > 0; index -= 1) {
     remainingReduction -= reduceSetsWithoutRemoving(deltas[index], remainingReduction);
   }
 
@@ -202,15 +263,135 @@ function reduceSetsWithoutRemoving(item: CoachExerciseDelta, requestedReduction:
 }
 
 function buildReason(
+  exercises: readonly CoachRoutineExerciseSummary[],
   energy: CoachAdaptationContext['energy'],
+  intents: CoachTextIntents,
   original: CoachRoutineSummary,
   adapted: CoachRoutineSummary,
+  deltas: readonly CoachExerciseDelta[],
 ): string {
-  if (energy === 'low' && adapted.setCount < original.setCount) {
+  const facts = buildDeltaFacts(exercises, deltas);
+
+  if (adapted.setCount >= original.setCount) {
+    return 'Sin cambios: tu energía registrada permite mantener la rutina original. Podés previsualizar y aceptar o rechazar.';
+  }
+
+  if (intents.targetMinutes !== null && original.estMinutes > intents.targetMinutes && energy === 'low') {
+    return buildTimeBoxReason(intents.targetMinutes, facts, ' y por tu energía baja');
+  }
+
+  if (intents.targetMinutes !== null && original.estMinutes > intents.targetMinutes) {
+    return buildTimeBoxReason(intents.targetMinutes, facts, '');
+  }
+
+  if (intents.noMachines) {
+    if (energy === 'low') {
+      if (facts.mainReduced) {
+        return 'Compactamos volumen porque registraste energía baja y no tenés máquinas o equipo disponible: también bajamos algunas series principales para mantenerlo realizable.';
+      }
+      return 'Compactamos volumen de accesorios porque registraste energía baja y no tenés máquinas o equipo disponible, sin inventar cambios de ejercicios.';
+    }
+    if (facts.mainReduced) {
+      return 'Compactamos volumen porque no tenés máquinas o equipo disponible: bajamos algunas series principales sin inventar cambios de ejercicios.';
+    }
+    return 'Compactamos volumen de accesorios porque no tenés máquinas o equipo disponible: mantenemos los principales sin inventar cambios de ejercicios.';
+  }
+
+  if (intents.fatigueOrLighter) {
+    if (energy === 'low') {
+      if (facts.mainReduced) {
+        return 'Bajamos volumen porque registraste energía baja y pediste algo más liviano: también redujimos algunas series principales.';
+      }
+      return 'Bajamos volumen porque registraste energía baja y pediste algo más liviano: mantenemos los principales y recortamos accesorios.';
+    }
+    if (facts.mainReduced) {
+      return 'Bajamos volumen porque pediste algo más liviano: también redujimos algunas series principales.';
+    }
+    return 'Bajamos volumen porque pediste algo más liviano: mantenemos los principales y recortamos accesorios.';
+  }
+
+  if (energy === 'low') {
+    if (facts.mainReduced) {
+      return 'Bajamos volumen porque registraste energía baja: también redujimos algunas series principales para ajustar la sesión.';
+    }
     return 'Bajamos volumen porque registraste energía baja: mantenemos los movimientos principales y recortamos accesorios. Podés previsualizar y aceptar o rechazar.';
   }
 
   return 'Sin cambios: tu energía registrada permite mantener la rutina original. Podés previsualizar y aceptar o rechazar.';
+}
+
+function buildTimeBoxReason(targetMinutes: number, facts: CoachDeltaFacts, suffix: string): string {
+  if (facts.accessoryTrimmed && facts.mainReduced) {
+    return `Ajustamos la sesión para que entre en ~${targetMinutes} min${suffix}: recortamos accesorios y bajamos algunas series de los principales para respetar tu tiempo.`;
+  }
+
+  if (facts.mainReduced) {
+    return `Ajustamos la sesión para que entre en ~${targetMinutes} min${suffix}: bajamos series de los movimientos principales para respetar tu tiempo.`;
+  }
+
+  if (facts.accessoryTrimmed) {
+    return `Ajustamos la sesión para que entre en ~${targetMinutes} min${suffix}: mantenemos los movimientos principales y recortamos accesorios.`;
+  }
+
+  return 'Sin cambios: tu energía registrada permite mantener la rutina original. Podés previsualizar y aceptar o rechazar.';
+}
+
+function buildDeltaFacts(
+  exercises: readonly CoachRoutineExerciseSummary[],
+  deltas: readonly CoachExerciseDelta[],
+): CoachDeltaFacts {
+  return deltas.reduce<CoachDeltaFacts>(
+    (facts, item, index) => {
+      if (item.toSets >= item.fromSets) {
+        return facts;
+      }
+
+      if (isMainMovement(exercises[index], index)) {
+        return { ...facts, mainReduced: true };
+      }
+
+      return { ...facts, accessoryTrimmed: true };
+    },
+    { accessoryTrimmed: false, mainReduced: false },
+  );
+}
+
+function detectTextIntents(freeText: string | undefined): CoachTextIntents {
+  const normalized = normalizeFreeText(freeText);
+  return {
+    targetMinutes: detectTargetMinutes(normalized),
+    fatigueOrLighter: /cansad|livian|suave|liger|poca energia|sin ganas|agotad/.test(normalized),
+    noMachines: /sin maquina|sin maquinas|sin equipo|en casa/.test(normalized),
+  };
+}
+
+function detectTargetMinutes(normalized: string): number | null {
+  if (normalized.length === 0) {
+    return null;
+  }
+
+  if (/\bmedia hora\b/.test(normalized)) {
+    return 30;
+  }
+
+  if (/\b(?:una|1)\s+hora\b/.test(normalized)) {
+    return 60;
+  }
+
+  const minuteMatch = normalized.match(/\b(\d{1,3})\s*(?:min|mins|minuto|minutos)\b/);
+  if (!minuteMatch) {
+    return null;
+  }
+
+  const minutes = Number.parseInt(minuteMatch[1], 10);
+  return Number.isFinite(minutes) && minutes > 0 ? minutes : null;
+}
+
+function normalizeFreeText(freeText: string | undefined): string {
+  return (freeText ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase('es-AR');
 }
 
 function normalizeSetCount(sets: number): number {

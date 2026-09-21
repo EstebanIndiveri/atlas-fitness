@@ -200,6 +200,33 @@ describe('TodayWorkoutHero', () => {
     expect(await screen.findByText('Completaste el entrenamiento de hoy')).toBeTruthy();
   });
 
+  it('hides the primary start action and shows repeat training when the workout is complete', async () => {
+    const onStartWorkout = jest.fn();
+    const onAdapt = jest.fn();
+    useTodayState(workoutToday(null, null, { completed: 3, total: 3 }));
+    mockFetchRoutineDetail.mockResolvedValue(routineDetail());
+
+    await renderHero({ onStartWorkout, onAdapt });
+
+    expect(await screen.findByText('Completaste el entrenamiento de hoy')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Empezar entrenamiento/ })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Entrenar de nuevo' }));
+    fireEvent.click(screen.getByRole('button', { name: /Adaptar con Coach Atlas/ }));
+
+    expect(onStartWorkout).toHaveBeenCalledTimes(1);
+    expect(onAdapt).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the primary start and coach actions while the workout is not complete', async () => {
+    useTodayState(workoutToday(null, null, { completed: 2, total: 3 }));
+    mockFetchRoutineDetail.mockResolvedValue(routineDetail());
+
+    await renderHero();
+
+    expect(await screen.findByRole('button', { name: /Empezar entrenamiento/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Adaptar con Coach Atlas/ })).toBeTruthy();
+  });
+
   it('omits the completion meter when the routine has no exercises', async () => {
     useTodayState(workoutToday(null, null, { completed: 0, total: 0 }));
     mockFetchRoutineDetail.mockResolvedValue(routineDetail());
