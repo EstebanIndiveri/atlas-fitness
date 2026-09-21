@@ -20,7 +20,9 @@ jest.mock('@/hooks/useDailyCheckin', () => ({ useDailyCheckin: jest.fn() }));
 jest.mock('@/hooks/useStreak', () => ({ useStreak: jest.fn() }));
 
 jest.mock('@/lib/onboarding/state', () => {
-  const actual = jest.requireActual('@/lib/onboarding/state');
+  const actual = jest.requireActual<typeof import('@/lib/onboarding/state')>(
+    '@/lib/onboarding/state',
+  );
   return { ...actual, isOnboardingDone: jest.fn(actual.isOnboardingDone) };
 });
 
