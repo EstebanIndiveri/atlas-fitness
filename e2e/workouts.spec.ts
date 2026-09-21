@@ -202,9 +202,9 @@ test.describe('Workout Flow', () => {
     await page.waitForResponse((resp) => resp.url().includes('/api/workouts/') && resp.status() === 200);
     await page.waitForURL('/dashboard/today', { timeout: 10000 });
 
-    // Go to the Progreso (history) tab, which lists recent sessions.
-    await page.goto('/dashboard/history');
-    await page.waitForURL('/dashboard/history', { timeout: 5000 });
+    // Go to the Progreso tab, which lists recent sessions.
+    await page.goto('/dashboard/progress');
+    await page.waitForURL('/dashboard/progress', { timeout: 5000 });
 
     // Verify the completed workout is represented in the progress recent sessions list.
     await expect(page.locator('h1:has-text("Progreso")')).toBeVisible({ timeout: 5000 });
