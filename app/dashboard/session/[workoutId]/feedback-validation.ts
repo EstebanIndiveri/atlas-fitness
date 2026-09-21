@@ -1,7 +1,4 @@
-import {
-  POST_WORKOUT_FEEDBACK_DISCOMFORT_MAX_ENTRIES,
-  POST_WORKOUT_FEEDBACK_NOTE_MAX_LENGTH,
-} from '@/components/session/PostWorkoutFeedbackForm';
+import { POST_WORKOUT_FEEDBACK_DISCOMFORT_MAX_ENTRIES } from '@/components/session/PostWorkoutFeedbackForm';
 import type {
   DiscomfortEntry,
   WorkoutSensation,
@@ -13,16 +10,14 @@ import type {
  * @param effort User-selected perceived effort.
  * @param sensation User-selected workout sensation.
  * @param discomfort Optional discomfort entries.
- * @param note Optional note text.
  * @returns True when the payload satisfies the API's client-side constraints.
  * @example
- * isValidFeedback(8, 'good', [], 'Terminó sólido');
+ * isValidFeedback(9, 'good', []);
  */
 export function isValidFeedback(
   effort: number | null,
   sensation: WorkoutSensation | null,
   discomfort: DiscomfortEntry[],
-  note: string,
 ): effort is number {
   return (
     typeof effort === 'number' &&
@@ -30,8 +25,7 @@ export function isValidFeedback(
     effort >= 1 &&
     effort <= 10 &&
     sensation !== null &&
-    isValidDiscomfortEntries(discomfort) &&
-    note.length <= POST_WORKOUT_FEEDBACK_NOTE_MAX_LENGTH
+    isValidDiscomfortEntries(discomfort)
   );
 }
 

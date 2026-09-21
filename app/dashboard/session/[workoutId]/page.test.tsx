@@ -80,18 +80,17 @@ describe('GuidedSessionPlayerPage', () => {
     const { default: GuidedSessionPlayerPage } = await import('./page');
     render(<GuidedSessionPlayerPage />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Esfuerzo 8 de 10' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Bien' }));
-    fireEvent.change(screen.getByLabelText('Nota opcional'), { target: { value: 'Terminó sólido.' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Guardar y cerrar' }));
+    fireEvent.click(screen.getByTestId('close-effort-exigente'));
+    fireEvent.click(screen.getByTestId('close-mood-good'));
+    fireEvent.click(screen.getByRole('button', { name: 'Finalizar y guardar' }));
 
     await waitFor(() => expect(mockSaveAndClose).toHaveBeenCalledTimes(1));
     expect(mockRecordPostWorkoutFeedback).toHaveBeenCalledWith({
       workoutId: 8,
-      effort: 8,
+      effort: 9,
       sensation: 'good',
       discomfort: [],
-      note: 'Terminó sólido.',
+      note: null,
     });
     expect(mockPush).toHaveBeenCalledWith('/dashboard/today');
   });
@@ -105,13 +104,13 @@ describe('GuidedSessionPlayerPage', () => {
     const { default: GuidedSessionPlayerPage } = await import('./page');
     const { rerender } = render(<GuidedSessionPlayerPage />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Esfuerzo 7 de 10' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Difícil' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Guardar y cerrar' }));
+    fireEvent.click(screen.getByTestId('close-effort-normal'));
+    fireEvent.click(screen.getByTestId('close-mood-bad'));
+    fireEvent.click(screen.getByRole('button', { name: 'Finalizar y guardar' }));
 
     await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('No se pudo guardar'));
     rerender(<GuidedSessionPlayerPage />);
-    expect((screen.getByRole('button', { name: 'Guardar y cerrar' }) as HTMLButtonElement).disabled).toBe(false);
+    expect((screen.getByRole('button', { name: 'Finalizar y guardar' }) as HTMLButtonElement).disabled).toBe(false);
     expect(mockPush).not.toHaveBeenCalled();
     mockSession.workout.endedAt = null;
   });

@@ -14,6 +14,7 @@ import type { GuidedCloseSummary } from '@/types/routine';
 
 type SessionCloseScreenProps = {
   summary: GuidedCloseSummary | null;
+  routineName?: string;
   muscleGroups?: string[];
   effort: number | null;
   onEffort: (value: number) => void;
@@ -21,8 +22,6 @@ type SessionCloseScreenProps = {
   onSensation: (value: WorkoutSensation) => void;
   discomfort: DiscomfortEntry[];
   onDiscomfortChange: (entries: DiscomfortEntry[]) => void;
-  note: string;
-  onNoteChange: (value: string) => void;
   mood?: number | null;
   onMood?: (value: number) => void;
   onSave: () => void;
@@ -36,10 +35,11 @@ type SessionCloseScreenProps = {
  * @param props Session summary, controlled feedback fields, and save callbacks.
  * @returns Mobile-first close screen with sourced stats and accessible feedback inputs.
  * @example
- * <SessionCloseScreen summary={summary} effort={7} sensation="good" discomfort={[]} note="" />
+ * <SessionCloseScreen summary={summary} effort={9} sensation="good" discomfort={[]} />
  */
 export function SessionCloseScreen({
   summary,
+  routineName,
   muscleGroups = [],
   effort,
   onEffort,
@@ -47,16 +47,17 @@ export function SessionCloseScreen({
   onSensation,
   discomfort,
   onDiscomfortChange,
-  note,
-  onNoteChange,
   onMood,
   onSave,
   saving,
   error = null,
 }: SessionCloseScreenProps) {
-  const subtitle = muscleGroups.length > 0
-    ? muscleGroups.join(' · ')
-    : SESSION_COPY.closeDefaultSubtitle;
+  const trimmedRoutineName = routineName?.trim() ?? '';
+  const subtitle = trimmedRoutineName.length > 0
+    ? trimmedRoutineName
+    : muscleGroups.length > 0
+      ? muscleGroups.join(' · ')
+      : SESSION_COPY.closeDefaultSubtitle;
 
   return (
     <Card className="overflow-hidden p-0" data-testid="session-close">
@@ -101,8 +102,6 @@ export function SessionCloseScreen({
           onLegacyMood={onMood}
           discomfort={discomfort}
           onDiscomfortChange={onDiscomfortChange}
-          note={note}
-          onNoteChange={onNoteChange}
           disabled={saving}
           error={error}
         />
