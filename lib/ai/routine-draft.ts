@@ -98,10 +98,11 @@ function buildFallbackReason(brief: RoutineDraftBrief, selected: readonly Exerci
     : `${selected.length} movimientos reales del catálogo`;
   return `Atlas eligió ${movementText} para ${brief.goal.trim()}, con volumen ${levelLabel(brief.level)} y ejecución viable en ${locationLabel(brief.location)}.`;
 }
-function cleanReason(value: unknown, fallback: string): string {
+function cleanText(value: unknown, fallback: string, maxLength: number, minLength = 1): string {
   if (typeof value !== 'string') return fallback;
-  const trimmed = value.trim().replace(/\s+/g, ' ');
-  return trimmed ? trimmed.slice(0, 320) : fallback;
+  const trimmed = value.replace(/[\p{Cc}\p{Cf}]+/gu, ' ').trim().replace(/\s+/g, ' ');
+  if (trimmed.length < minLength) return fallback;
+  return trimmed.slice(0, maxLength);
 }
 function buildFallbackDraft(
   brief: RoutineDraftBrief,
@@ -156,12 +157,9 @@ function normalizeGeminiDraft(
   if (exercises.length === 0) return null;
   return {
     source: 'gemini',
-    name: typeof rawDraft.name === 'string' && rawDraft.name.trim() ? rawDraft.name.trim() : fallback.name,
-    description:
-      typeof rawDraft.description === 'string' && rawDraft.description.trim()
-        ? rawDraft.description.trim()
-        : fallback.description,
-    reason: cleanReason(rawDraft.reason, fallback.reason),
+    name: cleanText(rawDraft.name, fallback.name, 80, 2),
+    description: cleanText(rawDraft.description, fallback.description, 320, 2),
+    reason: cleanText(rawDraft.reason, fallback.reason, 320),
     kind: brief.location,
     restSeconds: clampInteger(rawDraft.restSeconds, 0, 3600, fallback.restSeconds),
     exercises,

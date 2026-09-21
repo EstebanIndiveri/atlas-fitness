@@ -119,4 +119,41 @@ describe('generateRoutineDraft', () => {
     expect(draft.kind).toBe('home');
   });
 
+  it('falls back from Gemini text fields that would fail routine creation', async () => {
+    const fetchImpl = jest.fn<typeof fetch>().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        candidates: [
+          {
+            content: {
+              parts: [
+                {
+                  text: JSON.stringify({
+                    name: 'A\u0000',
+                    description: ' \u0000 ',
+                    reason: '  Usa\nmovimientos reales\u0000 del catálogo.  ',
+                    kind: 'gym',
+                    restSeconds: 90,
+                    exercises: [{ exerciseId: 1, sortOrder: 0, targetSets: 3, targetReps: 8 }],
+                  }),
+                },
+              ],
+            },
+          },
+        ],
+      }),
+    } as Response);
+
+    const draft = await generateRoutineDraft(brief, catalog, {
+      env: { GEMINI_API_KEY: 'test-key' },
+      fetchImpl,
+    });
+
+    expect(draft.name).toBe('Coach Atlas · ganar fuerza sin perder técnica');
+    expect(draft.name.length).toBeGreaterThanOrEqual(2);
+    expect(draft.description).toBe('Borrador de gimnasio de 3 días por semana, armado con ejercicios reales del catálogo.');
+    expect(draft.reason).toBe('Usa movimientos reales del catálogo.');
+  });
+
+
 });
