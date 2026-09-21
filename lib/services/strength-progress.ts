@@ -96,11 +96,36 @@ function sumVolumeKg(sets: { reps: number; weightKg: string }[]): string {
   return formatScaledDecimal(totalUnits, maxScale);
 }
 
+function normalizeDecimalForComparison(value: string): { sign: 1 | -1; whole: string; fraction: string } {
+  const trimmed = value.trim();
+  const sign = trimmed.startsWith('-') ? -1 : 1;
+  const unsigned = trimmed.replace(/^[+-]/, '');
+  const [rawWhole = '0', rawFraction = ''] = unsigned.split('.');
+  const whole = rawWhole.replace(/^0+(?=\d)/, '') || '0';
+  const fraction = rawFraction.replace(/0+$/, '');
+  return { sign, whole, fraction };
+}
+
 function compareDecimalStrings(left: string, right: string): number {
-  const leftNumber = Number.parseFloat(left);
-  const rightNumber = Number.parseFloat(right);
-  if (leftNumber < rightNumber) return -1;
-  if (leftNumber > rightNumber) return 1;
+  const normalizedLeft = normalizeDecimalForComparison(left);
+  const normalizedRight = normalizeDecimalForComparison(right);
+  if (normalizedLeft.sign !== normalizedRight.sign) {
+    return normalizedLeft.sign > normalizedRight.sign ? 1 : -1;
+  }
+
+  const signMultiplier = normalizedLeft.sign;
+  if (normalizedLeft.whole.length !== normalizedRight.whole.length) {
+    return normalizedLeft.whole.length > normalizedRight.whole.length ? signMultiplier : -signMultiplier;
+  }
+  if (normalizedLeft.whole !== normalizedRight.whole) {
+    return normalizedLeft.whole > normalizedRight.whole ? signMultiplier : -signMultiplier;
+  }
+
+  const maxFractionLength = Math.max(normalizedLeft.fraction.length, normalizedRight.fraction.length);
+  const leftFraction = normalizedLeft.fraction.padEnd(maxFractionLength, '0');
+  const rightFraction = normalizedRight.fraction.padEnd(maxFractionLength, '0');
+  if (leftFraction < rightFraction) return -signMultiplier;
+  if (leftFraction > rightFraction) return signMultiplier;
   return 0;
 }
 
@@ -147,6 +172,7 @@ export async function getStrengthProgressSummary(
     .select({
       workoutId: workouts.id,
       startedAt: workouts.startedAt,
+      endedAt: workouts.endedAt,
       reps: workoutSets.reps,
       weightKg: workoutSets.weightKg,
     })
@@ -159,20 +185,21 @@ export async function getStrengthProgressSummary(
         isNull(workouts.deletedAt),
         isNull(workoutSets.deletedAt),
         isNotNull(workouts.endedAt),
-        gte(workouts.startedAt, startUtc),
-        lt(workouts.startedAt, endUtc),
+        gte(workouts.endedAt, startUtc),
+        lt(workouts.endedAt, endUtc),
       ),
     )
-    .orderBy(asc(workouts.startedAt), asc(workoutSets.setIndex));
+    .orderBy(asc(workouts.endedAt), asc(workoutSets.setIndex));
 
-  const grouped = new Map<number, { startedAt: Date; sets: { reps: number; weightKg: string }[] }>();
+  const grouped = new Map<number, { startedAt: Date; endedAt: Date; sets: { reps: number; weightKg: string }[] }>();
   for (const row of rows) {
     const existing = grouped.get(row.workoutId);
     if (existing) {
       existing.sets.push({ reps: row.reps, weightKg: row.weightKg });
-    } else {
+    } else if (row.endedAt) {
       grouped.set(row.workoutId, {
         startedAt: row.startedAt,
+        endedAt: row.endedAt,
         sets: [{ reps: row.reps, weightKg: row.weightKg }],
       });
     }
@@ -181,7 +208,7 @@ export async function getStrengthProgressSummary(
   const points = Array.from(grouped.entries()).map(([workoutId, workout]): StrengthVolumePoint => ({
     workoutId,
     startedAt: workout.startedAt.toISOString(),
-    localDate: cordobaLocalDate(workout.startedAt),
+    localDate: cordobaLocalDate(workout.endedAt),
     totalVolumeKg: sumVolumeKg(workout.sets),
     completedSets: workout.sets.length,
   }));

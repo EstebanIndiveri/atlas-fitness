@@ -151,6 +151,24 @@ describe('getStrengthProgressSummary', () => {
     expect(summary.trendLabel).toBe('Punto de partida');
   });
 
+  it('includes a completed workout that started before the period but ended inside it', async () => {
+    const workoutId = await addWorkout('2026-08-25T23:45:00.000Z', '2026-08-26T03:15:00.000Z');
+    await addSet({ workoutId, exerciseId: benchId, setIndex: 1, reps: 8, weightKg: '15' });
+
+    const summary = await getStrengthProgressSummary(userId, 'month', NOW);
+
+    expect(summary.points).toEqual([
+      {
+        workoutId,
+        startedAt: '2026-08-25T23:45:00.000Z',
+        localDate: '2026-08-26',
+        totalVolumeKg: '120',
+        completedSets: 1,
+      },
+    ]);
+    expect(summary.hasLoggedSets).toBe(true);
+  });
+
   it('returns an honest empty strength summary when the user has zero completed logged sets', async () => {
     const openWorkoutId = await addWorkout('2026-09-24T12:00:00.000Z', null);
     await addSet({ workoutId: openWorkoutId, exerciseId: benchId, setIndex: 1, reps: 8, weightKg: '15' });
