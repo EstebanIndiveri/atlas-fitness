@@ -6,7 +6,7 @@ describe('APP_NAV_LINKS', () => {
     expect(APP_NAV_LINKS.map((link) => [link.label, link.href, link.tabId])).toEqual([
       ['Hoy', '/dashboard/today', 'today'],
       ['Entrenar', '/dashboard/session', 'session'],
-      ['Progreso', '/dashboard/history', 'progress'],
+      ['Progreso', '/dashboard/progress', 'progress'],
       ['Perfil', '/dashboard/settings', 'profile'],
     ]);
   });
@@ -21,7 +21,7 @@ describe('isCurrentPath', () => {
   it('treats nested session routes as the session tab', () => {
     expect(isCurrentPath('/dashboard/session', '/dashboard/session')).toBe(true);
     expect(isCurrentPath('/dashboard/session/12', '/dashboard/session')).toBe(true);
-    expect(isCurrentPath('/dashboard/history', '/dashboard/session')).toBe(false);
+    expect(isCurrentPath('/dashboard/progress', '/dashboard/session')).toBe(false);
   });
 });
 
