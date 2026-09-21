@@ -7,7 +7,7 @@ import { UI_COPY } from '@/lib/copy/ui';
 /**
  * Renders entry points for creating a new routine.
  *
- * @returns Two creation actions, both routed to the existing routine editor.
+ * @returns Coach Atlas guided creation and manual editor actions.
  * @throws Does not throw.
  * @example
  * <NewRoutineActions />
@@ -24,7 +24,7 @@ export function NewRoutineActions() {
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <Link
-            href="/dashboard/routines/new"
+            href="/dashboard/routines/coach"
             className={buttonClassName({ variant: 'secondary', size: 'lg' })}
           >
             {UI_COPY.training.createWithCoach}

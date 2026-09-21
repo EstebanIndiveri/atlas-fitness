@@ -12,7 +12,7 @@ describe('NewRoutineActions', () => {
 
     expect(screen.getByRole('heading', { name: 'Nueva rutina' })).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Crear con Coach Atlas' }).getAttribute('href')).toBe(
-      '/dashboard/routines/new',
+      '/dashboard/routines/coach',
     );
     expect(screen.getByRole('link', { name: 'Crear manualmente' }).getAttribute('href')).toBe(
       '/dashboard/routines/new',
