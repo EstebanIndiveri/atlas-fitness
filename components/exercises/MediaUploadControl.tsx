@@ -9,6 +9,7 @@ type MediaUploadControlProps = {
   mediaType: 'image' | 'video';
   disabled?: boolean;
   disabledReason?: string;
+  testId?: string;
   onUploaded: (url: string) => void;
 };
 
@@ -30,6 +31,7 @@ export function MediaUploadControl({
   mediaType,
   disabled = false,
   disabledReason = ROUTINE_COPY.uploadDisabled,
+  testId = ROUTINE_TEST_IDS.upload,
   onUploaded,
 }: MediaUploadControlProps) {
   const inputId = useId();
@@ -80,7 +82,7 @@ export function MediaUploadControl({
         disabled={disabled || uploading}
         accept={acceptFor(mediaType)}
         className="block w-full text-sm text-ink-muted file:mr-3 file:rounded-md file:border-0 file:bg-brand-muted file:px-3 file:py-2 file:text-sm file:font-medium file:text-ink"
-        data-testid={ROUTINE_TEST_IDS.upload}
+        data-testid={testId}
         aria-describedby={hintId}
         onChange={(event) => void onChange(event)}
       />

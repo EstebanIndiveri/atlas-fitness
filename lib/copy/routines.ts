@@ -115,6 +115,8 @@ export const ROUTINE_TEST_IDS = {
   media: 'routine-exercise-media',
   video: 'routine-exercise-video',
   upload: 'routine-media-upload',
+  uploadImage: 'routine-media-upload-image',
+  uploadVideo: 'routine-media-upload-video',
   imageUrl: 'routine-exercise-image-url',
   videoUrl: 'routine-exercise-video-url',
   detail: 'routine-detail',

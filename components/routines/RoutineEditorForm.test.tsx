@@ -56,7 +56,10 @@ describe('RoutineEditorForm', () => {
     expect(screen.getByLabelText(ROUTINE_COPY.nameLabel)).toBeTruthy();
     expect(screen.getByLabelText(ROUTINE_COPY.restLabel)).toBeTruthy();
     expect(screen.getByTestId(ROUTINE_TEST_IDS.media).textContent).toBe(ROUTINE_COPY.mediaEmpty);
-    const uploads = screen.getAllByTestId(ROUTINE_TEST_IDS.upload) as HTMLInputElement[];
+    const uploads = [
+      screen.getByTestId(ROUTINE_TEST_IDS.uploadImage),
+      screen.getByTestId(ROUTINE_TEST_IDS.uploadVideo),
+    ] as HTMLInputElement[];
     expect(uploads).toHaveLength(2);
     expect(uploads.every((upload) => upload.disabled)).toBe(true);
     expect(screen.getAllByText(ROUTINE_COPY.uploadDisabled)).toHaveLength(2);

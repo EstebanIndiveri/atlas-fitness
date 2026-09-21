@@ -185,11 +185,13 @@ export function RoutineEditorForm({
                     <MediaUploadControl
                       mediaType="image"
                       disabled={mediaLocked}
+                      testId={ROUTINE_TEST_IDS.uploadImage}
                       onUploaded={(url) => onUpdateExercise(exercise.clientId, { imageUrl: url })}
                     />
                     <MediaUploadControl
                       mediaType="video"
                       disabled={mediaLocked}
+                      testId={ROUTINE_TEST_IDS.uploadVideo}
                       onUploaded={(url) => onUpdateExercise(exercise.clientId, { videoUrl: url })}
                     />
                   </div>
