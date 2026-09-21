@@ -109,8 +109,16 @@ function AdaptWorkoutContent({
           <AdaptComparison result={adapt.result} routineName={routineName} />
           <Card className="space-y-3 rounded-xl">
             <p className="text-sm leading-6 text-ink-muted">{UI_COPY.coachAdapt.guidanceDisclosure}</p>
-            <Button size="lg" disabled={adapt.starting} onClick={() => void adapt.startWorkout()}>
+            <Button size="lg" disabled={adapt.starting} onClick={() => void adapt.startWorkout(true)}>
               {adapt.starting ? UI_COPY.coachAdapt.starting : UI_COPY.coachAdapt.startWithGuidance}
+            </Button>
+            <Button
+              variant="secondary"
+              size="lg"
+              disabled={adapt.starting}
+              onClick={() => void adapt.startWorkout(false)}
+            >
+              {UI_COPY.coachAdapt.keepOriginal}
             </Button>
             <Button variant="ghost" size="lg" disabled={adapt.starting} onClick={adapt.adjustAgain}>
               {UI_COPY.coachAdapt.adjustAgain}

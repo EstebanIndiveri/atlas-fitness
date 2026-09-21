@@ -55,6 +55,9 @@ describe('Adaptar entrenamiento page', () => {
     expect(screen.getByText('Coach Atlas')).toBeTruthy();
     expect(screen.getAllByText('Torso fuerte').length).toBeGreaterThan(0);
     expect(screen.getByText('2. Comparación').getAttribute('aria-current')).toBe('step');
-    expect(screen.getByText('La propuesta no modifica tu rutina guardada; usala como guía en la sesión.')).toBeTruthy();
+    expect(screen.getByText('Se aplica solo a la sesión de hoy; tu rutina guardada no cambia.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Usar entrenamiento adaptado' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Mantener entrenamiento original' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Ajustar otra cosa' })).toBeTruthy();
   });
 });
