@@ -13,7 +13,21 @@ import { Card } from '@/components/ui/Card';
 import { ErrorState, LoadingState } from '@/components/ui/states';
 import { useGuidedSession } from '@/hooks/useGuidedSession';
 import { useRestTimer } from '@/hooks/useRestTimer';
+import { recordPostWorkoutFeedback } from '@/lib/api/post-workout-feedback';
 import { SESSION_COPY } from '@/lib/copy/session';
+import { isValidFeedback } from './feedback-validation';
+import type {
+  DiscomfortEntry,
+  WorkoutSensation,
+} from '@/lib/services/post-workout-feedback';
+
+const moodToSensation: Record<number, WorkoutSensation> = {
+  1: 'bad',
+  2: 'hard',
+  3: 'neutral',
+  4: 'good',
+  5: 'great',
+};
 
 export default function GuidedSessionPlayerPage() {
   const params = useParams();
@@ -22,6 +36,14 @@ export default function GuidedSessionPlayerPage() {
   const session = useGuidedSession(workoutId);
   const rest = useRestTimer();
   const [motivator, setMotivator] = useState<string>(SESSION_COPY.motivators[0]);
+  const [effort, setEffort] = useState<number | null>(null);
+  const [sensation, setSensation] = useState<WorkoutSensation | null>(
+    session.mood ? moodToSensation[session.mood] ?? null : null,
+  );
+  const [discomfort, setDiscomfort] = useState<DiscomfortEntry[]>([]);
+  const [note, setNote] = useState('');
+  const [feedbackSaving, setFeedbackSaving] = useState(false);
+  const [feedbackError, setFeedbackError] = useState<string | null>(null);
 
   const handleCompleteSet = async () => {
     try {
@@ -38,8 +60,36 @@ export default function GuidedSessionPlayerPage() {
   };
 
   const handleSaveAndClose = async () => {
-    await session.saveAndClose();
-    router.push('/dashboard/today');
+    const selectedEffort = effort;
+    const selectedSensation = sensation;
+    if (
+      !session.workout ||
+      selectedSensation === null ||
+      !isValidFeedback(selectedEffort, selectedSensation, discomfort, note)
+    ) {
+      setFeedbackError(SESSION_COPY.feedbackSaveError);
+      return;
+    }
+
+    setFeedbackSaving(true);
+    setFeedbackError(null);
+    try {
+      if (!session.workout.endedAt) {
+        await session.saveAndClose();
+      }
+      await recordPostWorkoutFeedback({
+        workoutId: session.workout.id,
+        effort: selectedEffort,
+        sensation: selectedSensation,
+        discomfort,
+        note: note.trim().length > 0 ? note.trim() : null,
+      });
+      router.push('/dashboard/today');
+    } catch {
+      setFeedbackError(SESSION_COPY.feedbackSaveError);
+    } finally {
+      setFeedbackSaving(false);
+    }
   };
 
   const handleSkip = async () => {
@@ -105,10 +155,19 @@ export default function GuidedSessionPlayerPage() {
         <SessionCloseScreen
           summary={session.summary}
           muscleGroups={muscleGroups}
+          effort={effort}
+          onEffort={setEffort}
+          sensation={sensation}
+          onSensation={setSensation}
+          discomfort={discomfort}
+          onDiscomfortChange={setDiscomfort}
+          note={note}
+          onNoteChange={setNote}
           mood={session.mood}
           onMood={session.setMood}
           onSave={() => void handleSaveAndClose()}
-          saving={session.busy || ended}
+          saving={session.busy || feedbackSaving}
+          error={feedbackError}
         />
       ) : (
         <>
