@@ -40,6 +40,19 @@ export const SESSION_COPY = {
   streakLabel: 'Racha',
   streakDays: (n: number) => (n === 1 ? '1 día seguido' : `${n} días seguidos`),
   moodLabel: '¿Cómo te sentís?',
+  effortLabel: 'Esfuerzo percibido',
+  effortOptionLabel: (value: number) => `Esfuerzo ${value} de 10`,
+  sensationLabel: '¿Cómo terminó el cuerpo?',
+  discomfortTitle: 'Molestias',
+  discomfortEmpty: 'Sin molestias registradas.',
+  discomfortAreaLabel: 'Zona con molestia',
+  discomfortIntensityLabel: 'Intensidad',
+  discomfortAdd: 'Agregar molestia',
+  discomfortRemove: (label: string) => `Quitar molestia ${label}`,
+  discomfortMaxReached: 'Podés registrar hasta 5 molestias.',
+  noteLabel: 'Nota opcional',
+  noteHelp: 'Máximo 500 caracteres.',
+  feedbackSaveError: 'No se pudo guardar el feedback post-entrenamiento. Probá de nuevo.',
   saveAndClose: 'Guardar y cerrar',
   improvementNone: 'Sin dato previo para comparar.',
   improvementSame: (name: string) => `${name}: mismo peso tope que la última sesión.`,
@@ -62,6 +75,32 @@ export const MOOD_EMOJIS = [
   { value: 3, emoji: '😐', label: 'Normal' },
   { value: 4, emoji: '😊', label: 'Bien' },
   { value: 5, emoji: '😄', label: 'Excelente' },
+] as const;
+
+export const POST_WORKOUT_SENSATIONS = [
+  { value: 'bad', legacyMood: 1, emoji: '😞', label: 'Mal' },
+  { value: 'hard', legacyMood: 2, emoji: '😤', label: 'Difícil' },
+  { value: 'neutral', legacyMood: 3, emoji: '😐', label: 'Neutral' },
+  { value: 'good', legacyMood: 4, emoji: '😊', label: 'Bien' },
+  { value: 'great', legacyMood: 5, emoji: '😄', label: 'Excelente' },
+] as const;
+
+export const DISCOMFORT_AREA_OPTIONS = [
+  { value: 'neck', label: 'Cuello' },
+  { value: 'shoulder', label: 'Hombro' },
+  { value: 'elbow', label: 'Codo' },
+  { value: 'wrist', label: 'Muñeca' },
+  { value: 'back', label: 'Espalda' },
+  { value: 'hip', label: 'Cadera' },
+  { value: 'knee', label: 'Rodilla' },
+  { value: 'ankle', label: 'Tobillo' },
+  { value: 'other', label: 'Otra' },
+] as const;
+
+export const DISCOMFORT_INTENSITY_OPTIONS = [
+  { value: 'mild', label: 'Leve' },
+  { value: 'moderate', label: 'Moderada' },
+  { value: 'strong', label: 'Fuerte' },
 ] as const;
 
 export function motivatorForSet(setNumber: number): string {

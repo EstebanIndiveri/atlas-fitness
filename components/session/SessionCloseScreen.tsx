@@ -3,27 +3,56 @@
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { MetricValue } from '@/components/ui/MetricValue';
-import { formatImprovement, MOOD_EMOJIS, SESSION_COPY } from '@/lib/copy/session';
-import { cn } from '@/lib/ui/cn';
+import { PostWorkoutFeedbackForm } from '@/components/session/PostWorkoutFeedbackForm';
+import { formatImprovement, SESSION_COPY } from '@/lib/copy/session';
 import { metric } from '@/types/metric';
+import type {
+  DiscomfortEntry,
+  WorkoutSensation,
+} from '@/lib/services/post-workout-feedback';
 import type { GuidedCloseSummary } from '@/types/routine';
 
 type SessionCloseScreenProps = {
   summary: GuidedCloseSummary | null;
   muscleGroups?: string[];
-  mood: number | null;
-  onMood: (value: number) => void;
+  effort: number | null;
+  onEffort: (value: number) => void;
+  sensation: WorkoutSensation | null;
+  onSensation: (value: WorkoutSensation) => void;
+  discomfort: DiscomfortEntry[];
+  onDiscomfortChange: (entries: DiscomfortEntry[]) => void;
+  note: string;
+  onNoteChange: (value: string) => void;
+  mood?: number | null;
+  onMood?: (value: number) => void;
   onSave: () => void;
   saving: boolean;
+  error?: string | null;
 };
 
+/**
+ * Renders the guided session close screen and post-workout feedback form.
+ *
+ * @param props Session summary, controlled feedback fields, and save callbacks.
+ * @returns Mobile-first close screen with sourced stats and accessible feedback inputs.
+ * @example
+ * <SessionCloseScreen summary={summary} effort={7} sensation="good" discomfort={[]} note="" />
+ */
 export function SessionCloseScreen({
   summary,
   muscleGroups = [],
-  mood,
+  effort,
+  onEffort,
+  sensation,
+  onSensation,
+  discomfort,
+  onDiscomfortChange,
+  note,
+  onNoteChange,
   onMood,
   onSave,
   saving,
+  error = null,
 }: SessionCloseScreenProps) {
   const subtitle = muscleGroups.length > 0
     ? muscleGroups.join(' · ')
@@ -64,33 +93,25 @@ export function SessionCloseScreen({
           </p>
         ))}
 
-        <div>
-          <p className="mb-2 text-sm font-medium text-ink">{SESSION_COPY.moodLabel}</p>
-          <div className="flex justify-between gap-2">
-            {MOOD_EMOJIS.map(({ value, emoji, label }) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => onMood(value)}
-                aria-pressed={mood === value}
-                aria-label={label}
-                className={cn(
-                  'rounded-xl p-2 text-3xl transition',
-                  mood === value ? 'bg-brand-muted shadow-card' : 'opacity-50 hover:opacity-100',
-                )}
-                data-testid={`close-mood-${value}`}
-              >
-                {emoji}
-              </button>
-            ))}
-          </div>
-        </div>
+        <PostWorkoutFeedbackForm
+          effort={effort}
+          onEffort={onEffort}
+          sensation={sensation}
+          onSensation={onSensation}
+          onLegacyMood={onMood}
+          discomfort={discomfort}
+          onDiscomfortChange={onDiscomfortChange}
+          note={note}
+          onNoteChange={onNoteChange}
+          disabled={saving}
+          error={error}
+        />
 
         <Button
           variant="success"
           size="lg"
           onClick={onSave}
-          disabled={saving || mood === null}
+          disabled={saving || effort === null || sensation === null}
           data-testid="close-save"
         >
           {SESSION_COPY.saveAndClose}

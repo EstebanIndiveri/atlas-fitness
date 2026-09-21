@@ -9,6 +9,7 @@ export type PostWorkoutFeedbackResponse = PostWorkoutFeedbackDto;
 export type PostWorkoutFeedbackClientErrorKind = 'unauthorized' | 'not_found' | 'validation' | 'generic';
 
 export interface RecordPostWorkoutFeedbackInput {
+  workoutId: number;
   effort: number;
   sensation: WorkoutSensation;
   discomfort: DiscomfortEntry[];
@@ -30,19 +31,20 @@ export class PostWorkoutFeedbackClientError extends Error {
 /**
  * Records optional post-workout feedback for the authenticated user.
  *
- * @param workoutId - Workout id from the route segment.
- * @param input - User-submitted feedback fields forwarded to the API.
+ * @param input - Workout id plus user-submitted feedback fields forwarded to the API.
  * @returns The persisted feedback DTO.
  * @throws {PostWorkoutFeedbackClientError} When the API fails or returns an invalid DTO.
+ * @example
+ * await recordPostWorkoutFeedback({ workoutId: 22, effort: 8, sensation: 'good', discomfort: [] });
  */
 export async function recordPostWorkoutFeedback(
-  workoutId: number,
   input: RecordPostWorkoutFeedbackInput,
 ): Promise<PostWorkoutFeedbackResponse> {
+  const { workoutId, ...bodyInput } = input;
   const response = await fetch(`/api/workouts/${workoutId}/feedback`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(input),
+    body: JSON.stringify(bodyInput),
   });
   const body = await readBody(response);
 
@@ -102,6 +104,8 @@ export async function fetchPostWorkoutFeedback(
 
   return parsed;
 }
+
+export const getPostWorkoutFeedback = fetchPostWorkoutFeedback;
 
 async function readBody(response: Response): Promise<unknown | typeof INVALID_API_BODY> {
   const text = await response.text();
