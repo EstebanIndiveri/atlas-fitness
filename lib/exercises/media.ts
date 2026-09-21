@@ -1,15 +1,10 @@
-import { MEDIA_URL_MAX_LENGTH } from '@/lib/validation/media-url';
+import { MEDIA_URL_MAX_LENGTH, isValidMediaUrl } from '@/lib/validation/media-url';
 
 export { MEDIA_URL_MAX_LENGTH };
 
 /** Client scheme gate for catalog media URLs. */
 export function isHttpsMediaUrl(value: string): boolean {
-  try {
-    const url = new URL(value);
-    return url.protocol === 'https:' && Boolean(url.hostname);
-  } catch {
-    return false;
-  }
+  return isValidMediaUrl(value);
 }
 
 /**

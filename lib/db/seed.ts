@@ -1,5 +1,8 @@
 import bcrypt from 'bcryptjs';
-import { eq } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
+
+import { SYSTEM_EXERCISES } from '@/lib/exercises/catalog/system-exercises';
+
 import { db } from './client';
 import { shouldSeedQaUser } from './seed-options';
 import { users, exercises, userStreaks, dailyTips, routines, routineExercises } from './schema';
@@ -7,76 +10,13 @@ import { users, exercises, userStreaks, dailyTips, routines, routineExercises } 
 const QA_USER_EMAIL = 'qa@atlas.test';
 const QA_USER_PASSWORD = 'Test1234!';
 
-/**
- * Base URL for free-exercise-db (yuhonas) demonstration images.
- * Real, stable, openly-licensed photos so exercises never ship with a placeholder.
- */
-const FREE_EXERCISE_DB_IMAGE_BASE =
-  'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises';
-
-/**
- * Curated technique videos for the system exercises. Each YouTube id was verified
- * via the oEmbed check (exists, embeddable, title matches the movement) so they play
- * in-app instead of shipping as search links. User exercises are filled by the media
- * enrichment job (Gemini suggestion + oEmbed validation), never as unvalidated links.
- */
-const YOUTUBE_WATCH_BASE = 'https://www.youtube.com/watch?v=';
-
-/**
- * System exercises with fixed slugs for testing
- */
-const SYSTEM_EXERCISES = [
-  {
-    slug: 'bench-press',
-    name: 'Press Banca',
-    muscleGroup: 'Pecho',
-    instructions:
-      'Acostado en un banco plano, baja la barra hasta el pecho y empuja hacia arriba con control.',
-    imageUrl: `${FREE_EXERCISE_DB_IMAGE_BASE}/Barbell_Bench_Press_-_Medium_Grip/0.jpg`,
-    videoUrl: `${YOUTUBE_WATCH_BASE}SCVCLChPQFY`,
-    isSystem: true,
-  },
-  {
-    slug: 'squat',
-    name: 'Sentadilla',
-    muscleGroup: 'Piernas',
-    instructions:
-      'Con la barra en los hombros, baja doblando rodillas y caderas hasta que los muslos estén paralelos al suelo.',
-    imageUrl: `${FREE_EXERCISE_DB_IMAGE_BASE}/Barbell_Full_Squat/0.jpg`,
-    videoUrl: `${YOUTUBE_WATCH_BASE}UFs6E3Ti1jg`,
-    isSystem: true,
-  },
-  {
-    slug: 'deadlift',
-    name: 'Peso Muerto',
-    muscleGroup: 'Espalda',
-    instructions:
-      'Con la barra en el suelo, agáchate y levántala manteniendo la espalda recta hasta estar de pie.',
-    imageUrl: `${FREE_EXERCISE_DB_IMAGE_BASE}/Barbell_Deadlift/0.jpg`,
-    videoUrl: `${YOUTUBE_WATCH_BASE}wYREQkVtvEc`,
-    isSystem: true,
-  },
-  {
-    slug: 'overhead-press',
-    name: 'Press Militar',
-    muscleGroup: 'Hombros',
-    instructions:
-      'De pie, empuja la barra desde los hombros hacia arriba hasta extender completamente los brazos.',
-    imageUrl: `${FREE_EXERCISE_DB_IMAGE_BASE}/Standing_Military_Press/0.jpg`,
-    videoUrl: `${YOUTUBE_WATCH_BASE}wol7Hko8RhY`,
-    isSystem: true,
-  },
-  {
-    slug: 'barbell-row',
-    name: 'Remo con Barra',
-    muscleGroup: 'Espalda',
-    instructions:
-      'Inclinado hacia adelante, tira de la barra hacia tu abdomen manteniendo los codos cerca del cuerpo.',
-    imageUrl: `${FREE_EXERCISE_DB_IMAGE_BASE}/Bent_Over_Barbell_Row/0.jpg`,
-    videoUrl: `${YOUTUBE_WATCH_BASE}9efgcAjQe7E`,
-    isSystem: true,
-  },
-];
+async function reserveSystemExerciseSlugs(): Promise<void> {
+  const slugs = SYSTEM_EXERCISES.map((exercise) => exercise.slug);
+  await db
+    .update(exercises)
+    .set({ slug: sql`${exercises.slug} || '-custom-' || ${exercises.id}` })
+    .where(and(eq(exercises.isSystem, false), inArray(exercises.slug, slugs)));
+}
 
 async function exerciseIdBySlug(slug: string): Promise<number> {
   const row = await db.query.exercises.findFirst({
@@ -217,6 +157,7 @@ async function seed() {
 
   // Create system exercises
   console.log('\nCreating system exercises...');
+  await reserveSystemExerciseSlugs();
 
   for (const exercise of SYSTEM_EXERCISES) {
     const existing = await db.query.exercises.findFirst({

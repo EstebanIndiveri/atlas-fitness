@@ -28,7 +28,7 @@ const curl: ExerciseCatalogItem = {
 };
 
 describe('RoutineEditorForm', () => {
-  it('exposes labels, empty media, disabled upload and add/remove', () => {
+  it('exposes labels, empty media, locked system upload and add/remove', () => {
     const onAdd = jest.fn();
     const onRemove = jest.fn();
     const added = addExercise({ ...emptyDraft(), name: 'Empuje' }, bench, 'row-1');
@@ -56,9 +56,10 @@ describe('RoutineEditorForm', () => {
     expect(screen.getByLabelText(ROUTINE_COPY.nameLabel)).toBeTruthy();
     expect(screen.getByLabelText(ROUTINE_COPY.restLabel)).toBeTruthy();
     expect(screen.getByTestId(ROUTINE_TEST_IDS.media).textContent).toBe(ROUTINE_COPY.mediaEmpty);
-    const upload = screen.getByTestId(ROUTINE_TEST_IDS.upload) as HTMLInputElement;
-    expect(upload.disabled).toBe(true);
-    expect(screen.getByText(ROUTINE_COPY.uploadDisabled)).toBeTruthy();
+    const uploads = screen.getAllByTestId(ROUTINE_TEST_IDS.upload) as HTMLInputElement[];
+    expect(uploads).toHaveLength(2);
+    expect(uploads.every((upload) => upload.disabled)).toBe(true);
+    expect(screen.getAllByText(ROUTINE_COPY.uploadDisabled)).toHaveLength(2);
 
     fireEvent.click(screen.getByTestId(ROUTINE_TEST_IDS.addExercise));
     expect(onAdd).toHaveBeenCalled();

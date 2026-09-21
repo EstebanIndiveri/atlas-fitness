@@ -167,19 +167,35 @@ export function RoutineEditorForm({
           </p>
         ) : (
           <div className="space-y-3">
-            {draft.exercises.map((exercise, index) => (
-              <RoutineExerciseRow
-                key={exercise.clientId}
-                exercise={exercise}
-                index={index}
-                total={draft.exercises.length}
-                errors={validation.items[exercise.clientId]}
-                readOnly={readOnly}
-                onChange={(patch) => onUpdateExercise(exercise.clientId, patch)}
-                onMove={(direction) => onMoveExercise(exercise.clientId, direction)}
-                onRemove={() => onRemoveExercise(exercise.clientId)}
-              />
-            ))}
+            {draft.exercises.map((exercise, index) => {
+              const mediaLocked = readOnly || exercise.isSystem;
+              return (
+                <div key={exercise.clientId} className="space-y-3">
+                  <RoutineExerciseRow
+                    exercise={exercise}
+                    index={index}
+                    total={draft.exercises.length}
+                    errors={validation.items[exercise.clientId]}
+                    readOnly={readOnly}
+                    onChange={(patch) => onUpdateExercise(exercise.clientId, patch)}
+                    onMove={(direction) => onMoveExercise(exercise.clientId, direction)}
+                    onRemove={() => onRemoveExercise(exercise.clientId)}
+                  />
+                  <div className="grid gap-3 rounded-md border border-line bg-surface p-3 sm:grid-cols-2">
+                    <MediaUploadControl
+                      mediaType="image"
+                      disabled={mediaLocked}
+                      onUploaded={(url) => onUpdateExercise(exercise.clientId, { imageUrl: url })}
+                    />
+                    <MediaUploadControl
+                      mediaType="video"
+                      disabled={mediaLocked}
+                      onUploaded={(url) => onUpdateExercise(exercise.clientId, { videoUrl: url })}
+                    />
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
 
@@ -216,7 +232,6 @@ export function RoutineEditorForm({
             {ROUTINE_COPY.addExercise}
           </Button>
         </div>
-        <MediaUploadControl />
       </fieldset>
 
       <Button type="submit" size="lg" disabled={readOnly || busy} data-testid={ROUTINE_TEST_IDS.save}>
