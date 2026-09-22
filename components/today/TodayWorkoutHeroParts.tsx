@@ -1,3 +1,5 @@
+import type { JSX } from 'react';
+
 import { Button } from '@/components/ui/Button';
 import { MetricValue } from '@/components/ui/MetricValue';
 import { ErrorState } from '@/components/ui/states';
@@ -24,9 +26,9 @@ interface RetryableErrorProps {
  * Small gym/home pill for the Today workout hero.
  * @returns A sourced routine-kind label.
  */
-export function KindPill({ kind, gymLabel, homeLabel }: { kind: RoutineDetail['kind']; gymLabel: string; homeLabel: string }) {
+export function KindPill({ kind, gymLabel, homeLabel }: { kind: RoutineDetail['kind']; gymLabel: string; homeLabel: string }): JSX.Element {
   return (
-    <span className="rounded-full bg-surface/80 px-3 py-1 text-xs font-medium text-ink ring-1 ring-line">
+    <span className="max-w-full break-words rounded-full bg-surface/80 px-3 py-1 text-xs font-medium text-ink ring-1 ring-line">
       {kind === 'gym' ? gymLabel : homeLabel}
     </span>
   );
@@ -36,10 +38,10 @@ export function KindPill({ kind, gymLabel, homeLabel }: { kind: RoutineDetail['k
  * Plan-goal pill shown only when the real Today payload includes a goal.
  * @returns An accessible goal pill.
  */
-export function GoalPill({ goal, label }: { goal: string; label: string }) {
+export function GoalPill({ goal, label }: { goal: string; label: string }): JSX.Element {
   return (
     <span
-      className="rounded-full bg-brand/12 px-3 py-1 text-xs font-semibold text-brand ring-1 ring-brand/30"
+      className="max-w-full break-words rounded-full bg-brand/12 px-3 py-1 text-xs font-semibold text-brand ring-1 ring-brand/30"
       aria-label={`${label}: ${goal}`}
     >
       {goal}
@@ -51,7 +53,7 @@ export function GoalPill({ goal, label }: { goal: string; label: string }) {
  * Deterministic day-reason note shown only when provided by `/api/today`.
  * @returns An honest reason block.
  */
-export function ReasonNote({ reason, label }: { reason: string; label: string }) {
+export function ReasonNote({ reason, label }: { reason: string; label: string }): JSX.Element {
   return (
     <div
       className="flex items-start gap-2 rounded-lg bg-surface/60 px-3 py-2 text-sm text-ink-muted ring-1 ring-line"
@@ -69,7 +71,7 @@ export function ReasonNote({ reason, label }: { reason: string; label: string })
  * Honest completion meter based on real completed/total exercise counts.
  * @returns A progress meter without fabricated percentages.
  */
-export function CompletionMeter({ completed, total, label, unit, doneLabel }: CompletionMeterProps) {
+export function CompletionMeter({ completed, total, label, unit, doneLabel }: CompletionMeterProps): JSX.Element {
   const isDone = completed >= total;
   const summary = `${completed} de ${total} ${unit}`;
 
@@ -86,7 +88,7 @@ export function CompletionMeter({ completed, total, label, unit, doneLabel }: Co
         />
       </div>
       <div
-        className="h-2 overflow-hidden rounded-full bg-surface/70 ring-1 ring-line"
+        className="h-2.5 overflow-hidden rounded-full bg-canvas ring-1 ring-line"
         role="progressbar"
         aria-valuenow={completed}
         aria-valuemin={0}
@@ -94,7 +96,7 @@ export function CompletionMeter({ completed, total, label, unit, doneLabel }: Co
         aria-label={label}
       >
         <div
-          className="h-full rounded-full bg-brand transition-[width]"
+          className="h-full rounded-full bg-brand transition-[width] duration-500"
           style={{ width: `${(completed / total) * 100}%` }}
         />
       </div>
@@ -107,7 +109,7 @@ export function CompletionMeter({ completed, total, label, unit, doneLabel }: Co
  * Figma-style metric pills derived from real routine detail.
  * @returns Exercise and set pills with metric provenance; duration is omitted until sourced.
  */
-export function StatsRow({ exercises, series }: { exercises: number; series: number }) {
+export function StatsRow({ exercises, series }: { exercises: number; series: number }): JSX.Element {
   const items = [
     { icon: '↗', value: `${exercises} ejercicios`, label: 'Ejercicios' },
     { icon: '⇄', value: `${series} series`, label: 'Series' },
@@ -137,7 +139,7 @@ export function StatsRow({ exercises, series }: { exercises: number; series: num
  * Reusable retry block for Today hero load failures.
  * @returns Error state plus a retry button.
  */
-export function RetryableError({ message, onRetry, retryLabel, compact = false }: RetryableErrorProps) {
+export function RetryableError({ message, onRetry, retryLabel, compact = false }: RetryableErrorProps): JSX.Element {
   return (
     <div className={cn('space-y-3', compact && 'rounded-lg bg-surface/60 p-3')}>
       <ErrorState message={message} />
