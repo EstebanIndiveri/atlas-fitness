@@ -7,6 +7,14 @@ const mockSaveAndClose = jest.fn(async () => undefined);
 const mockSkipCurrent = jest.fn(async () => true);
 const mockHoldCurrent = jest.fn(async () => true);
 const mockRecordPostWorkoutFeedback = jest.fn(async (_input: unknown) => undefined);
+const mockRestStart = jest.fn();
+const mockRestSkip = jest.fn();
+const mockRestTimer = {
+  active: false,
+  remaining: 0,
+  start: mockRestStart,
+  skip: mockRestSkip,
+};
 
 const mockSession = {
   loading: false,
@@ -85,12 +93,7 @@ jest.mock('@/hooks/useGuidedSession', () => ({
 }));
 
 jest.mock('@/hooks/useRestTimer', () => ({
-  useRestTimer: () => ({
-    active: false,
-    remaining: 0,
-    start: jest.fn(),
-    skip: jest.fn(),
-  }),
+  useRestTimer: () => mockRestTimer,
 }));
 
 jest.mock('@/lib/api/post-workout-feedback', () => ({
@@ -106,6 +109,10 @@ describe('GuidedSessionPlayerPage', () => {
     mockSkipCurrent.mockClear();
     mockHoldCurrent.mockClear();
     mockRecordPostWorkoutFeedback.mockClear();
+    mockRestStart.mockClear();
+    mockRestSkip.mockClear();
+    mockRestTimer.active = false;
+    mockRestTimer.remaining = 0;
   });
 
   it('records post-workout feedback before returning to the dashboard', async () => {
@@ -148,7 +155,7 @@ describe('GuidedSessionPlayerPage', () => {
     mockSession.workout.endedAt = null;
   });
 
-  it('shows skip and hold controls on the guided train screen', async () => {
+  it('shows skip and hold controls on the guided train screen with fixed-CTA spacing', async () => {
     mockSession.phase = 'train';
     const { default: GuidedSessionPlayerPage } = await import('./page');
     render(<GuidedSessionPlayerPage />);
@@ -161,5 +168,21 @@ describe('GuidedSessionPlayerPage', () => {
     await waitFor(() => expect(mockSkipCurrent).toHaveBeenCalledTimes(1));
     expect(mockHoldCurrent).toHaveBeenCalledTimes(1);
     expect(screen.getByRole('heading', { name: SESSION_COPY.queueTitle })).toBeTruthy();
+    expect(screen.getByTestId('guided-session-page').className).toContain('pb-[calc(10rem+env(safe-area-inset-bottom,0px))]');
+    expect(screen.getByTestId('complete-set-bar').className).toContain('fixed');
+  });
+
+  it('keeps suggested rest immediately after the set table when rest is active', async () => {
+    mockSession.phase = 'train';
+    mockRestTimer.active = true;
+    mockRestTimer.remaining = 90;
+    const { default: GuidedSessionPlayerPage } = await import('./page');
+    render(<GuidedSessionPlayerPage />);
+
+    const card = screen.getByTestId('guided-exercise-card');
+    const setTableIndex = card.textContent?.indexOf('SERIE 2 EN CURSO') ?? -1;
+    const restIndex = card.textContent?.indexOf('DESCANSO SUGERIDO') ?? -1;
+    expect(setTableIndex).toBeGreaterThanOrEqual(0);
+    expect(restIndex).toBeGreaterThan(setTableIndex);
   });
 });
