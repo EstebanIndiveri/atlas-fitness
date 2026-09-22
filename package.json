@@ -1,6 +1,6 @@
 {
   "name": "atlas-fitness",
-  "version": "0.3.2",
+  "version": "0.4.0",
   "private": true,
   "description": "Asistente de fitness personal para registrar entrenamientos, pesos, consejos, media de ejercicios y motivación — vía **web app** y **bot de Telegram** (misma lógica de producto que Hermes Finance: un dominio, dos canales).",
   "scripts": {
