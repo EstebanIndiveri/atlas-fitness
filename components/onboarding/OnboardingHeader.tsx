@@ -1,7 +1,9 @@
 'use client';
 
-import { cn } from '@/lib/ui/cn';
 import { ONBOARDING_COPY, ONBOARDING_TEST_IDS } from '@/lib/copy/onboarding';
+
+import { ProgressBar } from './ProgressBar';
+import { StepChips } from './StepChips';
 
 const TOTAL_STEPS = ONBOARDING_COPY.tabs.length;
 
@@ -23,26 +25,10 @@ type OnboardingHeaderProps = {
 export function OnboardingHeader({ activeIndex, onBack, onSkip }: OnboardingHeaderProps) {
   return (
     <header
-      className="space-y-4 border-b border-line bg-surface/95 px-4 pb-4 pt-3 backdrop-blur"
+      className="space-y-4 border-b border-line bg-canvas/95 px-4 pb-4 pt-3 backdrop-blur"
       data-testid={ONBOARDING_TEST_IDS.header}
     >
-      <ul className="flex gap-2 overflow-x-auto" aria-hidden="true">
-        {ONBOARDING_COPY.tabs.map((tab, index) => (
-          <li
-            key={tab.id}
-            className={cn(
-              'whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold',
-              index === activeIndex
-                ? 'bg-brand text-brand-foreground'
-                : index < activeIndex
-                  ? 'bg-brand-muted text-brand'
-                  : 'bg-canvas text-ink-muted',
-            )}
-          >
-            {index + 1}. {tab.label}
-          </li>
-        ))}
-      </ul>
+      <StepChips activeIndex={activeIndex} steps={ONBOARDING_COPY.tabs} />
 
       <div className="flex items-center justify-between text-sm">
         <button
@@ -67,17 +53,7 @@ export function OnboardingHeader({ activeIndex, onBack, onSkip }: OnboardingHead
         </button>
       </div>
 
-      <div className="flex gap-1.5" aria-hidden="true">
-        {ONBOARDING_COPY.tabs.map((tab, index) => (
-          <span
-            key={tab.id}
-            className={cn(
-              'h-1.5 flex-1 rounded-full',
-              index <= activeIndex ? 'bg-brand' : 'bg-line',
-            )}
-          />
-        ))}
-      </div>
+      <ProgressBar activeIndex={activeIndex} totalSteps={TOTAL_STEPS} />
     </header>
   );
 }
