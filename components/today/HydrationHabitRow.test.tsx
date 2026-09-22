@@ -52,6 +52,13 @@ describe('HydrationHabitRow', () => {
     expect(screen.getByRole('button', { name: /Reiniciar/ }).hasAttribute('disabled')).toBe(true);
   });
 
+  it('keeps every action at a 44px tap target without forcing the row wider', () => {
+    render(<HydrationHabitRow habit={HABIT} amount="1.5" onAdd={jest.fn()} onClear={jest.fn()} />);
+
+    expect(screen.getByRole('button', { name: /Sumar/ }).className).toContain('min-h-11');
+    expect(screen.getByRole('button', { name: /Reiniciar/ }).className).toContain('size-11');
+  });
+
   it('never renders a fabricated target or percentage', () => {
     const { container } = render(
       <HydrationHabitRow habit={HABIT} amount="1.5" onAdd={jest.fn()} onClear={jest.fn()} />,

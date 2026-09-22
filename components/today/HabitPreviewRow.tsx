@@ -1,3 +1,5 @@
+import type { JSX } from 'react';
+
 import { cn } from '@/lib/ui/cn';
 import type { HabitKey } from '@/types/habit';
 
@@ -26,9 +28,9 @@ interface HabitPreviewRowProps {
  * @example
  * <HabitPreviewRow habit={habit} done={false} onToggle={toggle} />
  */
-export function HabitPreviewRow({ habit, done, onToggle, disabled = false }: HabitPreviewRowProps) {
+export function HabitPreviewRow({ habit, done, onToggle, disabled = false }: HabitPreviewRowProps): JSX.Element {
   return (
-    <li className="flex items-center gap-3 py-2">
+    <li className="flex min-w-0 items-center gap-3 py-2">
       <button
         type="button"
         role="checkbox"
@@ -37,7 +39,7 @@ export function HabitPreviewRow({ habit, done, onToggle, disabled = false }: Hab
         disabled={disabled}
         onClick={() => onToggle(habit.id)}
         className={cn(
-          'flex min-h-14 flex-1 items-center gap-3 rounded-2xl px-2 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
+          'flex min-h-14 min-w-0 flex-1 items-center gap-3 rounded-2xl px-2 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
           disabled ? 'cursor-not-allowed opacity-70' : 'hover:bg-canvas',
         )}
       >
@@ -61,7 +63,7 @@ export function HabitPreviewRow({ habit, done, onToggle, disabled = false }: Hab
           <span className="block truncate text-sm font-medium text-ink">{habit.name}</span>
           <span className="block truncate text-xs text-ink-muted">{habit.hint}</span>
         </span>
-        <span className="mr-1 text-right text-xs font-semibold text-ink-muted">
+        <span className="mr-1 shrink-0 text-right text-xs font-semibold text-ink-muted">
           {done ? 'Registrado' : 'Registrar'}
         </span>
         <span

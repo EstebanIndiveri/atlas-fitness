@@ -1,3 +1,5 @@
+import type { JSX } from 'react';
+
 import { MetricValue } from '@/components/ui/MetricValue';
 import { formatHydrationLiters } from '@/lib/format/hydration';
 import { cn } from '@/lib/ui/cn';
@@ -40,7 +42,7 @@ export function HydrationHabitRow({
   onAdd,
   onClear,
   disabled = false,
-}: HydrationHabitRowProps) {
+}: HydrationHabitRowProps): JSX.Element {
   const hasAmount = amount !== null;
 
   const handleAdd = (): void => {
@@ -56,7 +58,7 @@ export function HydrationHabitRow({
   };
 
   return (
-    <li className="flex items-center gap-3 py-2">
+    <li className="flex min-w-0 items-center gap-3 py-2">
       <span
         className="grid size-9 shrink-0 place-items-center rounded-lg bg-brand-muted text-brand"
         aria-hidden="true"
@@ -97,7 +99,7 @@ export function HydrationHabitRow({
             disabled={disabled}
             onClick={handleClear}
             className={cn(
-              'grid size-9 place-items-center rounded-lg border border-line text-ink-muted transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
+              'grid size-11 place-items-center rounded-lg border border-line text-ink-muted transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
               disabled ? 'cursor-not-allowed opacity-70' : 'hover:bg-canvas',
             )}
           >
@@ -122,7 +124,7 @@ export function HydrationHabitRow({
           disabled={disabled}
           onClick={handleAdd}
           className={cn(
-            'flex min-h-9 items-center gap-1 rounded-lg bg-brand px-3 text-sm font-medium text-white transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
+            'flex min-h-11 items-center gap-1 rounded-lg bg-brand px-3 text-sm font-medium text-white transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
             disabled ? 'cursor-not-allowed opacity-70' : 'hover:bg-brand/90',
           )}
         >

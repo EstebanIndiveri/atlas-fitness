@@ -191,6 +191,25 @@ describe('TodayWorkoutHero', () => {
     expect(meter.textContent).not.toMatch(/%/);
   });
 
+  it('keeps a clearly visible progress track at zero without inventing a percentage', async () => {
+    useTodayState(workoutToday(null, null, { completed: 0, total: 3 }));
+    mockFetchRoutineDetail.mockResolvedValue(routineDetail());
+
+    await renderHero();
+
+    const bar = await screen.findByRole('progressbar', { name: 'Avance de hoy' });
+    expect(bar.className).toContain('h-2.5');
+    expect(bar.className).toContain('bg-canvas');
+    expect(bar.className).toContain('ring-1');
+    expect(bar.className).toContain('ring-line');
+    expect(bar.firstElementChild?.className).toContain('transition-[width]');
+    expect(bar.firstElementChild?.className).toContain('duration-500');
+    expect(bar.getAttribute('aria-valuenow')).toBe('0');
+    expect(bar.getAttribute('aria-valuemin')).toBe('0');
+    expect(bar.getAttribute('aria-valuemax')).toBe('3');
+    expect(screen.getByTestId('completion-meter').textContent).not.toMatch(/%/);
+  });
+
   it('shows a completed message when every exercise is done', async () => {
     useTodayState(workoutToday(null, null, { completed: 3, total: 3 }));
     mockFetchRoutineDetail.mockResolvedValue(routineDetail());
@@ -223,7 +242,7 @@ describe('TodayWorkoutHero', () => {
 
     await renderHero();
 
-    expect(await screen.findByRole('button', { name: /Empezar Entreno/ })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: 'Empezar entrenamiento ▷' })).toBeTruthy();
     expect(screen.getByRole('button', { name: /Adaptar con Coach Atlas/ })).toBeTruthy();
   });
 
@@ -245,7 +264,7 @@ describe('TodayWorkoutHero', () => {
 
     await renderHero({ onStartWorkout, onAdapt });
 
-    fireEvent.click(await screen.findByRole('button', { name: /Empezar Entreno/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Empezar entrenamiento ▷' }));
     fireEvent.click(screen.getByRole('button', { name: /Adaptar con Coach Atlas/ }));
 
     expect(onStartWorkout).toHaveBeenCalledTimes(1);
@@ -258,7 +277,7 @@ describe('TodayWorkoutHero', () => {
 
     await renderHero();
 
-    expect(await screen.findByText('● ENTRENAMIENTO DE HOY')).toBeTruthy();
+    expect(await screen.findByText('ENTRENAMIENTO DE HOY')).toBeTruthy();
     expect(screen.getByText('Hipertrofia Adaptativa')).toBeTruthy();
     expect(screen.getByLabelText('Ejercicios').textContent).toContain('3 ejercicios');
     expect(screen.getByLabelText('Series').textContent).toContain('11 series');

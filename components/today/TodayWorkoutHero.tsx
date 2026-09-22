@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type JSX } from 'react';
 
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -31,8 +31,8 @@ type DetailState =
   | { status: 'error'; routine: null; error: string };
 
 const COPY = {
-  eyebrow: '● ENTRENAMIENTO DE HOY',
-  start: 'Empezar Entreno ▶',
+  eyebrow: 'ENTRENAMIENTO DE HOY',
+  start: 'Empezar entrenamiento ▷',
   repeat: 'Entrenar de nuevo',
   adapt: '✦ Adaptar con Coach Atlas',
   retry: 'Reintentar',
@@ -63,7 +63,7 @@ export function TodayWorkoutHero({
   onStartWorkout,
   onAdapt,
   onCreatePlan,
-}: TodayWorkoutHeroProps) {
+}: TodayWorkoutHeroProps): JSX.Element | null {
   const { today, loading, error, reload } = useToday();
   const [detailState, setDetailState] = useState<DetailState>({
     status: 'idle', routine: null, error: null,
@@ -128,20 +128,21 @@ export function TodayWorkoutHero({
       const metrics = routine ? buildMetrics(routine) : null;
       const workoutCompleted = today.completion.total > 0 && today.completion.completed >= today.completion.total;
       return (
-        <Card tone="brand" className="relative space-y-6 overflow-hidden rounded-[2rem] p-5 sm:p-7">
+        <Card tone="brand" className="relative min-w-0 space-y-6 overflow-hidden rounded-[2rem] p-5 sm:p-7">
           <TopographicTexture className="text-brand opacity-[0.06]" />
-          <div className="relative flex items-start justify-between gap-3">
-            <div className="flex items-center gap-2 rounded-full bg-surface/80 px-3 py-1 text-[0.68rem] font-semibold tracking-[0.18em] text-brand ring-1 ring-brand/20">
+          <div className="relative flex flex-wrap items-center justify-between gap-3">
+            <div className="flex shrink-0 items-center gap-2 text-[0.68rem] font-semibold tracking-[0.18em] text-brand">
+              <span className="size-2 rounded-full bg-brand" aria-hidden="true" />
               <span>{COPY.eyebrow}</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
               {today.planGoal ? <GoalPill goal={today.planGoal} label={COPY.goalLabel} /> : null}
               {routine ? <KindPill kind={routine.kind} gymLabel={COPY.gym} homeLabel={COPY.home} /> : null}
             </div>
           </div>
 
-          <div className="relative space-y-2">
-            <h2 className="font-serif text-4xl font-semibold leading-none tracking-[-0.05em] text-ink sm:text-5xl">
+          <div className="relative min-w-0 space-y-3">
+            <h2 className="max-w-full text-balance font-serif text-[clamp(2rem,9vw,3rem)] font-semibold leading-[0.96] tracking-[-0.04em] text-ink">
               {today.routineName}
             </h2>
             {routine?.description ? (
@@ -179,7 +180,7 @@ export function TodayWorkoutHero({
             ) : (
               <Button size="lg" onClick={onStartWorkout}>{COPY.start}</Button>
             )}
-            <Button size="lg" variant="secondary" className="border border-ink/20 bg-transparent" onClick={onAdapt}>{COPY.adapt}</Button>
+            <Button size="lg" variant="ghost" className="border border-ink/20" onClick={onAdapt}>{COPY.adapt}</Button>
           </div>
         </Card>
       );
@@ -199,7 +200,7 @@ export function TodayWorkoutHero({
   }
 }
 
-function buildMetrics(routine: RoutineDetail) {
+function buildMetrics(routine: RoutineDetail): { exercises: number; series: number } {
   const exercises = routine.exercises.length;
   const series = routine.exercises.reduce((total, item) => total + item.targetSets, 0);
   return { exercises, series };

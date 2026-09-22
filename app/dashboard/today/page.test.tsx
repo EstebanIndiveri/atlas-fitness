@@ -219,7 +219,7 @@ describe('TodayPage', () => {
     });
 
     render(<TodayPage />);
-    const startButton = await screen.findByRole('button', { name: /Empezar Entreno/i });
+    const startButton = await screen.findByRole('button', { name: /Empezar entrenamiento/i });
     fireEvent.click(startButton);
 
     await waitFor(() => {

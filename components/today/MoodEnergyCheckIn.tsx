@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, type KeyboardEvent } from 'react';
+import { useRef, useState, type JSX, type KeyboardEvent } from 'react';
 
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -69,7 +69,7 @@ function moodValueForKey(currentMood: number, key: string): number | null {
  * @example
  * <MoodEnergyCheckIn />
  */
-export function MoodEnergyCheckIn() {
+export function MoodEnergyCheckIn(): JSX.Element {
   const { checkin, loading, saving, error, submit } = useDailyCheckin();
   const moodButtonRefs = useRef<Record<number, HTMLButtonElement | null>>({});
   const [selectedMood, setSelectedMood] = useState<number | null>(checkin?.mood ?? null);
@@ -149,8 +149,10 @@ export function MoodEnergyCheckIn() {
                   onClick={() => handleMoodSelect(value)}
                   onKeyDown={(event) => handleMoodKeyDown(value, event)}
                   className={cn(
-                    'relative flex min-h-20 flex-1 flex-col items-center justify-center gap-1 rounded-2xl border border-line bg-canvas px-2 py-3 text-center transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
-                    active ? 'border-brand bg-brand text-white ring-2 ring-brand/30' : 'hover:border-brand hover:bg-surface',
+                    'relative flex min-h-20 flex-1 flex-col items-center justify-center gap-1 rounded-2xl border px-2 py-3 text-center transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
+                    active
+                      ? 'border-brand bg-brand text-white ring-2 ring-brand/30'
+                      : 'border-line bg-canvas hover:border-brand hover:bg-surface',
                     saving && 'cursor-not-allowed',
                   )}
                   data-testid={`mood-${value}`}
@@ -178,15 +180,15 @@ export function MoodEnergyCheckIn() {
               return (
                 <Button
                   key={value}
-                  variant={active ? 'primary' : 'secondary'}
+                  variant={active ? 'primary' : 'ghost'}
                   size="sm"
                   aria-pressed={active}
                   aria-label={`Seleccionar energía ${label}`}
                   disabled={saving}
                   onClick={() => handleEnergySelect(value)}
                   className={cn(
-                    'rounded-xl border border-line py-2.5 transition focus-visible:outline-brand',
-                    active ? 'border-brand bg-brand text-white' : 'bg-canvas text-ink-muted hover:bg-surface',
+                    'rounded-xl border py-2.5 transition focus-visible:outline-brand',
+                    active ? 'border-brand text-white' : 'border-line bg-canvas text-ink-muted hover:bg-surface',
                   )}
                 >
                   {label}

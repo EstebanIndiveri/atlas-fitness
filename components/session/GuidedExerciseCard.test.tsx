@@ -156,20 +156,10 @@ describe('GuidedExerciseCard', () => {
     expect(notes.value).toBe('Subir a 42.5 kg si sale liviano.');
   });
 
-  it('renders the rest timer immediately after the set table instead of above it', () => {
-    render(
-      <GuidedExerciseCard
-        exercise={exercise()}
-        {...cardProps}
-        focusSlot={<div data-testid="rest-timer">01:30</div>}
-      />,
-    );
+  it('keeps the exercise card free of rest-timer UI', () => {
+    render(<GuidedExerciseCard exercise={exercise()} {...cardProps} />);
 
-    const card = screen.getByTestId('guided-exercise-card');
-    expect(card.contains(screen.getByTestId('rest-timer'))).toBe(true);
-    expect(card.textContent?.indexOf('SERIE 1 EN CURSO')).toBeLessThan(
-      card.textContent?.indexOf('01:30') ?? Number.MAX_SAFE_INTEGER,
-    );
+    expect(screen.queryByTestId('rest-timer')).toBeNull();
   });
 
   it('renders the complete-set action as a fixed bottom CTA outside the table flow', () => {
@@ -184,9 +174,24 @@ describe('GuidedExerciseCard', () => {
     const complete = screen.getByTestId('complete-set-button');
     const bar = screen.getByTestId('complete-set-bar');
     expect(complete.textContent).toContain('COMPLETAR SERIE 1');
+    expect(screen.getByTestId('complete-set-icon').tagName).toBe('svg');
+    expect(complete.className).toContain('bg-brand');
+    expect(complete.getAttribute('aria-label')).toBe('Completar serie 1');
     expect(bar.className).toContain('fixed');
     expect(bar.className).toContain('bottom-app-cta');
     expect(bar.textContent).toContain('Siguiente: Press militar con mancuernas');
     expect(screen.getByTestId('set-checklist').contains(complete)).toBe(false);
+  });
+
+  it('hides the complete-set bar while the fixed rest timer is active', () => {
+    render(
+      <GuidedExerciseCard
+        exercise={exercise()}
+        {...cardProps}
+        resting
+      />,
+    );
+
+    expect(screen.queryByTestId('complete-set-bar')).toBeNull();
   });
 });
