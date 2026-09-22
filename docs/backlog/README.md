@@ -54,6 +54,12 @@ Atlas ya dejó atrás el scaffold: existe un loop usable de **onboarding → Hoy
 - Rate-limit durable y observabilidad más completa para endpoints sensibles si aumenta uso real.
 - Telegram Mini App consumiendo los mismos `/api/*` (ADR-002), si aporta más que la PWA instalada.
 
+### Deferred / follow-up (perfil)
+
+- **Preferencias de Coach** y **Notificaciones y recordatorios** quedan intencionalmente diferidos; las filas de Perfil se remueven hasta que existan pantallas/acciones reales.
+- Pantalla dedicada para editar **Equipamiento/Objetivos** desde Perfil, sin duplicar el flujo guiado actual.
+- Tour de onboarding que alimente a Coach Atlas para generación de plan con más contexto trazable.
+
 ### Could
 
 - Periodización/mesociclos simples y sugerencias de progresión.

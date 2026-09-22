@@ -1,10 +1,12 @@
 /**
  * @jest-environment jsdom
  */
-import { afterEach, describe, expect, it, jest } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { render, screen, waitFor } from '@testing-library/react';
+import type { OnboardingAnswers } from '@/lib/onboarding/state';
 
 const requestCode = jest.fn<() => Promise<void>>();
+const mockReadOnboardingAnswers = jest.fn<() => OnboardingAnswers | null>();
 
 jest.mock('@/hooks/useLinkCode', () => ({
   useLinkCode: () => ({
@@ -26,6 +28,10 @@ jest.mock('@/hooks/useInstallPrompt', () => ({
   }),
 }));
 
+jest.mock('@/lib/onboarding/state', () => ({
+  readOnboardingAnswers: mockReadOnboardingAnswers,
+}));
+
 function jsonResponse(body: unknown, ok = true): Response {
   return {
     ok,
@@ -37,6 +43,10 @@ function jsonResponse(body: unknown, ok = true): Response {
 
 describe('SettingsPage', () => {
   const originalFetch = global.fetch;
+
+  beforeEach(() => {
+    mockReadOnboardingAnswers.mockReturnValue(null);
+  });
 
   afterEach(() => {
     global.fetch = originalFetch;
@@ -64,6 +74,11 @@ describe('SettingsPage', () => {
 
   it('renders honest profile data, Figma sections, version, Telegram, PWA and logout blocks', async () => {
     const Page = (await import('./page')).default;
+    mockReadOnboardingAnswers.mockReturnValue({
+      goal: 'muscle',
+      pace: 'days-3',
+      equipment: 'dumbbells',
+    });
     global.fetch = jest.fn(async (input: unknown) => {
       if (String(input) === '/api/today') {
         return jsonResponse({
@@ -100,7 +115,12 @@ describe('SettingsPage', () => {
     expect(screen.getByText('Hipertrofia')).toBeTruthy();
     expect(screen.getByText('Plan de entrenamiento')).toBeTruthy();
     expect(screen.getByText('Empuje')).toBeTruthy();
-    expect(screen.getAllByText('No configurado').length).toBeGreaterThanOrEqual(3);
+    expect(screen.getByText('Equipamiento disponible')).toBeTruthy();
+    expect(await screen.findByText('Mancuernas en casa')).toBeTruthy();
+    expect(screen.getByTestId('equipment-settings').getAttribute('href')).toBe('/dashboard/plan/new');
+    expect(screen.queryByText('Preferencias de Coach')).toBeNull();
+    expect(screen.queryByText('Notificaciones y recordatorios')).toBeNull();
+    expect(screen.getByText('No configurado')).toBeTruthy();
     expect(screen.getByTestId('telegram-settings')).toBeTruthy();
     expect(screen.getByTestId('telegram-linked-status')).toBeTruthy();
     expect(screen.getByTestId('generate-link-code')).toBeTruthy();
