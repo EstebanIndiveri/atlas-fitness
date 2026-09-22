@@ -25,6 +25,8 @@ describe('WeeklyConsistencyCard', () => {
     expect(screen.getByRole('heading', { name: 'Consistencia semanal' })).toBeTruthy();
     expect(screen.getByLabelText('Días activos esta semana').textContent).toContain('4 de 7');
     expect(screen.getByLabelText('Consistencia semanal').textContent).toContain('57%');
+    expect(screen.getByText('Media 57%')).toBeTruthy();
+    expect(screen.getByRole('progressbar', { name: 'Barra de consistencia semanal' }).getAttribute('aria-valuenow')).toBe('57');
     expect(screen.getByText('Calculado por Atlas')).toBeTruthy();
     expect(screen.getByLabelText('Jueves (hoy, activo)')).toBeTruthy();
   });

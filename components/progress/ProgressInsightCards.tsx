@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 import { Card } from '@/components/ui/Card';
 import { MetricValue } from '@/components/ui/MetricValue';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
@@ -79,10 +81,16 @@ function buildStrengthChart(points: StrengthVolumePoint[]): StrengthChart {
  */
 export function StrengthEvolutionCard({ strength }: StrengthEvolutionCardProps) {
   const chart = buildStrengthChart(strength.points);
+  const latestPoint = strength.points.at(-1) ?? null;
 
   return (
-    <Card className="space-y-3 rounded-2xl p-5">
-      <h2 className="text-base font-semibold text-ink">{PROGRESS_COPY.strength.title}</h2>
+    <Card className="space-y-4 rounded-[28px] p-5">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-base font-semibold text-ink">{PROGRESS_COPY.strength.title}</h2>
+        <Link href="/dashboard/routines" className="shrink-0 text-xs font-semibold text-brand">
+          Ver ejercicios ▸
+        </Link>
+      </div>
       {!strength.hasLoggedSets ? (
         <>
           <EmptyState
@@ -96,7 +104,7 @@ export function StrengthEvolutionCard({ strength }: StrengthEvolutionCardProps) 
         <>
           <div
             aria-label={PROGRESS_COPY.strength.volumeLabel}
-            className="flex items-start justify-between gap-3 rounded-xl bg-canvas p-3"
+            className="flex items-start justify-between gap-3 rounded-2xl bg-canvas p-3.5"
           >
             <div className="min-w-0">
               <p className="text-xs font-semibold text-ink-muted">{PROGRESS_COPY.strength.volumeLabel}</p>
@@ -104,7 +112,7 @@ export function StrengthEvolutionCard({ strength }: StrengthEvolutionCardProps) 
                 metric={metric(`${strength.latestVolumeKg ?? '0'} kg`, 'atlas_computed')}
                 label={PROGRESS_COPY.strength.volumeLabel}
                 showSource
-                className="mt-1 flex flex-wrap text-lg leading-tight"
+                className="mt-1 flex flex-wrap text-3xl leading-tight"
               />
             </div>
             <span className="shrink-0 rounded-full bg-brand px-2.5 py-1 text-xs font-semibold text-brand-foreground">
@@ -132,6 +140,12 @@ export function StrengthEvolutionCard({ strength }: StrengthEvolutionCardProps) 
               <circle key={point.key} cx={point.x} cy={point.y} r="4.5" className="fill-brand" />
             ))}
           </svg>
+          {latestPoint ? (
+            <p className="text-xs leading-relaxed text-ink-muted">
+              Última sesión: {latestPoint.totalVolumeKg} kg · {latestPoint.completedSets}{' '}
+              {latestPoint.completedSets === 1 ? 'serie' : 'series'}
+            </p>
+          ) : null}
           {strength.points.length === 1 ? (
             <p className="text-xs leading-relaxed text-ink-muted">{PROGRESS_COPY.strength.startingPointBody}</p>
           ) : null}
@@ -151,8 +165,11 @@ export function StrengthEvolutionCard({ strength }: StrengthEvolutionCardProps) 
  */
 export function WellbeingCard({ checkin, loading, error }: WellbeingCardProps) {
   return (
-    <Card className="space-y-4 rounded-2xl p-5">
-      <h2 className="text-base font-semibold text-ink">{PROGRESS_COPY.wellbeing.title}</h2>
+    <Card className="space-y-4 rounded-[28px] p-5">
+      <div>
+        <h2 className="text-base font-semibold text-ink">{PROGRESS_COPY.wellbeing.title}</h2>
+        <p className="mt-1 text-sm text-ink-muted">Basado en tu check-in registrado.</p>
+      </div>
       {loading ? <LoadingState compact /> : null}
       {!loading && error ? <ErrorState message={error} /> : null}
       {!loading && !error && !checkin ? (
@@ -163,7 +180,7 @@ export function WellbeingCard({ checkin, loading, error }: WellbeingCardProps) {
       ) : null}
       {!loading && !error && checkin ? (
         <div className="grid grid-cols-2 gap-3">
-          <div aria-label={PROGRESS_COPY.wellbeing.moodLabel} className="rounded-xl bg-canvas p-3">
+          <div aria-label={PROGRESS_COPY.wellbeing.moodLabel} className="rounded-2xl bg-canvas p-3.5">
             <p className="text-xs font-semibold text-ink-muted">Ánimo</p>
             <MetricValue
               metric={metric(`${checkin.mood}/5`, 'user_input')}
@@ -171,7 +188,7 @@ export function WellbeingCard({ checkin, loading, error }: WellbeingCardProps) {
               className="mt-1 text-lg"
             />
           </div>
-          <div aria-label={PROGRESS_COPY.wellbeing.energyLabel} className="rounded-xl bg-canvas p-3">
+          <div aria-label={PROGRESS_COPY.wellbeing.energyLabel} className="rounded-2xl bg-canvas p-3.5">
             <p className="text-xs font-semibold text-ink-muted">Energía</p>
             <MetricValue
               metric={metric(formatEnergyLabel(checkin.energy), 'user_input')}
@@ -205,7 +222,7 @@ export function HabitConsistencyCard({ doneByKey, loading, error }: HabitConsist
   const totalHabits = habitStates.length;
 
   return (
-    <Card className="space-y-3 rounded-2xl p-5">
+    <Card className="space-y-3 rounded-[28px] p-5">
       <h2 className="text-base font-semibold text-ink">{PROGRESS_COPY.habits.title}</h2>
       {loading ? <LoadingState compact /> : null}
       {!loading && error ? <ErrorState message={error} /> : null}

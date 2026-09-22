@@ -12,10 +12,10 @@ import { RecentSessionsCard } from '@/components/progress/RecentSessionsCard';
 import { formatWeekConsistencyPercent } from '@/components/progress/ProgressFormat';
 import { WeeklyConsistencyCard } from '@/components/progress/WeeklyConsistencyCard';
 import { PageContainer } from '@/components/shell/PageContainer';
-import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { ErrorState, LoadingState } from '@/components/ui/states';
 import { useDailyCheckin } from '@/hooks/useDailyCheckin';
 import { useHabits } from '@/hooks/useHabits';
+import { cn } from '@/lib/ui/cn';
 import { useProgress } from '@/hooks/useProgress';
 import { PROGRESS_COPY } from '@/lib/copy/progress';
 import type { ProgressPeriod } from '@/lib/services/progress-summary';
@@ -36,6 +36,42 @@ const EMPTY_STRENGTH: StrengthProgressSummary = {
 
 function isProgressPeriod(value: string): value is ProgressPeriod {
   return value === 'week' || value === 'month' || value === 'quarter';
+}
+
+interface PeriodTabsProps {
+  period: ProgressPeriod;
+  onChange: (period: ProgressPeriod) => void;
+}
+
+function PeriodTabs({ period, onChange }: PeriodTabsProps) {
+  return (
+    <div
+      role="radiogroup"
+      aria-label={PROGRESS_COPY.periodAria}
+      className="grid rounded-full bg-surface p-1 shadow-card ring-1 ring-line"
+      style={{ gridTemplateColumns: `repeat(${PERIOD_OPTIONS.length}, minmax(0, 1fr))` }}
+    >
+      {PERIOD_OPTIONS.map((option) => {
+        const selected = option.value === period;
+        return (
+          <button
+            key={option.value}
+            type="button"
+            role="radio"
+            aria-checked={selected}
+            tabIndex={selected ? 0 : -1}
+            onClick={() => onChange(option.value)}
+            className={cn(
+              'rounded-full px-3 py-2 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
+              selected ? 'bg-ink text-surface shadow-sm' : 'text-ink-muted hover:bg-canvas hover:text-ink',
+            )}
+          >
+            {option.label}
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 /**
@@ -59,20 +95,14 @@ export default function ProgressPage() {
   const consistencyPercent = summary?.period === 'week' && week ? formatWeekConsistencyPercent(week.activeCount) : null;
 
   return (
-    <PageContainer className="max-w-md space-y-4 pb-32">
+    <PageContainer className="max-w-md space-y-5 pb-32">
       <ProgressHeader
         fromLocalDate={summary?.fromLocalDate ?? null}
         toLocalDate={summary?.toLocalDate ?? null}
         updated={Boolean(summary && !loading && !error)}
       />
 
-      <SegmentedControl
-        ariaLabel={PROGRESS_COPY.periodAria}
-        options={PERIOD_OPTIONS}
-        value={period}
-        onChange={handlePeriodChange}
-        className="rounded-2xl"
-      />
+      <PeriodTabs period={period} onChange={handlePeriodChange} />
 
       {loading ? <LoadingState /> : null}
       {!loading && error ? <ErrorState title={PROGRESS_COPY.states.errorTitle} message={error} compact={false} /> : null}

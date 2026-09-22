@@ -62,6 +62,8 @@ describe('ProgressInsightCards', () => {
     expect(screen.getByLabelText('Volumen de la última sesión').textContent).toContain('360 kg');
     expect(screen.getByText('Subiendo')).toBeTruthy();
     expect(screen.getByRole('img', { name: 'Evolución de volumen por sesión' })).toBeTruthy();
+    expect(screen.getByText('Ver ejercicios ▸')).toBeTruthy();
+    expect(screen.getByText('Última sesión: 360 kg · 2 series')).toBeTruthy();
   });
 
   it('labels a single strength session as a starting point instead of hiding it', () => {
