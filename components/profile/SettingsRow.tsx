@@ -7,8 +7,10 @@ interface SettingsRowProps {
   title: string;
   description?: string;
   href?: string;
+  icon?: ReactNode;
   trailing?: ReactNode;
   testId?: string;
+  tone?: 'default' | 'danger';
 }
 
 const ROW_CLASS =
@@ -17,14 +19,25 @@ const ROW_CLASS =
 function RowContent({
   title,
   description,
+  icon,
   trailing,
   interactive,
+  tone = 'default',
 }: Omit<SettingsRowProps, 'href' | 'testId'> & { interactive: boolean }) {
   return (
     <>
-      <span className="min-w-0">
-        <span className="block text-sm font-medium text-ink">{title}</span>
-        {description ? <span className="mt-1 block text-sm text-ink-muted">{description}</span> : null}
+      <span className="flex min-w-0 items-center gap-3">
+        {icon ? (
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-brand-muted text-sm text-ink">
+            {icon}
+          </span>
+        ) : null}
+        <span className="min-w-0">
+          <span className={cn('block text-sm font-medium', tone === 'danger' ? 'text-danger' : 'text-ink')}>
+            {title}
+          </span>
+          {description ? <span className="mt-1 block text-sm text-ink-muted">{description}</span> : null}
+        </span>
       </span>
       <span className="flex shrink-0 items-center gap-2 text-sm text-ink-muted">
         {trailing}
@@ -36,13 +49,20 @@ function RowContent({
 
 /**
  * Renders a settings row as a real link when `href` exists, otherwise as information.
- * @param props Row title, optional description, optional href, trailing content, and test id.
+ * @param props Row title, optional icon, optional description, optional href, trailing content, tone, and test id.
  * @returns Link or non-interactive row with consistent layout.
- * @example <SettingsRow title="Plan y rutinas" href="/dashboard/routines" />
+ * @example <SettingsRow icon="◎" title="Plan y rutinas" href="/dashboard/routines" />
  */
-export function SettingsRow({ title, description, href, trailing, testId }: SettingsRowProps) {
+export function SettingsRow({ title, description, href, icon, trailing, testId, tone }: SettingsRowProps) {
   const content = (
-    <RowContent title={title} description={description} trailing={trailing} interactive={Boolean(href)} />
+    <RowContent
+      title={title}
+      description={description}
+      icon={icon}
+      trailing={trailing}
+      tone={tone}
+      interactive={Boolean(href)}
+    />
   );
 
   if (href) {
