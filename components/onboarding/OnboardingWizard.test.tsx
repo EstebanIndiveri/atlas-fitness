@@ -36,6 +36,57 @@ describe('OnboardingWizard', () => {
     expect(screen.getByTestId(ONBOARDING_TEST_IDS.continue)).toHaveProperty('disabled', false);
   });
 
+  it('renders the Figma step chrome with a dark active chip and segmented progress', () => {
+    render(<OnboardingWizard onFinish={jest.fn()} onSkip={jest.fn()} />);
+
+    const activeChip = screen.getByRole('listitem', { name: '1. Objetivo' });
+    expect(activeChip.className).toContain('bg-ink');
+    expect(screen.getByRole('listitem', { name: '2. Ritmo' }).className).toContain('bg-surface');
+    expect(
+      screen.getByRole('progressbar', { name: 'Progreso del onboarding' }).getAttribute(
+        'aria-valuenow',
+      ),
+    ).toBe('1');
+
+    const progress = screen.getByTestId('onboarding-progress');
+    const segments = Array.from(progress.querySelectorAll('[data-progress-segment="true"]'));
+    expect(segments).toHaveLength(4);
+    expect(segments[0]?.className).toContain('bg-brand');
+    expect(segments[1]?.className).toContain('bg-line');
+
+    selectFirstOptionAndContinue();
+
+    expect(screen.getByRole('listitem', { name: '2. Ritmo' }).className).toContain('bg-ink');
+    const updatedSegments = Array.from(progress.querySelectorAll('[data-progress-segment="true"]'));
+    expect(updatedSegments[1]?.className).toContain('bg-brand');
+  });
+
+  it('uses selectable option cards with radio semantics, a leading icon, and a checked state', () => {
+    render(<OnboardingWizard onFinish={jest.fn()} onSkip={jest.fn()} />);
+
+    const radioOptions = screen.getAllByRole('radio');
+    expect(radioOptions).toHaveLength(goalStep.options.length);
+    expect(radioOptions[0]?.getAttribute('aria-checked')).toBe('false');
+    expect(radioOptions[0]?.querySelector('[data-option-icon="true"]')?.textContent).toBeTruthy();
+
+    fireEvent.click(radioOptions[0] as HTMLElement);
+
+    expect(radioOptions[0]?.getAttribute('aria-checked')).toBe('true');
+    expect(radioOptions[0]?.className).toContain('border-brand');
+    expect(radioOptions[0]?.querySelector('[data-option-check="true"]')?.textContent).toBe('✓');
+  });
+
+  it('supports arrow-key selection inside the custom radio group', () => {
+    render(<OnboardingWizard onFinish={jest.fn()} onSkip={jest.fn()} />);
+
+    const radioOptions = screen.getAllByRole('radio');
+    (radioOptions[0] as HTMLElement).focus();
+    fireEvent.keyDown(radioOptions[0] as HTMLElement, { key: 'ArrowDown' });
+
+    expect(radioOptions[1]?.getAttribute('aria-checked')).toBe('true');
+    expect(document.activeElement).toBe(radioOptions[1]);
+  });
+
   it('advances through every step and finishes with the selected answers', () => {
     const onFinish = jest.fn<(answers: OnboardingAnswers) => void>();
     render(<OnboardingWizard onFinish={onFinish} onSkip={jest.fn()} />);
