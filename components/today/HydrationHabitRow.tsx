@@ -11,6 +11,7 @@ const COPY = {
   step: '0,25 L',
   reset: 'Reiniciar',
   empty: 'Sin registrar hoy',
+  registered: 'Registrado hoy',
 } as const;
 
 interface HydrationHabitRowProps {
@@ -76,18 +77,19 @@ export function HydrationHabitRow({
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-medium text-ink">{habit.name}</span>
         <span className="block truncate text-xs text-ink-muted">
-          {hasAmount ? (
-            <MetricValue
-              metric={metric(formatHydrationLiters(amount), 'user_input')}
-              label={habit.name}
-            />
-          ) : (
-            COPY.empty
-          )}
+          {hasAmount ? COPY.registered : COPY.empty}
         </span>
       </span>
 
       <span className="flex shrink-0 items-center gap-1.5">
+        {hasAmount ? (
+          <span className="rounded-full bg-canvas px-2.5 py-1 text-xs font-semibold text-ink ring-1 ring-line">
+            <MetricValue
+              metric={metric(formatHydrationLiters(amount), 'user_input')}
+              label={habit.name}
+            />
+          </span>
+        ) : null}
         {hasAmount ? (
           <button
             type="button"

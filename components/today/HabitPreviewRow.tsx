@@ -28,7 +28,7 @@ interface HabitPreviewRowProps {
  */
 export function HabitPreviewRow({ habit, done, onToggle, disabled = false }: HabitPreviewRowProps) {
   return (
-    <li className="flex items-center gap-3 py-1.5">
+    <li className="flex items-center gap-3 py-2">
       <button
         type="button"
         role="checkbox"
@@ -37,7 +37,7 @@ export function HabitPreviewRow({ habit, done, onToggle, disabled = false }: Hab
         disabled={disabled}
         onClick={() => onToggle(habit.id)}
         className={cn(
-          'flex min-h-11 flex-1 items-center gap-3 rounded-xl px-2 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
+          'flex min-h-14 flex-1 items-center gap-3 rounded-2xl px-2 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
           disabled ? 'cursor-not-allowed opacity-70' : 'hover:bg-canvas',
         )}
       >
@@ -61,10 +61,13 @@ export function HabitPreviewRow({ habit, done, onToggle, disabled = false }: Hab
           <span className="block truncate text-sm font-medium text-ink">{habit.name}</span>
           <span className="block truncate text-xs text-ink-muted">{habit.hint}</span>
         </span>
+        <span className="mr-1 text-right text-xs font-semibold text-ink-muted">
+          {done ? 'Registrado' : 'Registrar'}
+        </span>
         <span
           aria-hidden="true"
           className={cn(
-            'grid size-6 shrink-0 place-items-center rounded-full border transition',
+            'grid size-7 shrink-0 place-items-center rounded-full border transition',
             done ? 'border-brand bg-brand text-white' : 'border-line bg-surface text-transparent',
           )}
         >

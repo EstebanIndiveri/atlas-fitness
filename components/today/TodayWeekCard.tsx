@@ -1,16 +1,16 @@
 'use client';
 
-import { StreakChip } from '@/components/StreakChip';
 import { WeekDayStrip } from '@/components/today/WeekDayStrip';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { MetricValue } from '@/components/ui/MetricValue';
 import { ErrorState, LoadingState } from '@/components/ui/states';
+import { useStreak } from '@/hooks/useStreak';
 import { useWeekConsistency } from '@/hooks/useWeekConsistency';
 import { metric } from '@/types/metric';
 
 const COPY = {
-  heading: 'Esta semana',
+  heading: 'Consistencia Semanal',
   daysLabel: 'Tu semana',
   activeSuffix: 'días activos esta semana',
   activeSuffixSingular: 'día activo esta semana',
@@ -31,11 +31,22 @@ const COPY = {
  */
 export function TodayWeekCard() {
   const { week, loading, error, reload } = useWeekConsistency();
+  const { streak, loading: streakLoading, error: streakError } = useStreak();
+  const streakLabel = streak ? `🔥 Racha: ${streak.currentStreak} ${streak.currentStreak === 1 ? 'día' : 'días'}` : '🔥 Racha: sin registrar';
 
   return (
-    <Card className="space-y-4 p-5">
-      <h2 className="font-serif text-xl font-semibold text-ink">{COPY.heading}</h2>
-      <StreakChip />
+    <Card className="space-y-4 rounded-[1.75rem] p-5">
+      <div className="flex items-start justify-between gap-3">
+        <h2 className="font-serif text-xl font-semibold text-ink">{COPY.heading}</h2>
+        <p className="text-right text-sm font-semibold text-brand" role="status">
+          {streakLoading ? 'Cargando racha…' : streakError ? 'Racha no disponible' : streakLabel}
+          {streak ? (
+            <span data-testid="current-streak" className="sr-only">
+              {streak.currentStreak}
+            </span>
+          ) : null}
+        </p>
+      </div>
       <section className="space-y-3" aria-label={COPY.daysLabel}>
         <WeekDayStrip days={week?.days} />
         {loading ? (

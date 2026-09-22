@@ -75,7 +75,8 @@ describe('TodayWeekCard', () => {
     });
     render(<TodayWeekCard />);
 
-    expect(screen.getByRole('heading', { name: 'Esta semana' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Consistencia Semanal' })).toBeTruthy();
+    expect(screen.getByText('🔥 Racha: 5 días')).toBeTruthy();
     expect(screen.getByTestId('current-streak').textContent).toBe('5');
     expect(screen.getByRole('list', { name: 'Días de la semana' })).toBeTruthy();
     expect(screen.getByText(/días activos esta semana/)).toBeTruthy();
@@ -116,6 +117,6 @@ describe('TodayWeekCard', () => {
     const { container } = render(<TodayWeekCard />);
 
     expect(container.textContent).not.toMatch(/%/);
-    expect(container.textContent).not.toMatch(/\d+\s*(de|\/)\s*\d+/);
+    expect(container.textContent).not.toMatch(/\d+\s*(de|\/)\s*5/);
   });
 });

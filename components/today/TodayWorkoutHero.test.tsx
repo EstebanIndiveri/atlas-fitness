@@ -133,7 +133,7 @@ describe('TodayWorkoutHero', () => {
     expect(screen.getByText('Foco en pecho, hombros y tríceps.')).toBeTruthy();
     expect(screen.getByText('3 ejercicios')).toBeTruthy();
     expect(screen.getByText('11 series')).toBeTruthy();
-    expect(screen.getByText('33 min')).toBeTruthy();
+    expect(screen.queryByLabelText('Duración estimada')).toBeNull();
     expect(screen.getByText('Gimnasio')).toBeTruthy();
   });
 
@@ -223,7 +223,7 @@ describe('TodayWorkoutHero', () => {
 
     await renderHero();
 
-    expect(await screen.findByRole('button', { name: /Empezar entrenamiento/ })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: /Empezar Entreno/ })).toBeTruthy();
     expect(screen.getByRole('button', { name: /Adaptar con Coach Atlas/ })).toBeTruthy();
   });
 
@@ -245,11 +245,26 @@ describe('TodayWorkoutHero', () => {
 
     await renderHero({ onStartWorkout, onAdapt });
 
-    fireEvent.click(await screen.findByRole('button', { name: /Empezar entrenamiento/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /Empezar Entreno/ }));
     fireEvent.click(screen.getByRole('button', { name: /Adaptar con Coach Atlas/ }));
 
     expect(onStartWorkout).toHaveBeenCalledTimes(1);
     expect(onAdapt).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders sourced Figma-style workout metric pills and omits unsourced duration', async () => {
+    useTodayState(workoutToday('Hipertrofia Adaptativa', 'En base a tu descanso real.'));
+    mockFetchRoutineDetail.mockResolvedValue(routineDetail());
+
+    await renderHero();
+
+    expect(await screen.findByText('● ENTRENAMIENTO DE HOY')).toBeTruthy();
+    expect(screen.getByText('Hipertrofia Adaptativa')).toBeTruthy();
+    expect(screen.getByLabelText('Ejercicios').textContent).toContain('3 ejercicios');
+    expect(screen.getByLabelText('Series').textContent).toContain('11 series');
+    expect(screen.queryByLabelText('Duración estimada')).toBeNull();
+    expect(screen.queryByText('45 min')).toBeNull();
+    expect(screen.queryByText('16 series')).toBeNull();
   });
 
   it('does not render fabricated stats while routine detail is loading', async () => {
@@ -339,7 +354,7 @@ describe('TodayWorkoutHero', () => {
     expect(screen.getByText('Casa')).toBeTruthy();
     expect(screen.getByText('1 ejercicios')).toBeTruthy();
     expect(screen.getByText('2 series')).toBeTruthy();
-    expect(screen.getByText('6 min')).toBeTruthy();
+    expect(screen.queryByLabelText('Duración estimada')).toBeNull();
     expect(screen.queryByText('Foco en pecho, hombros y tríceps.')).toBeNull();
     expect(screen.queryByText('11 series')).toBeNull();
   });
