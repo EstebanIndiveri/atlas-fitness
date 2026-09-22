@@ -190,84 +190,89 @@ export default function GuidedSessionPlayerPage() {
 
   return (
     <PageContainer>
-      <GuidedSessionHeader
-        routineName={session.routine.name}
-        currentIndex={currentIndex}
-        totalExercises={session.routine.exercises.length}
-        muscleGroup={session.current?.muscleGroup ?? null}
-        elapsedSeconds={elapsedSeconds}
-      />
-
-      {showClose ? (
-        <SessionCloseScreen
-          summary={session.summary}
+      <div
+        className={!showClose ? 'pb-[calc(10rem+env(safe-area-inset-bottom,0px))]' : undefined}
+        data-testid="guided-session-page"
+      >
+        <GuidedSessionHeader
           routineName={session.routine.name}
-          muscleGroups={muscleGroups}
-          effort={effort}
-          onEffort={setEffort}
-          sensation={sensation}
-          onSensation={setSensation}
-          discomfort={discomfort}
-          onDiscomfortChange={setDiscomfort}
-          mood={session.mood}
-          onMood={session.setMood}
-          onSave={() => void handleSaveAndClose()}
-          saving={session.busy || feedbackSaving}
-          error={feedbackError}
+          currentIndex={currentIndex}
+          totalExercises={session.routine.exercises.length}
+          muscleGroup={session.current?.muscleGroup ?? null}
+          elapsedSeconds={elapsedSeconds}
         />
-      ) : (
-        <>
-          {session.suggestion?.nextExerciseId ? (
-            <Card className="mb-4 p-4" data-testid="next-exercise-banner">
-              <p className="text-sm font-medium text-ink">
-                {session.suggestion.isLast ? SESSION_COPY.lastExercise : SESSION_COPY.nextExercise}
-              </p>
-              <p className="text-sm text-ink-muted">{session.suggestion.message}</p>
-            </Card>
-          ) : null}
 
-          {session.current ? (
-            <>
-              <GuidedExerciseCard
-                exercise={session.current}
-                completedCount={session.completedCount}
-                completedSets={completedSetsForCurrent}
-                weight={session.weight}
-                onWeightChange={session.setWeight}
-                reps={session.reps}
-                onRepsChange={session.setReps}
-                onCompleteSet={() => void handleCompleteSet()}
-                onReplace={() => void handleSkip()}
-                onHold={() => void handleHold()}
-                busy={session.busy || rest.active}
-                nextExerciseName={nextExerciseName}
-                focusSlot={
-                  rest.active ? (
-                    <RestTimer
-                      remaining={rest.remaining}
-                      totalSeconds={restTotalSeconds || session.routine.restSeconds}
-                      motivator={motivator}
-                      onSkip={rest.skip}
-                      onAddThirtySeconds={handleAddRestThirtySeconds}
-                    />
-                  ) : null
-                }
-              />
-              <SessionQueueActions
-                items={session.queueItems}
-                onSkip={() => void handleSkip()}
-                onHold={() => void handleHold()}
-                busy={session.busy}
-                error={session.actionError}
-              />
-            </>
-          ) : (
-            <Card className="p-4">
-              <p className="text-ink">{SESSION_COPY.lastExerciseDone}</p>
-            </Card>
-          )}
-        </>
-      )}
+        {showClose ? (
+          <SessionCloseScreen
+            summary={session.summary}
+            routineName={session.routine.name}
+            muscleGroups={muscleGroups}
+            effort={effort}
+            onEffort={setEffort}
+            sensation={sensation}
+            onSensation={setSensation}
+            discomfort={discomfort}
+            onDiscomfortChange={setDiscomfort}
+            mood={session.mood}
+            onMood={session.setMood}
+            onSave={() => void handleSaveAndClose()}
+            saving={session.busy || feedbackSaving}
+            error={feedbackError}
+          />
+        ) : (
+          <>
+            {session.suggestion?.nextExerciseId ? (
+              <Card className="mb-4 p-4" data-testid="next-exercise-banner">
+                <p className="text-sm font-medium text-ink">
+                  {session.suggestion.isLast ? SESSION_COPY.lastExercise : SESSION_COPY.nextExercise}
+                </p>
+                <p className="text-sm text-ink-muted">{session.suggestion.message}</p>
+              </Card>
+            ) : null}
+
+            {session.current ? (
+              <>
+                <GuidedExerciseCard
+                  exercise={session.current}
+                  completedCount={session.completedCount}
+                  completedSets={completedSetsForCurrent}
+                  weight={session.weight}
+                  onWeightChange={session.setWeight}
+                  reps={session.reps}
+                  onRepsChange={session.setReps}
+                  onCompleteSet={() => void handleCompleteSet()}
+                  onReplace={() => void handleSkip()}
+                  onHold={() => void handleHold()}
+                  busy={session.busy || rest.active}
+                  nextExerciseName={nextExerciseName}
+                  focusSlot={
+                    rest.active ? (
+                      <RestTimer
+                        remaining={rest.remaining}
+                        totalSeconds={restTotalSeconds || session.routine.restSeconds}
+                        motivator={motivator}
+                        onSkip={rest.skip}
+                        onAddThirtySeconds={handleAddRestThirtySeconds}
+                      />
+                    ) : null
+                  }
+                />
+                <SessionQueueActions
+                  items={session.queueItems}
+                  onSkip={() => void handleSkip()}
+                  onHold={() => void handleHold()}
+                  busy={session.busy}
+                  error={session.actionError}
+                />
+              </>
+            ) : (
+              <Card className="p-4">
+                <p className="text-ink">{SESSION_COPY.lastExerciseDone}</p>
+              </Card>
+            )}
+          </>
+        )}
+      </div>
     </PageContainer>
   );
 }

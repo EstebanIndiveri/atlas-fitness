@@ -1,4 +1,4 @@
-import { and, eq, gte, isNotNull, isNull, lt } from 'drizzle-orm';
+import { and, asc, eq, gte, isNotNull, isNull, lt } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { catalogVisibleToUser } from '@/lib/auth/ownership';
@@ -77,9 +77,35 @@ const createTrainingPlanSchema = z.object({
 });
 
 type ValidCreateTrainingPlanInput = z.infer<typeof createTrainingPlanSchema>;
+type ValidTrainingPlanWriteInput = Omit<ValidCreateTrainingPlanInput, 'userId'>;
 
 function parseCreateTrainingPlanInput(input: unknown): ValidCreateTrainingPlanInput {
   const parsed = createTrainingPlanSchema.safeParse(input);
+
+  if (!parsed.success) {
+    const invalidDay = parsed.error.issues.some((issue) => issue.path.includes('dayOfWeek'));
+    const emptySchedule = parsed.error.issues.some(
+      (issue) => issue.path.length === 1 && issue.path[0] === 'schedule' && issue.code === 'too_small',
+    );
+    const message = emptySchedule
+      ? 'El plan debe tener al menos un día asignado'
+      : invalidDay
+        ? 'Día de semana inválido'
+        : 'Plan inválido';
+
+    throw new AppError('VALIDATION', message);
+  }
+
+  const uniqueDays = new Set(parsed.data.schedule.map((item) => item.dayOfWeek));
+  if (uniqueDays.size !== parsed.data.schedule.length) {
+    throw new AppError('VALIDATION', 'El plan no puede repetir días');
+  }
+
+  return parsed.data;
+}
+
+function parseTrainingPlanWriteInput(input: unknown): ValidTrainingPlanWriteInput {
+  const parsed = createTrainingPlanSchema.omit({ userId: true }).safeParse(input);
 
   if (!parsed.success) {
     const invalidDay = parsed.error.issues.some((issue) => issue.path.includes('dayOfWeek'));
@@ -149,6 +175,29 @@ async function findActiveTrainingPlan(userId: number): Promise<TrainingPlan | nu
   });
 
   return plan ?? null;
+}
+
+async function findOwnedTrainingPlan(userId: number, planId: number): Promise<TrainingPlan> {
+  const plan = await db.query.trainingPlans.findFirst({
+    where: and(
+      eq(trainingPlans.id, planId),
+      eq(trainingPlans.userId, userId),
+      isNull(trainingPlans.deletedAt),
+    ),
+  });
+
+  if (!plan) {
+    throw new AppError('NOT_FOUND', 'Plan no encontrado');
+  }
+
+  return plan;
+}
+
+async function loadPlanSchedule(planId: number): Promise<ScheduledRoutine[]> {
+  return db.query.scheduledRoutines.findMany({
+    where: eq(scheduledRoutines.trainingPlanId, planId),
+    orderBy: [asc(scheduledRoutines.dayOfWeek)],
+  });
 }
 
 function isDayReasonEnergy(value: string | null): value is DayReasonEnergy {
@@ -240,6 +289,81 @@ export async function createTrainingPlan(input: unknown): Promise<CreateTraining
     return { plan, schedule };
   });
 }
+
+
+/**
+ * Loads one owned training plan and its weekly schedule.
+ *
+ * @param userId - Authenticated user id that must own the plan.
+ * @param planId - Training plan id from the route parameter.
+ * @returns The requested plan and its weekday schedule.
+ * @throws {AppError} NOT_FOUND when the plan does not exist, is soft-deleted, or belongs to another user.
+ * @example
+ * const plan = await getTrainingPlanById(1, 10);
+ */
+export async function getTrainingPlanById(
+  userId: number,
+  planId: number,
+): Promise<CreateTrainingPlanResult> {
+  const plan = await findOwnedTrainingPlan(userId, planId);
+  const schedule = await loadPlanSchedule(plan.id);
+
+  return { plan, schedule };
+}
+
+/**
+ * Updates an owned weekly training plan and atomically replaces its schedule.
+ *
+ * @param userId - Authenticated user id that must own the plan.
+ * @param planId - Training plan id from the route parameter.
+ * @param input - Unknown boundary payload containing name, optional goal, and weekday assignments.
+ * @returns The updated plan and its replacement schedule.
+ * @throws {AppError} NOT_FOUND when the plan is missing, soft-deleted, or belongs to another user.
+ * @throws {AppError} VALIDATION when the payload or referenced routines are invalid.
+ * @example
+ * await updateTrainingPlan(1, 10, { name: 'Semana', schedule: [{ dayOfWeek: 1, routineId: 7 }] });
+ */
+export async function updateTrainingPlan(
+  userId: number,
+  planId: number,
+  input: unknown,
+): Promise<CreateTrainingPlanResult> {
+  const validInput = parseTrainingPlanWriteInput(input);
+  const existingPlan = await findOwnedTrainingPlan(userId, planId);
+  for (const assignment of validInput.schedule) {
+    await assertAccessibleRoutine(assignment.routineId, userId);
+  }
+
+  const now = new Date();
+  return db.transaction(async (tx) => {
+    const [plan] = await tx
+      .update(trainingPlans)
+      .set({
+        name: validInput.name,
+        goal: validInput.goal ?? null,
+        updatedAt: now,
+      })
+      .where(eq(trainingPlans.id, existingPlan.id))
+      .returning();
+
+    await tx.delete(scheduledRoutines).where(eq(scheduledRoutines.trainingPlanId, existingPlan.id));
+
+    const schedule = await tx
+      .insert(scheduledRoutines)
+      .values(
+        validInput.schedule.map((assignment) => ({
+          trainingPlanId: plan.id,
+          dayOfWeek: assignment.dayOfWeek,
+          routineId: assignment.routineId,
+          note: assignment.note ?? null,
+        })),
+      )
+      .returning();
+
+    return { plan, schedule };
+  });
+}
+
 
 /**
  * Resolves the user's scheduled routine for the date containing `now` in Córdoba.

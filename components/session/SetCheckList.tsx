@@ -1,6 +1,5 @@
 'use client';
 
-import { Button } from '@/components/ui/Button';
 import { SESSION_COPY } from '@/lib/copy/session';
 
 type SetCheckListProps = {
@@ -26,25 +25,40 @@ type CompletedSet = {
 const SET_TABLE_GRID_CLASS =
   'grid-cols-[2.5rem_minmax(0,1fr)_minmax(2.75rem,0.65fr)_2.75rem]';
 
-function formatWeight(value: number): string {
-  return Number.isInteger(value) ? String(value) : value.toFixed(1);
+function parseWeightCents(value: string): number | null {
+  const normalized = value.trim().replace(',', '.');
+  const match = /^(\d+)(?:\.(\d{0,2}))?$/.exec(normalized);
+  if (!match) {
+    return null;
+  }
+  const [, integerPart, decimalPart = ''] = match;
+  const cents = `${decimalPart}00`.slice(0, 2);
+  return Number.parseInt(integerPart, 10) * 100 + Number.parseInt(cents, 10);
+}
+
+function formatWeightCents(value: number): string {
+  const safeValue = Math.max(0, value);
+  const kilos = Math.floor(safeValue / 100);
+  const cents = safeValue % 100;
+  if (cents === 0) {
+    return String(kilos);
+  }
+  if (cents % 10 === 0) {
+    return `${kilos}.${cents / 10}`;
+  }
+  return `${kilos}.${String(cents).padStart(2, '0')}`;
 }
 
 function stepWeight(value: string, delta: number): string {
-  const parsed = Number.parseFloat(value.replace(',', '.'));
-  const base = Number.isFinite(parsed) ? parsed : 0;
-  return formatWeight(Math.max(0, base + delta));
+  const base = parseWeightCents(value) ?? 0;
+  const step = delta > 0 ? 250 : -250;
+  return formatWeightCents(base + step);
 }
 
 function stepReps(value: string, delta: number, fallback: number): string {
   const parsed = Number.parseInt(value, 10);
   const base = Number.isFinite(parsed) ? parsed : fallback;
   return String(Math.max(1, base + delta));
-}
-
-function hasValidReps(value: string): boolean {
-  const parsed = Number.parseInt(value, 10);
-  return Number.isFinite(parsed) && parsed > 0;
 }
 
 /**
@@ -64,9 +78,7 @@ export function SetCheckList({
   onWeightChange,
   reps,
   onRepsChange,
-  onCompleteSet,
   busy,
-  nextExerciseName,
 }: SetCheckListProps) {
   const safeCompleted = Math.min(Math.max(completedSets.length || completedCount, 0), targetSets);
   const slots = Array.from({ length: targetSets }, (_, index) => index + 1);
@@ -112,7 +124,7 @@ export function SetCheckList({
                       <label htmlFor="guided-weight" className="text-[10px] font-medium uppercase text-ink-muted">
                         Peso (kg)
                       </label>
-                      <span className="shrink-0 text-[10px] text-ink-muted">±2.5</span>
+                      <span className="shrink-0 text-[10px] text-ink-muted">Paso ±2.5 kg</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <button
@@ -127,7 +139,7 @@ export function SetCheckList({
                       </button>
                       <input
                         id="guided-weight"
-                        className="w-full min-w-[3.25rem] rounded-md bg-canvas px-1 py-1.5 text-center text-lg font-bold tabular-nums text-ink outline-none ring-1 ring-line focus:ring-brand"
+                        className="w-full min-w-[5.5rem] rounded-md bg-canvas px-2 py-1.5 text-center text-lg font-bold tabular-nums text-ink outline-none ring-1 ring-line focus:ring-brand"
                         inputMode="decimal"
                         value={weight}
                         onChange={(event) => onWeightChange(event.target.value)}
@@ -151,7 +163,7 @@ export function SetCheckList({
                       <label htmlFor="guided-reps" className="text-[10px] font-medium uppercase text-ink-muted">
                         Reps
                       </label>
-                      <span className="shrink-0 text-[10px] text-ink-muted">±1</span>
+                      <span className="shrink-0 text-[10px] text-ink-muted">Paso ±1</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <button
@@ -229,22 +241,6 @@ export function SetCheckList({
           {SESSION_COPY.warmup}
         </button>
       </div>
-      {activeSet ? (
-        <div className="mt-4 space-y-2 rounded-2xl bg-surface p-3 ring-1 ring-line">
-          <Button
-            size="lg"
-            className="min-h-12 rounded-lg text-base font-bold"
-            onClick={onCompleteSet}
-            disabled={busy || !weight.trim() || !hasValidReps(reps)}
-            data-testid="complete-set-button"
-          >
-            {SESSION_COPY.completeSetCta(activeSet)}
-          </Button>
-          {nextExerciseName ? (
-            <p className="text-center text-xs text-ink-muted">Siguiente: {nextExerciseName}</p>
-          ) : null}
-        </div>
-      ) : null}
     </div>
   );
 }

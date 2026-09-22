@@ -12,6 +12,8 @@ export type CreateTrainingPlanInput = {
   schedule: Array<{ dayOfWeek: TrainingPlanDayOfWeek; routineId: number; note?: string }>;
 };
 
+export type UpdateTrainingPlanInput = CreateTrainingPlanInput;
+
 export type TrainingPlanClientErrorKind =
   | 'unauthorized'
   | 'validation'
@@ -56,11 +58,77 @@ export async function createTrainingPlan(
     throw mapTrainingPlanHttpError(response.status, body);
   }
 
-  const parsed = parseCreateTrainingPlanResponse(body);
+  const parsed = parseTrainingPlanResponse(body);
   if (!parsed) {
     throw new TrainingPlanClientError(
       'generic',
       'No se pudo crear el plan de entrenamiento',
+      response.status,
+    );
+  }
+
+  return parsed;
+}
+
+/**
+ * Fetches one authenticated user's training plan by id.
+ *
+ * @param planId - Training plan id to load.
+ * @returns The requested training plan and persisted schedule.
+ * @throws {TrainingPlanClientError} When the API rejects the request or returns an invalid body.
+ * @example
+ * const plan = await getTrainingPlan(10);
+ */
+export async function getTrainingPlan(planId: number): Promise<CreateTrainingPlanResult> {
+  const response = await fetch(`/api/training-plan/${planId}`);
+  const body = await readBody(response);
+
+  if (!response.ok) {
+    throw mapTrainingPlanHttpError(response.status, body);
+  }
+
+  const parsed = parseTrainingPlanResponse(body);
+  if (!parsed) {
+    throw new TrainingPlanClientError(
+      'generic',
+      'No se pudo cargar el plan de entrenamiento',
+      response.status,
+    );
+  }
+
+  return parsed;
+}
+
+/**
+ * Updates one authenticated user's training plan.
+ *
+ * @param planId - Training plan id to update.
+ * @param input - Plan name and day-to-routine assignments using 0=Sunday through 6=Saturday.
+ * @returns The updated training plan and persisted replacement schedule.
+ * @throws {TrainingPlanClientError} When the API rejects the request or returns an invalid body.
+ * @example
+ * await updateTrainingPlan(10, { name: 'Semana', schedule: [{ dayOfWeek: 1, routineId: 7 }] });
+ */
+export async function updateTrainingPlan(
+  planId: number,
+  input: UpdateTrainingPlanInput,
+): Promise<CreateTrainingPlanResult> {
+  const response = await fetch(`/api/training-plan/${planId}`, {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  const body = await readBody(response);
+
+  if (!response.ok) {
+    throw mapTrainingPlanHttpError(response.status, body);
+  }
+
+  const parsed = parseTrainingPlanResponse(body);
+  if (!parsed) {
+    throw new TrainingPlanClientError(
+      'generic',
+      'No se pudo guardar el plan de entrenamiento',
       response.status,
     );
   }
@@ -119,7 +187,7 @@ function mapTrainingPlanHttpError(status: number, body: unknown): TrainingPlanCl
   );
 }
 
-function parseCreateTrainingPlanResponse(value: unknown): CreateTrainingPlanResult | null {
+function parseTrainingPlanResponse(value: unknown): CreateTrainingPlanResult | null {
   if (!isRecord(value)) {
     return null;
   }

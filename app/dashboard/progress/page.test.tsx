@@ -97,6 +97,8 @@ describe('ProgressPage', () => {
 
     render(<ProgressPage />);
 
+    expect(screen.getByRole('radiogroup', { name: 'Rango de progreso' }).className).toContain('rounded-full');
+    expect(screen.getByRole('radio', { name: 'Mes' }).className).toContain('bg-ink');
     expect(screen.getByRole('heading', { name: 'Interpretación de Atlas' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Resumen del mes' })).toBeTruthy();
     expect(screen.getByLabelText('Consistencia').textContent).toContain('Sin datos');

@@ -109,8 +109,10 @@ describe('GuidedExerciseCard', () => {
 
     expect(screen.getByText('Pecho y tríceps')).toBeTruthy();
     expect(screen.getByText('Serie 3 de 4')).toBeTruthy();
-    expect(screen.getByText('Press de banca con barra')).toBeTruthy();
-    expect(screen.queryByText('Ejercicio compuesto')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Press de banca con barra' })).toBeTruthy();
+    expect(screen.queryByText(/Ejercicio compuesto/)).toBeNull();
+    expect(screen.queryByText(/Última vez/)).toBeNull();
+    expect(screen.queryByText('RPE 8.5')).toBeNull();
     expect(screen.queryByTestId('guided-exercise-image')).toBeNull();
 
     const technique = screen.getByRole('button', { name: 'Mostrar técnica' });
@@ -154,7 +156,7 @@ describe('GuidedExerciseCard', () => {
     expect(notes.value).toBe('Subir a 42.5 kg si sale liviano.');
   });
 
-  it('renders the rest timer inside the card focus area before the set counter', () => {
+  it('renders the rest timer immediately after the set table instead of above it', () => {
     render(
       <GuidedExerciseCard
         exercise={exercise()}
@@ -165,8 +167,26 @@ describe('GuidedExerciseCard', () => {
 
     const card = screen.getByTestId('guided-exercise-card');
     expect(card.contains(screen.getByTestId('rest-timer'))).toBe(true);
-    expect(card.textContent?.indexOf('01:30')).toBeLessThan(
-      card.textContent?.indexOf('SERIE 1 EN CURSO') ?? Number.MAX_SAFE_INTEGER,
+    expect(card.textContent?.indexOf('SERIE 1 EN CURSO')).toBeLessThan(
+      card.textContent?.indexOf('01:30') ?? Number.MAX_SAFE_INTEGER,
     );
+  });
+
+  it('renders the complete-set action as a fixed bottom CTA outside the table flow', () => {
+    render(
+      <GuidedExerciseCard
+        exercise={exercise()}
+        {...cardProps}
+        nextExerciseName="Press militar con mancuernas"
+      />,
+    );
+
+    const complete = screen.getByTestId('complete-set-button');
+    const bar = screen.getByTestId('complete-set-bar');
+    expect(complete.textContent).toContain('COMPLETAR SERIE 1');
+    expect(bar.className).toContain('fixed');
+    expect(bar.className).toContain('bottom-app-cta');
+    expect(bar.textContent).toContain('Siguiente: Press militar con mancuernas');
+    expect(screen.getByTestId('set-checklist').contains(complete)).toBe(false);
   });
 });

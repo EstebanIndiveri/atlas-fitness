@@ -7,9 +7,12 @@ describe('ProgressHeader', () => {
   it('renders the Atlas wordmark, progress title, month and freshness badge', () => {
     render(<ProgressHeader fromLocalDate="2026-09-01" toLocalDate="2026-09-30" now={new Date('2026-09-20T15:00:00.000Z')} updated />);
 
+    expect(screen.getByText('◎')).toBeTruthy();
     expect(screen.getByText('Atlas')).toBeTruthy();
+    expect(screen.getByLabelText('Notificaciones')).toBeTruthy();
+    expect(screen.getByLabelText('Compartir progreso')).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Progreso' })).toBeTruthy();
-    expect(screen.getByText('¿Estoy avanzando?')).toBeTruthy();
+    expect(screen.getByText(/¿Estás avanzando\?/)).toBeTruthy();
     expect(screen.getByText('septiembre de 2026')).toBeTruthy();
     expect(screen.getByText('Actualizado hoy')).toBeTruthy();
   });

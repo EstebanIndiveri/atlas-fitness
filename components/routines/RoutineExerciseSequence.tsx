@@ -27,59 +27,58 @@ export function RoutineExerciseSequence({ routine }: RoutineExerciseSequenceProp
   const exercises = sortedExercises(routine);
 
   return (
-    <section aria-labelledby="routine-exercise-sequence" className="space-y-3">
+    <section aria-labelledby="routine-exercise-sequence" className="space-y-3 pb-3">
       <div className="flex items-end justify-between gap-4 px-1">
-        <div>
-          <h2 id="routine-exercise-sequence" className="text-2xl font-semibold leading-none text-ink">
-            {ROUTINE_COPY.exerciseSequenceTitle}
-          </h2>
-        </div>
-        <p className="max-w-36 text-xs leading-4 text-ink-muted">{ROUTINE_COPY.exerciseSequenceHelp}</p>
+        <h2 id="routine-exercise-sequence" className="font-serif text-3xl font-semibold leading-none text-ink">
+          {ROUTINE_COPY.exerciseSequenceTitle}
+        </h2>
+        <p className="max-w-36 text-right text-xs leading-4 text-ink-muted">Podés consultar técnica pulsando</p>
       </div>
 
-      <Card className="divide-y divide-line overflow-hidden rounded-2xl border border-line p-0 shadow-card">
+      <Card className="divide-y divide-line overflow-hidden rounded-[1.35rem] border border-line p-0 shadow-card">
         {exercises.length === 0 ? (
           <p className="p-4 text-sm text-ink-muted">{ROUTINE_COPY.exerciseSequenceEmpty}</p>
         ) : null}
-        {exercises.map((exercise, index) => (
-          <article
-            key={exercise.id}
-            className="grid grid-cols-[2rem_1fr] gap-3 p-4"
-            data-testid={ROUTINE_TEST_IDS.detailExercise}
-          >
-            <div
-              aria-hidden="true"
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-muted text-sm font-bold text-brand"
+        {exercises.map((exercise, index) => {
+          const hasTechnique = exercise.instructions.trim().length > 0;
+          return (
+            <article
+              key={exercise.id}
+              className="grid grid-cols-[2.25rem_minmax(0,1fr)_auto] gap-3 p-4"
+              data-testid={ROUTINE_TEST_IDS.detailExercise}
             >
-              {index + 1}
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h3 className="font-semibold text-ink">{exercise.exerciseName}</h3>
-                  <p className="mt-1 text-sm text-ink-muted">{exercise.muscleGroup}</p>
+              <div
+                aria-hidden="true"
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-line bg-canvas text-sm font-bold text-ink"
+              >
+                {index + 1}
+              </div>
+              <div className="min-w-0">
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                  <h3 className="min-w-0 truncate font-semibold text-ink">{exercise.exerciseName}</h3>
                 </div>
-                {exercise.instructions.trim().length > 0 ? (
-                  <span className="text-xl leading-none text-ink-muted" aria-hidden="true">
-                    ›
+                <p className="mt-1 line-clamp-1 text-sm text-ink-muted">{exercise.muscleGroup}</p>
+                <div className="mt-3 flex min-w-0 flex-wrap items-center gap-2 text-xs">
+                  <span className="max-w-full rounded-full bg-canvas px-3 py-2 font-semibold text-brand">
+                    {`${exercise.targetSets} series × ${exercise.targetReps} reps`}
                   </span>
+                  <span className="max-w-full rounded-full bg-canvas px-3 py-2 font-semibold text-ink-muted">
+                    ⏱ {formatRest(routine.restSeconds)}
+                  </span>
+                </div>
+                {hasTechnique ? (
+                  <details className="mt-3 text-sm text-ink-muted">
+                    <summary className="cursor-pointer font-medium text-ink">Ver técnica</summary>
+                    <p className="mt-2 leading-6">{exercise.instructions}</p>
+                  </details>
                 ) : null}
               </div>
-              <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
-                <span className="rounded-md bg-canvas px-3 py-2 font-semibold text-brand">
-                  {`${exercise.targetSets} series × ${exercise.targetReps} reps`}
-                </span>
-                <span className="text-ink-muted">{formatRest(routine.restSeconds)}</span>
-              </div>
-              {exercise.instructions.trim().length > 0 ? (
-                <details className="mt-3 text-sm text-ink-muted">
-                  <summary className="cursor-pointer font-medium text-ink">Ver técnica</summary>
-                  <p className="mt-2 leading-6">{exercise.instructions}</p>
-                </details>
-              ) : null}
-            </div>
-          </article>
-        ))}
+              <span className="pt-1 text-2xl leading-none text-ink-muted" aria-hidden="true">
+                ▸
+              </span>
+            </article>
+          );
+        })}
       </Card>
     </section>
   );

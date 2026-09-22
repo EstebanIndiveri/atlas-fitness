@@ -82,31 +82,6 @@ describe('SetCheckList', () => {
   });
 
 
-  it('keeps the complete-set control labeled in a non-overlapping footer', () => {
-    render(
-      <SetCheckList
-        targetSets={3}
-        targetReps={8}
-        completedCount={0}
-        completedSets={[]}
-        weight="40"
-        onWeightChange={jest.fn()}
-        reps="8"
-        onRepsChange={jest.fn()}
-        onCompleteSet={jest.fn()}
-        busy={false}
-        nextExerciseName="Sentadilla"
-      />,
-    );
-
-    const complete = screen.getByTestId('complete-set-button');
-    expect(complete.textContent).toContain('COMPLETAR SERIE 1');
-    expect(complete.className).toContain('min-h-12');
-    expect(complete.closest('div')?.className).not.toContain('sticky');
-    expect(complete.closest('div')?.className).not.toContain('bottom-app-cta');
-    expect(screen.getByText('Siguiente: Sentadilla')).toBeTruthy();
-  });
-
   it('lets the user edit active-set reps with stepper controls and input', () => {
     const onRepsChange = jest.fn();
     render(
@@ -165,7 +140,7 @@ describe('SetCheckList', () => {
     expect(weightButtons).toHaveLength(2);
     weightButtons.forEach((button) => expect(button.className).toContain('shrink-0'));
     expect(weightInput.className).toContain('w-full');
-    expect(weightInput.className).toContain('min-w-[3.25rem]');
+    expect(weightInput.className).toContain('min-w-[5.5rem]');
     expect(weightInput.className).toContain('tabular-nums');
   });
 
@@ -185,6 +160,56 @@ describe('SetCheckList', () => {
       />,
     );
 
-    expect((screen.getByTestId('complete-set-button') as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.queryByTestId('complete-set-button')).toBeNull();
   });
+
+  it('clamps steppers without emitting NaN for invalid drafts', () => {
+    const onWeightChange = jest.fn();
+    const onRepsChange = jest.fn();
+    render(
+      <SetCheckList
+        targetSets={3}
+        targetReps={8}
+        completedCount={0}
+        completedSets={[]}
+        weight="abc"
+        onWeightChange={onWeightChange}
+        reps="abc"
+        onRepsChange={onRepsChange}
+        onCompleteSet={jest.fn()}
+        busy={false}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Bajar peso 2.5 kg' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Bajar repeticiones 1' }));
+    expect(onWeightChange).toHaveBeenCalledWith('0');
+    expect(onRepsChange).toHaveBeenCalledWith('7');
+    expect(onWeightChange).not.toHaveBeenCalledWith(expect.stringContaining('NaN'));
+    expect(onRepsChange).not.toHaveBeenCalledWith(expect.stringContaining('NaN'));
+  });
+
+  it('keeps two and three digit decimal weights fully visible in a tabular input', () => {
+    render(
+      <SetCheckList
+        targetSets={3}
+        targetReps={8}
+        completedCount={0}
+        completedSets={[]}
+        weight="125.5"
+        onWeightChange={jest.fn()}
+        reps="8"
+        onRepsChange={jest.fn()}
+        onCompleteSet={jest.fn()}
+        busy={false}
+      />,
+    );
+
+    const weightInput = screen.getByTestId('guided-weight-input');
+    expect((weightInput as HTMLInputElement).value).toBe('125.5');
+    expect(weightInput.className).toContain('min-w-[5.5rem]');
+    expect(weightInput.className).toContain('tabular-nums');
+    expect(weightInput.className).not.toContain('overflow-hidden');
+  });
+
 });
