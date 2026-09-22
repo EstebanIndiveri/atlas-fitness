@@ -102,13 +102,35 @@ describe('RoutineDetailPage', () => {
 
     expect(await screen.findByRole('heading', { name: 'Empuje y torso superior' })).toBeTruthy();
     expect(screen.getByText('Detalle de Rutina')).toBeTruthy();
-    expect(screen.getByText('Gimnasio')).toBeTruthy();
-    expect(screen.getByText('2 ejercicios · 7 series')).toBeTruthy();
-    expect(screen.getByText('Énfasis muscular: Pectoral medio y deltoides, Tríceps braquial')).toBeTruthy();
+    expect(screen.getByText('● GIMNASIO')).toBeTruthy();
+    expect(screen.getByText('Plantilla')).toBeTruthy();
+    expect(screen.getByText('◎ 2 ejercicios · 7 series')).toBeTruthy();
+    expect(screen.getByText('⏱ Descanso 2 min')).toBeTruthy();
+    expect(screen.getByText('◎ Énfasis muscular: Pectoral medio y deltoides, Tríceps braquial.')).toBeTruthy();
     expect(screen.getByText('Press de banca plano')).toBeTruthy();
     expect(screen.getByText('3 series × 8 reps')).toBeTruthy();
-    expect(screen.getAllByText('2 min descanso')).toHaveLength(2);
+    expect(screen.getAllByText('⏱ 2 min descanso')).toHaveLength(2);
     expect(screen.queryByText(/45 min|Semana|Hipertrofia|Barra/)).toBeNull();
+  });
+
+
+
+  it('computes exercise and set totals from routine exercises instead of hardcoded Figma metrics', async () => {
+    const exercises = [
+      { id: 101, routineId: 12, exerciseId: 1, sortOrder: 0, targetSets: 3, targetReps: 8, exerciseName: 'Press de banca plano', muscleGroup: 'Pectoral clavicular', instructions: '', imageUrl: null, videoUrl: null },
+      { id: 102, routineId: 12, exerciseId: 2, sortOrder: 1, targetSets: 4, targetReps: 10, exerciseName: 'Press inclinado', muscleGroup: 'Pectoral clavicular', instructions: '', imageUrl: null, videoUrl: null },
+      { id: 103, routineId: 12, exerciseId: 3, sortOrder: 2, targetSets: 3, targetReps: 12, exerciseName: 'Vuelos laterales', muscleGroup: 'Deltoides anterior', instructions: '', imageUrl: null, videoUrl: null },
+      { id: 104, routineId: 12, exerciseId: 4, sortOrder: 3, targetSets: 3, targetReps: 12, exerciseName: 'Fondos', muscleGroup: 'Tríceps braquial', instructions: '', imageUrl: null, videoUrl: null },
+      { id: 105, routineId: 12, exerciseId: 5, sortOrder: 4, targetSets: 3, targetReps: 15, exerciseName: 'Extensión con cuerda', muscleGroup: 'Tríceps braquial', instructions: '', imageUrl: null, videoUrl: null },
+    ];
+    global.fetch = jest.fn<typeof fetch>().mockResolvedValue(jsonResponse(routineResponse({ exercises })));
+    const { default: RoutineDetailPage } = await import('./page');
+
+    render(<RoutineDetailPage />);
+
+    expect(await screen.findByText('◎ 5 ejercicios · 16 series')).toBeTruthy();
+    expect(screen.getByText('◎ Énfasis muscular: Pectoral clavicular, Deltoides anterior, Tríceps braquial.')).toBeTruthy();
+    expect(screen.queryByText('◎ 5 ejercicios · 15 series')).toBeNull();
   });
 
   it('renders an honest empty state when the routine has no exercises', async () => {
@@ -118,7 +140,7 @@ describe('RoutineDetailPage', () => {
     render(<RoutineDetailPage />);
 
     expect(await screen.findByRole('heading', { name: 'Empuje y torso superior' })).toBeTruthy();
-    expect(screen.getByText('0 ejercicios · 0 series')).toBeTruthy();
+    expect(screen.getByText('◎ 0 ejercicios · 0 series')).toBeTruthy();
     expect(screen.getByText('Esta rutina todavía no tiene ejercicios cargados.')).toBeTruthy();
   });
 
@@ -165,12 +187,12 @@ describe('RoutineDetailPage', () => {
 
     render(<RoutineDetailPage />);
 
-    expect((await screen.findByRole('link', { name: 'Editar rutina' })).getAttribute('href')).toBe(
+    expect((await screen.findByRole('link', { name: '⚏ Editar rutina' })).getAttribute('href')).toBe(
       '/dashboard/routines/12/edit',
     );
     expect(screen.getByRole('link', { name: '2. Constructor' }).getAttribute('href')).toBe(
       '/dashboard/routines/12/edit',
     );
-    expect(screen.getByRole('button', { name: '3. Coach Atlas' }).hasAttribute('disabled')).toBe(true);
+    expect(screen.getByRole('button', { name: '✦ 3. Coach Atlas' }).hasAttribute('disabled')).toBe(true);
   });
 });
