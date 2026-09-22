@@ -7,16 +7,14 @@ import { Card } from '@/components/ui/Card';
 import { MoodFace } from '@/components/today/MoodFace';
 import { ErrorState, LoadingState } from '@/components/ui/states';
 import { useDailyCheckin } from '@/hooks/useDailyCheckin';
-import { MOOD_EMOJIS } from '@/lib/copy/session';
 import { cn } from '@/lib/ui/cn';
 import type { CheckInEnergy, DailyCheckInResponse } from '@/lib/api/checkin';
 
 const CHECKIN_COPY = {
-  title: 'Estado de ánimo',
-  autosaveHint: 'Auto-guarda al tocar',
+  title: '¿Cómo te sentís hoy?',
   moodGroupLabel: 'Estado de ánimo de hoy',
-  energyTitle: 'Nivel de energía',
-  noEnergy: 'Sin registrar',
+  energyTitle: 'Energía de hoy',
+  noEnergy: 'Sin registrar energía',
   chooseMoodFirst: 'Elegí tu ánimo primero',
   helper: 'Atlas usa tu check-in como contexto para sus recomendaciones.',
 } as const;
@@ -26,7 +24,13 @@ const ENERGY_OPTIONS: { value: CheckInEnergy; label: string }[] = [
   { value: 'medium', label: 'Media' },
   { value: 'high', label: 'Alta' },
 ];
-const MOOD_VALUES: number[] = MOOD_EMOJIS.map(({ value }) => value);
+const MOOD_OPTIONS = [
+  { value: 5, label: 'Excelente' },
+  { value: 4, label: 'Con energía' },
+  { value: 3, label: 'Normal' },
+  { value: 1, label: 'Agotado' },
+] as const;
+const MOOD_VALUES: number[] = MOOD_OPTIONS.map(({ value }) => value);
 
 function toCheckInEnergy(energy: DailyCheckInResponse['energy'] | null | undefined): CheckInEnergy | null {
   if (energy === 'low' || energy === 'medium' || energy === 'high') return energy;
@@ -34,7 +38,8 @@ function toCheckInEnergy(energy: DailyCheckInResponse['energy'] | null | undefin
 }
 
 function labelForEnergy(energy: CheckInEnergy | null): string {
-  return ENERGY_OPTIONS.find((option) => option.value === energy)?.label ?? CHECKIN_COPY.noEnergy;
+  const label = ENERGY_OPTIONS.find((option) => option.value === energy)?.label;
+  return label ? `⚡ ${label} energía` : `⚡ ${CHECKIN_COPY.noEnergy}`;
 }
 
 function moodValueForKey(currentMood: number, key: string): number | null {
@@ -111,12 +116,10 @@ export function MoodEnergyCheckIn() {
   };
 
   return (
-    <Card className="rounded-xl border border-line bg-surface p-5 shadow-card sm:p-6" data-testid="mood-energy-checkin">
+    <Card className="rounded-[1.75rem] border border-line bg-surface p-5 shadow-card sm:p-6" data-testid="mood-energy-checkin">
       <div className="flex items-start justify-between gap-4">
-        <h2 className="text-base font-semibold text-ink">{CHECKIN_COPY.title}</h2>
-        <p className="pt-0.5 text-right text-xs font-medium text-ink-muted">
-          {CHECKIN_COPY.autosaveHint}
-        </p>
+        <h2 className="text-lg font-semibold text-ink">{CHECKIN_COPY.title}</h2>
+        <p className="pt-0.5 text-right text-sm font-semibold text-brand">{labelForEnergy(selectedEnergy)}</p>
       </div>
 
       {loading ? <LoadingState compact /> : null}
@@ -129,7 +132,7 @@ export function MoodEnergyCheckIn() {
             role="radiogroup"
             aria-label={CHECKIN_COPY.moodGroupLabel}
           >
-            {MOOD_EMOJIS.map(({ value, label }) => {
+            {MOOD_OPTIONS.map(({ value, label }) => {
               const active = selectedMood === value;
               return (
                 <button
@@ -146,16 +149,18 @@ export function MoodEnergyCheckIn() {
                   onClick={() => handleMoodSelect(value)}
                   onKeyDown={(event) => handleMoodKeyDown(value, event)}
                   className={cn(
-                    'relative flex min-h-16 flex-1 flex-col items-center justify-center gap-1 rounded-xl border border-line bg-canvas px-2 py-3 text-center transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
-                    active ? 'border-brand bg-brand-muted ring-2 ring-brand' : 'hover:border-brand hover:bg-surface',
+                    'relative flex min-h-20 flex-1 flex-col items-center justify-center gap-1 rounded-2xl border border-line bg-canvas px-2 py-3 text-center transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
+                    active ? 'border-brand bg-brand text-white ring-2 ring-brand/30' : 'hover:border-brand hover:bg-surface',
                     saving && 'cursor-not-allowed',
                   )}
                   data-testid={`mood-${value}`}
                 >
-                  <MoodFace value={value} className={active ? 'text-brand' : 'text-ink-muted'} />
-                  <span className="text-[0.68rem] font-medium leading-tight text-ink">{label}</span>
+                  <MoodFace value={value} className={active ? 'text-white' : 'text-ink-muted'} />
+                  <span className={cn('text-[0.68rem] font-medium leading-tight', active ? 'text-white' : 'text-ink')}>
+                    {label}
+                  </span>
                   {active ? (
-                    <span className="absolute -right-1 -top-1 grid size-5 place-items-center rounded-full bg-brand text-[0.65rem] font-bold text-white" aria-hidden="true">
+                    <span className="absolute -right-1 -top-1 grid size-5 place-items-center rounded-full bg-ink text-[0.65rem] font-bold text-white" aria-hidden="true">
                       ✓
                     </span>
                   ) : null}
@@ -166,7 +171,6 @@ export function MoodEnergyCheckIn() {
 
           <div className="mt-6 flex items-center justify-between gap-4">
             <p className="text-sm font-semibold text-ink">{CHECKIN_COPY.energyTitle}</p>
-            <p className="text-sm font-semibold text-brand">{labelForEnergy(selectedEnergy)}</p>
           </div>
           <div className="mt-3 grid grid-cols-3 gap-2" aria-label={CHECKIN_COPY.energyTitle}>
             {ENERGY_OPTIONS.map(({ value, label }) => {

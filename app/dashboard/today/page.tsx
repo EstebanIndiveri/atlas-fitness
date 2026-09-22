@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { PageContainer } from '@/components/shell/PageContainer';
@@ -27,14 +27,6 @@ function readWorkoutId(value: unknown): number | null {
   return isRecord(value) && typeof value.id === 'number' ? value.id : null;
 }
 
-function subscribeNoop(): () => void {
-  return () => undefined;
-}
-
-function getServerOnboardingDone(): boolean {
-  return false;
-}
-
 /**
  * Today screen (`/dashboard/today`): greeting, check-in, workout hero, Coach Atlas,
  * habits and weekly progress. Composes existing data hooks and honest empty states;
@@ -46,11 +38,7 @@ export default function TodayPage() {
   const { today } = useToday();
   const [userName, setUserName] = useState<string | null>(null);
   const [userLoading, setUserLoading] = useState(true);
-  const onboardingDone = useSyncExternalStore(
-    subscribeNoop,
-    isOnboardingDone,
-    getServerOnboardingDone,
-  );
+  const [onboardingDone] = useState(() => isOnboardingDone() || isOnboardingDone());
 
   useEffect(() => {
     // Read the live store value (not the hydration snapshot) so already-onboarded

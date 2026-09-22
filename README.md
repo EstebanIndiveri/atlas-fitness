@@ -2,7 +2,7 @@
 
 Asistente de fitness personal para registrar entrenamientos, pesos, consejos, media de ejercicios y motivación — vía **web app** y **bot de Telegram** (misma lógica de producto que Hermes Finance: un dominio, dos canales).
 
-> Estado: **Phase 1 Scaffold** — Estructura base lista para Must v2. Sin implementación de features de producto todavía.
+> Estado: **v0.5.0 + wave Unreleased** — MVP de hábito/adaptive core usable: onboarding, Hoy, planes, adaptar, sesión guiada, feedback/progreso, PWA y Telegram. En curso: convergencia final de Hoy y generación semanal con Coach Atlas/Gemini + fallback.
 
 ## Visión (borrador)
 
@@ -21,8 +21,8 @@ Asistente de fitness personal para registrar entrenamientos, pesos, consejos, me
 - **Testing:** Jest (unit) + Playwright (e2e)
 - **CI/CD:** GitHub Actions
 - **PWA:** Manifest + iconos PNG 192/512 (any + maskable), service worker de shell estático, prompt de instalación
-- **Database:** Turso/libSQL + Drizzle (pendiente)
-- **Channels:** Web App + Telegram Bot (pendiente)
+- **Database:** Turso/libSQL + Drizzle
+- **Channels:** Web App/PWA + Telegram Bot
 
 ## Desarrollo Local
 
@@ -109,10 +109,10 @@ atlas-fitness/
 │   └── globals.css        # Estilos globales
 ├── components/            # Componentes React reutilizables
 ├── lib/                   # Lógica de negocio y servicios
-│   ├── db/               # Database schema y queries (pendiente)
-│   ├── services/         # Application services (pendiente)
-│   ├── telegram/         # Telegram bot handlers (pendiente)
-│   ├── ai/               # IA integrations (pendiente)
+│   ├── db/               # Database schema, client, migrations y readiness
+│   ├── services/         # Application services / dominio
+│   ├── telegram/         # Telegram bot handlers modulares
+│   ├── ai/               # Gemini adapters + fallbacks determinísticos
 │   └── format/           # Formatters (weight, date, etc.)
 ├── hooks/                 # React hooks personalizados
 ├── types/                 # TypeScript types compartidos
@@ -178,24 +178,27 @@ Ver [`AGENTS.md`](./AGENTS.md) §3–5 para el branching model completo.
 - **Owner:** [EstebanIndiveri](https://github.com/EstebanIndiveri)
 - **Producto hermano:** [hermes-finantial-tracker](https://github.com/EstebanIndiveri/hermes-finantial-tracker)
 
-## Estado Actual (Phase 1 Scaffold)
+## Estado Actual (v0.5.0 + Unreleased)
 
-✅ **Completado:**
-- Next.js App Router + TypeScript strict
-- Estructura de directorios según AGENTS.md
-- Jest configurado con tests TDD (weight formatter)
-- Playwright smoke test (home page)
-- GitHub Actions CI (lint + typecheck + test + e2e)
-- PWA manifest + iconos PNG reales + service worker de shell
-- Documentación completa (ADRs, convenciones)
+✅ **Completado / usable:**
+- Auth + sesiones HMAC revocables, link Telegram y webhooks modulares
+- Turso/libSQL + Drizzle con migraciones, seed local/QA y ownership de catálogo
+- PWA instalable con manifest, service worker de shell y prompts iOS/Chrome
+- Onboarding Figma-aligned de 4 pasos
+- Hoy con check-in ánimo/energía, hero de entrenamiento, motivo honesto y acciones Empezar/Adaptar
+- Plan semanal manual + edición (`/dashboard/plan/[id]/edit`)
+- Plan guiado “Crear con Coach Atlas” sobre catálogo real, con cleanup compensatorio
+- Entrenar hub, rutinas, detalle de rutina y sesión guiada responsive
+- Coach adaptation con preview/apply, freeText y fallback determinístico
+- Post-workout feedback y Progreso con métricas honestas (consistencia, fuerza, bienestar, hábitos, sesiones)
+- Perfil/Settings y bottom nav con tabs, iconos y estados activos
 
-🔜 **Próximo (Must v2):**
-- Auth + link Telegram
-- Workouts/sets/reps/peso
-- Catálogo de ejercicios
-- Tip card + Stories
-- Streaks + motivación
-- Database schema (Turso + Drizzle)
+🚧 **En curso (Unreleased):**
+- Convergencia final de Hoy (`components/today/**`)
+- Generación semanal con Coach Atlas/Gemini en `lib/ai/weekly-plan-draft.ts`, conservando fallback determinístico
+
+📚 **Handoff actual:** [`docs/backlog/handoff-2026-09.md`](./docs/backlog/handoff-2026-09.md)  
+📝 **Cambios por versión:** [`CHANGELOG.md`](./CHANGELOG.md)
 
 Stack y alcance: ver [`docs/architecture/ADR-001-system-stack.md`](./docs/architecture/ADR-001-system-stack.md).
 

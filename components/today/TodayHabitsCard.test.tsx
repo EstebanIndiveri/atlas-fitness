@@ -42,15 +42,27 @@ describe('TodayHabitsCard', () => {
     jest.clearAllMocks();
   });
 
-  it('renders the heading and one checkbox per boolean catalog habit', () => {
+  it('renders the Figma heading, honest completion count and one checkbox per boolean catalog habit', () => {
     mockHabits({ doneByKey: { hydration: true, walk: false, mobility: false, sleep: false } });
     render(<TodayHabitsCard />);
 
-    expect(screen.getByRole('heading', { name: 'Hábitos de hoy' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Hábitos Diarios' })).toBeTruthy();
+    expect(screen.getByText('1 de 4 completados')).toBeTruthy();
     expect(screen.getAllByRole('checkbox')).toHaveLength(3);
-    expect(screen.getByRole('checkbox', { name: /Caminar/ }).getAttribute('aria-checked')).toBe(
+    expect(screen.getByRole('checkbox', { name: /Pasos Activos/ }).getAttribute('aria-checked')).toBe(
       'false',
     );
+  });
+
+  it('keeps steps and sleep as honest toggle rows instead of fabricating values', () => {
+    mockHabits({ doneByKey: { hydration: false, walk: true, mobility: false, sleep: true } });
+    const { container } = render(<TodayHabitsCard />);
+
+    expect(screen.getByRole('checkbox', { name: /Pasos Activos/ })).toBeTruthy();
+    expect(screen.getByRole('checkbox', { name: /Descanso & Sueño/ })).toBeTruthy();
+    expect(container.textContent).not.toContain('7,420');
+    expect(container.textContent).not.toContain('7h 45m');
+    expect(container.textContent).not.toContain('10k');
   });
 
   it('renders a quantitative stepper for hydration and reports the real amount', () => {
@@ -73,7 +85,7 @@ describe('TodayHabitsCard', () => {
     const { toggle } = mockHabits();
     render(<TodayHabitsCard />);
 
-    fireEvent.click(screen.getByRole('checkbox', { name: /Dormir/ }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /Descanso & Sueño/ }));
     expect(toggle).toHaveBeenCalledWith('sleep');
   });
 
@@ -93,11 +105,11 @@ describe('TodayHabitsCard', () => {
     ).toBeTruthy();
   });
 
-  it('never fabricates habit counts or progress numbers', () => {
+  it('never fabricates habit target values or progress percentages', () => {
     mockHabits({ doneByKey: { hydration: true, walk: true, mobility: false, sleep: false } });
     const { container } = render(<TodayHabitsCard />);
 
-    expect(container.textContent).not.toMatch(/\d+\s*(de|\/)\s*\d+/);
+    expect(screen.getByText('2 de 4 completados')).toBeTruthy();
     expect(container.textContent).not.toMatch(/%/);
   });
 });

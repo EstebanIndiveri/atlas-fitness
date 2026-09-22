@@ -46,24 +46,31 @@ describe('MoodEnergyCheckIn', () => {
     jest.clearAllMocks();
   });
 
-  it('renders five mood faces and three energy pills', () => {
+  it('renders the Figma mood prompt with four honest mood choices and three energy pills', () => {
     mockCheckin();
 
     render(<MoodEnergyCheckIn />);
 
-    expect(screen.getByRole('heading', { name: 'Estado de ánimo' })).toBeTruthy();
-    expect(screen.getByText('Auto-guarda al tocar')).toBeTruthy();
-    expect(screen.getAllByRole('radio')).toHaveLength(5);
-    expect(screen.getByRole('radio', { name: 'Mal' })).toBeTruthy();
-    expect(screen.getByRole('radio', { name: 'Regular' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: '¿Cómo te sentís hoy?' })).toBeTruthy();
+    expect(screen.getByText('⚡ Sin registrar energía')).toBeTruthy();
+    expect(screen.getAllByRole('radio')).toHaveLength(4);
+    expect(screen.getByRole('radio', { name: 'Agotado' })).toBeTruthy();
     expect(screen.getByRole('radio', { name: 'Normal' })).toBeTruthy();
-    expect(screen.getByRole('radio', { name: 'Bien' })).toBeTruthy();
+    expect(screen.getByRole('radio', { name: 'Con energía' })).toBeTruthy();
     expect(screen.getByRole('radio', { name: 'Excelente' })).toBeTruthy();
-    expect(screen.getByRole('radio', { name: 'Bien' }).querySelector('svg')).toBeTruthy();
-    expect(screen.getByRole('radio', { name: 'Mal' }).textContent).not.toContain('😞');
+    expect(screen.getByRole('radio', { name: 'Con energía' }).querySelector('svg')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Seleccionar energía Baja' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Seleccionar energía Media' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Seleccionar energía Alta' })).toBeTruthy();
+  });
+
+  it('does not fabricate an energy percentage from the low/medium/high check-in enum', () => {
+    mockCheckin({ checkin: { ...recordedCheckin, energy: 'high' } });
+
+    const { container } = render(<MoodEnergyCheckIn />);
+
+    expect(screen.getByText('⚡ Alta energía')).toBeTruthy();
+    expect(container.textContent).not.toMatch(/\d+%/);
   });
 
   it('renders the compact loading state while loading', () => {
@@ -80,7 +87,7 @@ describe('MoodEnergyCheckIn', () => {
     render(<MoodEnergyCheckIn />);
 
     expect(screen.getByRole('alert').textContent).toContain('No se pudo guardar el check-in');
-    expect(screen.getByRole('radio', { name: 'Bien' }).hasAttribute('disabled')).toBe(false);
+    expect(screen.getByRole('radio', { name: 'Con energía' }).hasAttribute('disabled')).toBe(false);
     expect(screen.getByRole('button', { name: 'Seleccionar energía Alta' }).hasAttribute('disabled')).toBe(false);
   });
 
@@ -107,9 +114,9 @@ describe('MoodEnergyCheckIn', () => {
 
     render(<MoodEnergyCheckIn />);
 
-    expect(screen.getByRole('radio', { name: 'Bien' }).getAttribute('aria-checked')).toBe('true');
+    expect(screen.getByRole('radio', { name: 'Con energía' }).getAttribute('aria-checked')).toBe('true');
     expect(screen.getByRole('button', { name: 'Seleccionar energía Alta' }).getAttribute('aria-pressed')).toBe('true');
-    expect(screen.getAllByText('Alta')[0].className).toContain('text-brand');
+    expect(screen.getByText('⚡ Alta energía')).toBeTruthy();
   });
 
 
@@ -119,8 +126,8 @@ describe('MoodEnergyCheckIn', () => {
     render(<MoodEnergyCheckIn />);
     fireEvent.keyDown(screen.getByRole('radio', { name: 'Normal' }), { key: 'ArrowRight' });
 
-    expect(submit).toHaveBeenCalledWith({ mood: 4, energy: 'medium' });
-    expect(screen.getByRole('radio', { name: 'Bien' }).getAttribute('aria-checked')).toBe('true');
+    expect(submit).toHaveBeenCalledWith({ mood: 1, energy: 'medium' });
+    expect(screen.getByRole('radio', { name: 'Agotado' }).getAttribute('aria-checked')).toBe('true');
   });
 
   it('does not fabricate a mood when energy is tapped first', () => {
@@ -138,7 +145,7 @@ describe('MoodEnergyCheckIn', () => {
 
     render(<MoodEnergyCheckIn />);
 
-    expect(screen.getByRole('radio', { name: 'Bien' }).hasAttribute('disabled')).toBe(true);
+    expect(screen.getByRole('radio', { name: 'Con energía' }).hasAttribute('disabled')).toBe(true);
     expect(screen.getByRole('button', { name: 'Seleccionar energía Alta' }).hasAttribute('disabled')).toBe(true);
   });
 });

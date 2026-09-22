@@ -43,16 +43,16 @@ export function WeekDayStrip({ now = new Date(), days }: WeekDayStripProps) {
               aria-current={isToday ? 'date' : undefined}
               aria-label={dayAriaLabel(DAY_NAMES[index], isToday, isActive)}
               className={cn(
-                'grid h-11 w-full place-items-center rounded-lg text-xs font-semibold',
+                'grid h-11 w-full place-items-center rounded-xl text-xs font-semibold',
                 isToday
                   ? 'bg-brand text-brand-foreground'
                   : isActive
-                    ? 'bg-canvas text-ink ring-2 ring-brand'
+                    ? 'bg-brand-muted text-brand ring-2 ring-brand'
                     : 'bg-canvas text-ink-muted ring-1 ring-line',
                 isFuture && !isToday && 'opacity-60',
               )}
             >
-              {isToday ? TODAY_LABEL : label}
+              {isToday ? TODAY_LABEL : isActive ? '✓' : label}
             </div>
             <span
               aria-hidden
