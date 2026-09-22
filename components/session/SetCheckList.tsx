@@ -12,7 +12,9 @@ type SetCheckListProps = {
   reps: string;
   onRepsChange: (value: string) => void;
   onCompleteSet: () => void;
+  onAddSet?: () => void;
   busy: boolean;
+  resting?: boolean;
   nextExerciseName?: string | null;
 };
 
@@ -78,7 +80,9 @@ export function SetCheckList({
   onWeightChange,
   reps,
   onRepsChange,
+  onAddSet,
   busy,
+  resting = false,
 }: SetCheckListProps) {
   const safeCompleted = Math.min(Math.max(completedSets.length || completedCount, 0), targetSets);
   const slots = Array.from({ length: targetSets }, (_, index) => index + 1);
@@ -178,7 +182,7 @@ export function SetCheckList({
                       </button>
                       <input
                         id="guided-reps"
-                        className="w-full min-w-[3.25rem] rounded-md bg-canvas px-1 py-1.5 text-center text-lg font-bold tabular-nums text-ink outline-none ring-1 ring-line focus:ring-brand"
+                        className="w-full min-w-[4rem] rounded-md bg-canvas px-1 py-1.5 text-center text-lg font-bold tabular-nums text-ink outline-none ring-1 ring-line focus:ring-brand"
                         inputMode="numeric"
                         value={reps}
                         onChange={(event) => onRepsChange(event.target.value)}
@@ -226,15 +230,33 @@ export function SetCheckList({
               >
                 {completed?.reps ?? targetReps}
               </span>
-              <span className="text-right text-ink-muted" aria-hidden>
-                {done ? '✓' : '◌'}
+              <span
+                className={done ? 'justify-self-end text-brand' : 'justify-self-end text-ink-muted'}
+                aria-label={done ? 'Serie completada' : 'Serie pendiente'}
+              >
+                <svg
+                  className="size-5"
+                  viewBox="0 0 20 20"
+                  fill={done ? 'currentColor' : 'none'}
+                  stroke="currentColor"
+                  strokeWidth="1.75"
+                  aria-hidden
+                >
+                  <circle cx="10" cy="10" r="7.25" strokeDasharray={done ? undefined : '2 2'} />
+                  {done ? <path className="stroke-brand-foreground" d="m6.5 10 2.1 2.1 4.6-4.6" strokeLinecap="round" strokeLinejoin="round" /> : null}
+                </svg>
               </span>
             </li>
           );
         })}
       </ol>
       <div className="flex items-center justify-between border-x border-b border-line bg-surface px-3 py-3 text-sm font-semibold text-brand">
-        <button type="button" className="text-left" disabled aria-disabled="true">
+        <button
+          type="button"
+          className="text-left disabled:cursor-not-allowed disabled:text-ink-muted"
+          onClick={onAddSet}
+          disabled={busy || resting || !onAddSet}
+        >
           {SESSION_COPY.addSet}
         </button>
         <button type="button" className="text-right text-ink-muted" disabled aria-disabled="true">

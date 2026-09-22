@@ -14,7 +14,7 @@ export const SESSION_COPY = {
   targetReps: (reps: number) => `Objetivo: ${reps} reps`,
   targetSets: (sets: number, reps: number) => `${sets} × ${reps} reps`,
   completeSet: 'Completar serie',
-  completeSetCta: (setIndex: number) => `✓ COMPLETAR SERIE ${setIndex}`,
+  completeSetCta: (setIndex: number) => `COMPLETAR SERIE ${setIndex}`,
   weightLabel: 'Peso (kg)',
   restTitle: 'DESCANSO SUGERIDO',
   addSet: '+ Añadir serie',

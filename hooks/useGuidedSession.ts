@@ -28,6 +28,8 @@ interface WorkoutPayload {
   queue?: unknown;
 }
 
+const MAX_TARGET_SETS = 12;
+
 function parseReps(value: string, fallback: number): number {
   const parsed = Number.parseInt(value, 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
@@ -120,6 +122,25 @@ export function useGuidedSession(workoutId: string) {
     if (!current || !workout) return 0;
     return workout.sets.filter((set) => set.exerciseId === current.exerciseId).length;
   }, [current, workout]);
+
+  const addSet = useCallback((): void => {
+    if (!current || busy || current.targetSets >= MAX_TARGET_SETS) {
+      return;
+    }
+    setRoutine((previous) => {
+      if (!previous) {
+        return previous;
+      }
+      return {
+        ...previous,
+        exercises: previous.exercises.map((exercise) =>
+          exercise.exerciseId === current.exerciseId
+            ? { ...exercise, targetSets: Math.min(exercise.targetSets + 1, MAX_TARGET_SETS) }
+            : exercise,
+        ),
+      };
+    });
+  }, [busy, current]);
 
   const repsKey = current ? `${current.exerciseId}:${completedCount}` : null;
   const reps = current
@@ -274,6 +295,7 @@ export function useGuidedSession(workoutId: string) {
     queueItems,
     current,
     completedCount,
+    addSet,
     weight,
     setWeight,
     reps,

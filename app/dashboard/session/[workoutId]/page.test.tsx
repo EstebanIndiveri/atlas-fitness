@@ -74,6 +74,7 @@ const mockSession = {
   setWeight: jest.fn(),
   reps: '8',
   setReps: jest.fn(),
+  addSet: jest.fn(),
   completeSet: jest.fn(),
   skipCurrent: mockSkipCurrent,
   holdCurrent: mockHoldCurrent,
@@ -172,17 +173,17 @@ describe('GuidedSessionPlayerPage', () => {
     expect(screen.getByTestId('complete-set-bar').className).toContain('fixed');
   });
 
-  it('keeps suggested rest immediately after the set table when rest is active', async () => {
+  it('moves suggested rest into a fixed bottom bar while hiding the complete CTA', async () => {
     mockSession.phase = 'train';
     mockRestTimer.active = true;
     mockRestTimer.remaining = 90;
     const { default: GuidedSessionPlayerPage } = await import('./page');
     render(<GuidedSessionPlayerPage />);
 
-    const card = screen.getByTestId('guided-exercise-card');
-    const setTableIndex = card.textContent?.indexOf('SERIE 2 EN CURSO') ?? -1;
-    const restIndex = card.textContent?.indexOf('DESCANSO SUGERIDO') ?? -1;
-    expect(setTableIndex).toBeGreaterThanOrEqual(0);
-    expect(restIndex).toBeGreaterThan(setTableIndex);
+    const restBar = screen.getByTestId('rest-timer').closest('[data-testid="rest-timer-bar"]');
+    expect(restBar?.className).toContain('fixed');
+    expect(restBar?.className).toContain('bottom-app-cta');
+    expect(screen.getByTestId('guided-exercise-card').contains(screen.getByTestId('rest-timer'))).toBe(false);
+    expect(screen.queryByTestId('complete-set-bar')).toBeNull();
   });
 });

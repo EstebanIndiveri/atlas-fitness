@@ -33,7 +33,8 @@ export function SessionCompleteSetBar({
   nextExerciseName,
   onCompleteSet,
 }: SessionCompleteSetBarProps) {
-  const completeLabel = `⊘ COMPLETAR SERIE ${activeSet}`;
+  const completeLabel = `COMPLETAR SERIE ${activeSet}`;
+  const completeAriaLabel = `Completar serie ${activeSet}`;
 
   return (
     <div
@@ -42,12 +43,24 @@ export function SessionCompleteSetBar({
     >
       <Button
         size="lg"
-        className="min-h-12 rounded-xl bg-ink text-base font-black tracking-[0.02em] text-canvas hover:bg-ink"
+        className="min-h-12 rounded-xl bg-brand text-base font-black tracking-[0.02em] text-brand-foreground hover:bg-brand-hover disabled:bg-brand/60 disabled:text-brand-foreground disabled:opacity-100"
         onClick={onCompleteSet}
         disabled={busy || !isValidWeightKg(weight.trim()) || !hasValidReps(reps)}
         data-testid="complete-set-button"
-        aria-label={completeLabel}
+        aria-label={completeAriaLabel}
       >
+        <svg
+          className="mr-2 size-5 shrink-0"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          aria-hidden
+          data-testid="complete-set-icon"
+        >
+          <circle cx="12" cy="12" r="8.5" />
+          <path d="m8.5 12 2.25 2.25L15.75 9" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
         {completeLabel}
       </Button>
       {nextExerciseName ? (

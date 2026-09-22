@@ -10,7 +10,6 @@ import { SessionCompleteSetBar } from '@/components/session/SessionCompleteSetBa
 import { SESSION_COPY } from '@/lib/copy/session';
 import { cn } from '@/lib/ui/cn';
 import { metric } from '@/types/metric';
-import type { ReactNode } from 'react';
 import type { RoutineExerciseItem } from '@/types/routine';
 
 type GuidedExerciseCardProps = {
@@ -22,11 +21,12 @@ type GuidedExerciseCardProps = {
   reps: string;
   onRepsChange: (value: string) => void;
   onCompleteSet: () => void;
+  onAddSet?: () => void;
   onReplace?: () => void;
   onHold?: () => void;
   busy: boolean;
+  resting?: boolean;
   nextExerciseName?: string | null;
-  focusSlot?: ReactNode;
 };
 
 type CompletedSet = {
@@ -81,11 +81,12 @@ export function GuidedExerciseCard({
   reps,
   onRepsChange,
   onCompleteSet,
+  onAddSet,
   onReplace,
   onHold,
   busy,
+  resting = false,
   nextExerciseName,
-  focusSlot,
 }: GuidedExerciseCardProps) {
   const [panel, setPanel] = useState<SecondaryPanel | null>(null);
   const [noteText, setNoteText] = useState('');
@@ -215,13 +216,14 @@ export function GuidedExerciseCard({
             reps={reps}
             onRepsChange={onRepsChange}
             onCompleteSet={onCompleteSet}
+            onAddSet={onAddSet}
             busy={busy}
+            resting={resting}
             nextExerciseName={nextExerciseName}
           />
-          {focusSlot ? <div className="mt-4">{focusSlot}</div> : null}
         </div>
       </Card>
-      {canCompleteSet ? (
+      {canCompleteSet && !resting ? (
         <SessionCompleteSetBar
           activeSet={activeSet}
           weight={weight}

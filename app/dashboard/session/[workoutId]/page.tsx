@@ -241,22 +241,27 @@ export default function GuidedSessionPlayerPage() {
                   reps={session.reps}
                   onRepsChange={session.setReps}
                   onCompleteSet={() => void handleCompleteSet()}
+                  onAddSet={session.addSet}
                   onReplace={() => void handleSkip()}
                   onHold={() => void handleHold()}
                   busy={session.busy || rest.active}
+                  resting={rest.active}
                   nextExerciseName={nextExerciseName}
-                  focusSlot={
-                    rest.active ? (
-                      <RestTimer
-                        remaining={rest.remaining}
-                        totalSeconds={restTotalSeconds || session.routine.restSeconds}
-                        motivator={motivator}
-                        onSkip={rest.skip}
-                        onAddThirtySeconds={handleAddRestThirtySeconds}
-                      />
-                    ) : null
-                  }
                 />
+                {rest.active ? (
+                  <div
+                    className="fixed inset-x-0 bottom-app-cta z-30 border-t border-line bg-canvas/95 px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] pt-3 shadow-card backdrop-blur md:sticky md:bottom-4 md:mx-auto md:max-w-4xl md:rounded-2xl md:border"
+                    data-testid="rest-timer-bar"
+                  >
+                    <RestTimer
+                      remaining={rest.remaining}
+                      totalSeconds={restTotalSeconds || session.routine.restSeconds}
+                      motivator={motivator}
+                      onSkip={rest.skip}
+                      onAddThirtySeconds={handleAddRestThirtySeconds}
+                    />
+                  </div>
+                ) : null}
                 <SessionQueueActions
                   items={session.queueItems}
                   onSkip={() => void handleSkip()}

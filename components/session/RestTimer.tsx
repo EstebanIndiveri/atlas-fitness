@@ -39,31 +39,40 @@ export function RestTimer({
     : 0;
 
   return (
-    <Card className="mb-4 rounded-2xl border border-line p-4">
-      <div className="flex items-center gap-3">
-        <div className="flex size-12 items-center justify-center rounded-xl bg-brand-muted text-2xl" aria-hidden>
-          ⏳
+    <Card className="rounded-2xl border border-line p-4">
+      <div className="flex flex-col gap-3 min-[430px]:flex-row min-[430px]:items-center">
+        <div className="flex items-center gap-3">
+          <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-brand-muted text-2xl" aria-hidden>
+            ⏳
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-muted">
+              {SESSION_COPY.restTitle}
+            </p>
+            <p className="text-3xl font-bold tracking-[-0.04em] text-brand">
+              <span data-testid="rest-timer">{formatTimer(remaining)}</span>
+              <span className="ml-1 text-xs font-medium text-ink-muted">min</span>
+            </p>
+          </div>
         </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-muted">
-            {SESSION_COPY.restTitle}
-          </p>
-          <p className="text-3xl font-bold tracking-[-0.04em] text-brand">
-            <span data-testid="rest-timer">{formatTimer(remaining)}</span>
-            <span className="ml-1 text-xs font-medium text-ink-muted">min</span>
-          </p>
-        </div>
-        <div className="flex gap-2">
+        <div className="flex w-full gap-2 min-[430px]:ml-auto min-[430px]:w-auto">
           <Button
             variant="secondary"
             size="sm"
+            className="flex-1 whitespace-nowrap min-[430px]:flex-none"
             onClick={onAddThirtySeconds}
             disabled={!onAddThirtySeconds}
             aria-label="Sumar 30 segundos al descanso"
           >
             {SESSION_COPY.addRestThirty}
           </Button>
-          <Button variant="secondary" size="sm" onClick={onSkip} data-testid="skip-rest">
+          <Button
+            variant="secondary"
+            size="sm"
+            className="flex-1 whitespace-nowrap min-[430px]:flex-none"
+            onClick={onSkip}
+            data-testid="skip-rest"
+          >
             {SESSION_COPY.skipRest}
           </Button>
         </div>
