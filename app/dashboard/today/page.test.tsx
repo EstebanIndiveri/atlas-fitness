@@ -196,8 +196,8 @@ describe('TodayPage', () => {
     render(<TodayPage />);
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Hola, Esteban' })).toBeTruthy();
-    expect(screen.getByRole('heading', { name: 'Hábitos de hoy' })).toBeTruthy();
-    expect(screen.getByRole('heading', { name: 'Esta semana' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Hábitos Diarios' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Consistencia Semanal' })).toBeTruthy();
   });
 
   it('starts the scheduled workout with its routineId and navigates', async () => {
@@ -219,7 +219,7 @@ describe('TodayPage', () => {
     });
 
     render(<TodayPage />);
-    const startButton = await screen.findByRole('button', { name: /Empezar entrenamiento/i });
+    const startButton = await screen.findByRole('button', { name: /Empezar Entreno/i });
     fireEvent.click(startButton);
 
     await waitFor(() => {

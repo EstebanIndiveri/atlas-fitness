@@ -24,7 +24,9 @@ type Preset = {
 };
 
 const COPY = {
-  eyebrow: '¿Cambió algo para hoy?',
+  eyebrow: 'Basado en datos biométricos',
+  insight: 'Usamos tu check-in, tu rutina y tus registros reales cuando pedís una adaptación. Si falta contexto, Atlas lo muestra como estado vacío.',
+  quickAdjustments: 'Ajustes rápidos para tu sesión:',
   noRoutine: 'Necesitás un entrenamiento de hoy para adaptar.',
   inputLabel: 'Preguntarle algo a Atlas',
   inputPlaceholder: 'Preguntarle algo a Atlas',
@@ -39,8 +41,7 @@ const COPY = {
 const PRESETS: readonly Preset[] = [
   { label: 'Tengo 30 min', icon: '⏱️', freeText: 'Tengo 30 minutos' },
   { label: 'Estoy cansado', icon: '🪫', freeText: 'Estoy cansado' },
-  { label: 'Sin máquinas', icon: '🏠', freeText: 'Sin máquinas disponibles' },
-  { label: 'Quiero algo más liviano', icon: '🌿', freeText: 'Quiero algo más liviano' },
+  { label: 'Sin poleas', icon: '✦', freeText: 'Sin poleas disponibles' },
 ] as const;
 
 /**
@@ -122,13 +123,16 @@ export function CoachAtlasCard({ routineId, workoutId = null, onResult }: CoachA
   };
 
   return (
-    <Card className="rounded-xl" data-testid="coach-atlas-card" aria-busy={busy}>
+    <Card className="rounded-[1.75rem] p-5" data-testid="coach-atlas-card" aria-busy={busy}>
       <div className="flex items-start justify-between gap-3">
-        <h2 className="text-sm font-semibold text-ink">✦ Coach Atlas</h2>
+        <h2 className="text-base font-semibold text-ink">◎ Coach Atlas</h2>
         <p className="text-right text-xs text-ink-muted">{COPY.eyebrow}</p>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-2" role="group" aria-label="Adaptaciones rápidas de Atlas">
+      <p className="mt-4 text-sm leading-6 text-ink">{COPY.insight}</p>
+      <p className="mt-5 text-sm font-semibold text-ink">{COPY.quickAdjustments}</p>
+
+      <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="Adaptaciones rápidas de Atlas">
         {PRESETS.map((preset) => {
           const presetLoading = loadingKey === preset.label;
           const disabled = !canAdapt || busy;
@@ -138,7 +142,7 @@ export function CoachAtlasCard({ routineId, workoutId = null, onResult }: CoachA
               variant="secondary"
               size="md"
               className={cn(
-                'min-h-14 justify-start gap-2 rounded-xl px-3 text-left text-xs sm:text-sm',
+                'min-h-11 justify-start gap-2 rounded-full px-4 text-left text-xs sm:text-sm',
                 presetLoading && 'ring-2 ring-brand',
               )}
               disabled={disabled}

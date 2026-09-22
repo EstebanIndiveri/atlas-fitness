@@ -108,15 +108,16 @@ describe('CoachAtlasCard', () => {
     decideMock.mockReset();
   });
 
-  it('renders the four preset chips and the free-text input row', () => {
+  it('renders the Figma heading, honest provenance copy, three preset chips and free-text input row', () => {
     render(<CoachAtlasCard routineId={42} />);
 
-    expect(screen.getByRole('heading', { name: '✦ Coach Atlas' })).toBeTruthy();
-    expect(screen.getByText('¿Cambió algo para hoy?')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: '◎ Coach Atlas' })).toBeTruthy();
+    expect(screen.getByText('Basado en datos biométricos')).toBeTruthy();
+    expect(screen.getByText('Ajustes rápidos para tu sesión:')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Tengo 30 min' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Estoy cansado' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Sin máquinas' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Quiero algo más liviano' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Sin poleas' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Quiero algo más liviano' })).toBeNull();
     expect(screen.getByRole('textbox', { name: 'Preguntarle algo a Atlas' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Enviar pregunta a Atlas' })).toBeTruthy();
   });
@@ -169,7 +170,7 @@ describe('CoachAtlasCard', () => {
     );
     render(<CoachAtlasCard routineId={42} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Sin máquinas' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Sin poleas' }));
 
     expect(
       await screen.findByText('Necesitás registrar cómo estás hoy antes de adaptar.'),
@@ -192,7 +193,7 @@ describe('CoachAtlasCard', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Estoy cansado' }));
     expect(await screen.findByText('Sugerencia de Atlas')).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Sin máquinas' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Sin poleas' }));
 
     expect(
       await screen.findByText('Necesitás registrar cómo estás hoy antes de adaptar.'),
@@ -208,9 +209,9 @@ describe('CoachAtlasCard', () => {
     );
     render(<CoachAtlasCard routineId={42} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Quiero algo más liviano' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Sin poleas' }));
 
-    expect(screen.getByRole('button', { name: 'Adaptando Quiero algo más liviano' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Adaptando Sin poleas' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Tengo 30 min' }).hasAttribute('disabled')).toBe(true);
     expect(screen.getByRole('button', { name: 'Estoy cansado' }).hasAttribute('disabled')).toBe(true);
 
