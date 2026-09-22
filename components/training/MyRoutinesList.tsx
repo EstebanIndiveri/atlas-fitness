@@ -4,10 +4,8 @@ import Link from 'next/link';
 
 import { Button, buttonClassName } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { MetricValue } from '@/components/ui/MetricValue';
 import { EmptyState } from '@/components/ui/states';
 import { UI_COPY } from '@/lib/copy/ui';
-import { metric } from '@/types/metric';
 import type { Workout } from '@/lib/db/schema';
 import type { RoutineSummary } from '@/types/routine';
 
@@ -45,14 +43,17 @@ export function MyRoutinesList({
   return (
     <section aria-labelledby="my-routines-title" className="space-y-3">
       <div className="flex items-center justify-between gap-3">
-        <h2 id="my-routines-title" className="text-xl font-bold text-ink">
-          {UI_COPY.training.myRoutinesTitle}
-        </h2>
-        <Link
-          href="/dashboard/routines"
-          className="text-sm font-medium text-brand hover:underline"
-        >
-          {UI_COPY.training.managePlan}
+        <div className="flex items-baseline gap-2">
+          <h2
+            id="my-routines-title"
+            className="font-serif text-xl font-semibold tracking-[-0.03em] text-ink"
+          >
+            {UI_COPY.training.myRoutinesTitle}
+          </h2>
+          <span className="text-xs text-ink-muted">{formatRoutineTotal(routines.length)}</span>
+        </div>
+        <Link href="/dashboard/routines" className="text-sm font-medium text-brand hover:underline">
+          Ordenar
         </Link>
       </div>
 
@@ -84,18 +85,20 @@ export function MyRoutinesList({
           />
         </Card>
       ) : (
-        <ul className="space-y-3">
-          {routines.map((routine) => (
-            <li key={routine.id}>
-              <RoutineCard
-                routine={routine}
-                disabled={activeWorkout !== null || starting !== null}
-                starting={starting === routine.id}
-                onStart={onStart}
-              />
-            </li>
-          ))}
-        </ul>
+        <Card className="overflow-hidden p-0">
+          <ul className="divide-y divide-line">
+            {routines.map((routine) => (
+              <li key={routine.id}>
+                <RoutineCard
+                  routine={routine}
+                  disabled={activeWorkout !== null || starting !== null}
+                  starting={starting === routine.id}
+                  onStart={onStart}
+                />
+              </li>
+            ))}
+          </ul>
+        </Card>
       )}
     </section>
   );
@@ -116,32 +119,37 @@ function RoutineCard({
   const setCount = routine.exercises.reduce((total, exercise) => total + exercise.targetSets, 0);
 
   return (
-    <Card className="space-y-4 p-4" data-testid="routine-card">
-      <div>
-        <h3 className="text-lg font-semibold text-ink">{routine.name}</h3>
-        {routine.description ? (
-          <p className="mt-1 text-sm leading-6 text-ink-muted">{routine.description}</p>
-        ) : null}
-      </div>
-      <div className="flex flex-wrap gap-3 text-sm">
-        <MetricValue
-          metric={metric(formatCount(exerciseCount, UI_COPY.training.exerciseSingular, UI_COPY.training.exercisePlural), 'atlas_computed')}
-          label={UI_COPY.training.routineExerciseCountLabel}
-        />
-        <MetricValue
-          metric={metric(formatCount(setCount, UI_COPY.training.setSingular, UI_COPY.training.setPlural), 'atlas_computed')}
-          label={UI_COPY.training.routineSetCountLabel}
-        />
+    <div className="flex items-center gap-3 bg-surface px-4 py-3" data-testid="routine-card">
+      <span
+        className="grid size-10 shrink-0 place-items-center rounded-full bg-brand-muted text-brand"
+        aria-hidden="true"
+      >
+        🏋
+      </span>
+      <div className="min-w-0 flex-1">
+        <h3 className="truncate text-sm font-bold text-ink">{routine.name}</h3>
+        <p className="mt-1 text-xs text-ink-muted">
+          {formatCount(exerciseCount, UI_COPY.training.exerciseSingular, UI_COPY.training.exercisePlural)}
+          {' · '}
+          {formatCount(setCount, UI_COPY.training.setSingular, UI_COPY.training.setPlural)}
+        </p>
       </div>
       <Button
+        size="sm"
+        variant="secondary"
         onClick={() => onStart(routine.id)}
         disabled={disabled}
         data-testid="start-routine"
+        className="shrink-0 rounded-lg bg-brand-muted text-brand ring-0"
       >
-        {starting ? UI_COPY.training.startingWorkout : UI_COPY.training.routineStart}
+        {starting ? UI_COPY.training.startingWorkout : `▶ ${UI_COPY.training.routineStart}`}
       </Button>
-    </Card>
+    </div>
   );
+}
+
+function formatRoutineTotal(value: number): string {
+  return `${value} ${value === 1 ? 'rutina' : 'rutinas'}`;
 }
 
 function formatCount(value: number, singular: string, plural: string): string {
