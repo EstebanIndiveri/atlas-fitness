@@ -1,8 +1,8 @@
 /**
  * @jest-environment jsdom
  */
-import { describe, expect, it, jest } from '@jest/globals';
-import { render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, jest } from '@jest/globals';
+import { render, screen, waitFor } from '@testing-library/react';
 
 import type { useRoutineList as useRoutineListHook } from '@/hooks/useRoutineList';
 import type { RoutineSummary } from '@/types/routine';
@@ -35,6 +35,12 @@ const routine: RoutineSummary = {
 };
 
 describe('RoutinesPage', () => {
+  const originalFetch = global.fetch;
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
   it('renders distinct Coach Atlas and manual creation entry points', async () => {
     const { useRoutineList } = await import('@/hooks/useRoutineList');
     jest.mocked(useRoutineList as typeof useRoutineListHook).mockReturnValue({
@@ -58,5 +64,37 @@ describe('RoutinesPage', () => {
     expect(manualCta.getAttribute('href')).toBe('/dashboard/routines/new');
     expect(manualCta.textContent).toBe('Crear manual');
     expect(manualCta.className).toContain('ring-line');
+  });
+
+  it('shows an edit weekly plan link when today belongs to a current plan', async () => {
+    global.fetch = jest.fn(async () => ({
+      ok: true,
+      status: 200,
+      text: async () =>
+        JSON.stringify({
+          kind: 'rest_day',
+          localDate: '2026-09-22',
+          dayOfWeek: 2,
+          trainingPlanId: 77,
+          planGoal: null,
+        }),
+    })) as unknown as typeof fetch;
+    const { useRoutineList } = await import('@/hooks/useRoutineList');
+    jest.mocked(useRoutineList as typeof useRoutineListHook).mockReturnValue({
+      routines: [routine],
+      loading: false,
+      error: null,
+      deletingId: null,
+      reload: jest.fn<() => void>(),
+      remove: jest.fn<(id: number) => Promise<boolean>>(),
+    });
+    const { default: RoutinesPage } = await import('./page');
+
+    render(<RoutinesPage />);
+
+    await waitFor(() => {
+      const link = screen.getByText('Editar plan semanal');
+      expect(link.getAttribute('href')).toBe('/dashboard/plan/77/edit');
+    });
   });
 });

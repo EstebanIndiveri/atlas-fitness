@@ -117,4 +117,12 @@ describe('PlanBuilderForm', () => {
       'No se pudo crear el plan. Probá de nuevo.',
     );
   });
+
+  it('uses edit submit copy when rendered in edit mode', () => {
+    const props = baseProps();
+    props.canSubmit = true;
+    render(<PlanBuilderForm {...props} mode="edit" />);
+
+    expect(screen.getByTestId(PLAN_TEST_IDS.submit).textContent).toBe('Guardar cambios');
+  });
 });
