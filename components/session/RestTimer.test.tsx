@@ -19,6 +19,9 @@ describe('RestTimer', () => {
     expect(screen.getByTestId('rest-timer').textContent).toBe('01:30');
     expect(screen.getByTestId('rest-motivator').textContent).toMatch(/Respirá/);
     expect(screen.getByTestId('rest-progress').getAttribute('aria-valuenow')).toBe('75');
+    const actions = screen.getByTestId('skip-rest').parentElement;
+    expect(actions?.className).toContain('w-full');
+    expect(actions?.className).toContain('min-[430px]:w-auto');
     screen.getByRole('button', { name: 'Sumar 30 segundos al descanso' }).click();
     expect(onAddThirtySeconds).toHaveBeenCalled();
     screen.getByRole('button', { name: 'Saltar descanso' }).click();

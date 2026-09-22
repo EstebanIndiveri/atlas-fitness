@@ -13,11 +13,14 @@ import { fetchToday } from '@/lib/api/today';
 import { useLinkCode } from '@/hooks/useLinkCode';
 import { useInstallPrompt } from '@/hooks/useInstallPrompt';
 import { APP_VERSION } from '@/lib/app/version';
+import { ONBOARDING_COPY } from '@/lib/copy/onboarding';
 import { UI_COPY } from '@/lib/copy/ui';
+import { readOnboardingAnswers } from '@/lib/onboarding/state';
 import { PWA_COPY } from '@/lib/pwa/copy';
 import { TELEGRAM_FE_COPY } from '@/lib/telegram/copy';
 import type { AuthUser } from '@/types/auth';
 import type { TodayResponse } from '@/lib/api/today';
+import type { OnboardingAnswers } from '@/lib/onboarding/state';
 
 const EMPTY_VALUE = 'No configurado';
 
@@ -66,6 +69,17 @@ function trainingPlanDescription(today: TodayResponse | null): string {
   return planRoutineFromToday(today) ?? EMPTY_VALUE;
 }
 
+function equipmentLabelFromOnboarding(answers: OnboardingAnswers | null): string | null {
+  const equipmentId = answers?.equipment;
+  if (!equipmentId) {
+    return null;
+  }
+
+  const equipmentStep = ONBOARDING_COPY.steps.find((step) => step.id === 'equipment');
+  const selectedOption = equipmentStep?.options.find((option) => option.id === equipmentId);
+  return selectedOption?.title ?? null;
+}
+
 function pwaStateLabel(isStandalone: boolean, canInstall: boolean): string {
   if (isStandalone) {
     return 'Activa';
@@ -78,8 +92,22 @@ export default function SettingsPage() {
   const [today, setToday] = useState<TodayResponse | null>(null);
   const [loadingUser, setLoadingUser] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [onboardingAnswers, setOnboardingAnswers] = useState<OnboardingAnswers | null>(null);
   const { code, loading, error, requestCode } = useLinkCode();
   const { canInstall, isStandalone } = useInstallPrompt();
+
+  useEffect(() => {
+    let active = true;
+    void Promise.resolve().then(() => {
+      if (active) {
+        setOnboardingAnswers(readOnboardingAnswers());
+      }
+    });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     const load = async () => {
@@ -129,6 +157,7 @@ export default function SettingsPage() {
     { label: 'CONSISTENCIA', value: 'Sin datos' },
   ] as const;
   const planGoal = planGoalFromToday(today) ?? EMPTY_VALUE;
+  const equipmentLabel = equipmentLabelFromOnboarding(onboardingAnswers) ?? EMPTY_VALUE;
   const pwaStatus = pwaStateLabel(isStandalone, canInstall);
 
   return (
@@ -167,23 +196,15 @@ export default function SettingsPage() {
         <SettingsRow
           icon="⌁"
           title="Equipamiento disponible"
-          description={EMPTY_VALUE}
+          description={equipmentLabel}
+          href="/dashboard/plan/new"
+          testId="equipment-settings"
         />
         <SettingsRow
           icon="♧"
           title={UI_COPY.profileHabitsTitle}
           description={EMPTY_VALUE}
           href="/dashboard/today"
-        />
-        <SettingsRow
-          icon="⚙"
-          title="Preferencias de Coach"
-          description={EMPTY_VALUE}
-        />
-        <SettingsRow
-          icon="◔"
-          title="Notificaciones y recordatorios"
-          description={EMPTY_VALUE}
         />
       </SettingsSection>
 

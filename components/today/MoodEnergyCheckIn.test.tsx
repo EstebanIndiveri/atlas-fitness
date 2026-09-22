@@ -114,7 +114,12 @@ describe('MoodEnergyCheckIn', () => {
 
     render(<MoodEnergyCheckIn />);
 
-    expect(screen.getByRole('radio', { name: 'Con energía' }).getAttribute('aria-checked')).toBe('true');
+    const selectedMood = screen.getByRole('radio', { name: 'Con energía' });
+    expect(selectedMood.getAttribute('aria-checked')).toBe('true');
+    expect(selectedMood.className).toContain('bg-brand');
+    expect(selectedMood.className).toContain('text-white');
+    expect(selectedMood.className).not.toContain('bg-canvas');
+    expect(selectedMood.querySelector('svg')?.className.baseVal).toContain('text-white');
     expect(screen.getByRole('button', { name: 'Seleccionar energía Alta' }).getAttribute('aria-pressed')).toBe('true');
     expect(screen.getByText('⚡ Alta energía')).toBeTruthy();
   });

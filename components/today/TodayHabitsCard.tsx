@@ -1,5 +1,7 @@
 'use client';
 
+import type { JSX } from 'react';
+
 import { HabitPreviewRow, type HabitPreview } from '@/components/today/HabitPreviewRow';
 import { HydrationHabitRow } from '@/components/today/HydrationHabitRow';
 import { Card } from '@/components/ui/Card';
@@ -29,16 +31,16 @@ const HABIT_PREVIEWS: readonly HabitPreview[] = [
  * @returns Habits card with interactive, data-honest completion toggles.
  * @example <TodayHabitsCard />
  */
-export function TodayHabitsCard() {
+export function TodayHabitsCard(): JSX.Element {
   const { doneByKey, amountByKey, loading, saving, error, toggle, addAmount, clearAmount } =
     useHabits();
   const completedCount = HABIT_PREVIEWS.filter((habit) => doneByKey[habit.id]).length;
 
   return (
     <Card className="space-y-3 rounded-[1.75rem] p-5">
-      <div className="flex items-start justify-between gap-4">
-        <h2 className="font-serif text-xl font-semibold text-ink">{COPY.heading}</h2>
-        <p className="text-right text-sm font-semibold text-ink-muted">
+      <div className="flex min-w-0 items-start justify-between gap-4">
+        <h2 className="min-w-0 font-serif text-xl font-semibold text-ink">{COPY.heading}</h2>
+        <p className="shrink-0 text-right text-sm font-semibold text-ink-muted">
           {COPY.completed(completedCount, HABIT_PREVIEWS.length)}
         </p>
       </div>
@@ -47,7 +49,7 @@ export function TodayHabitsCard() {
       {error ? <ErrorState message={error} /> : null}
 
       {!loading ? (
-        <ul className="divide-y divide-line" data-testid="habit-preview-list">
+        <ul className="min-w-0 divide-y divide-line" data-testid="habit-preview-list">
           {HABIT_PREVIEWS.map((habit) =>
             isQuantitativeHabitKey(habit.id) ? (
               <HydrationHabitRow

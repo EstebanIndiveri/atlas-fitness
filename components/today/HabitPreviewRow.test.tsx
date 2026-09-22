@@ -22,9 +22,9 @@ describe('HabitPreviewRow', () => {
   it('reflects an un-done habit', () => {
     render(<HabitPreviewRow habit={habit} done={false} onToggle={jest.fn()} />);
 
-    expect(screen.getByRole('checkbox', { name: /Hidratación/ }).getAttribute('aria-checked')).toBe(
-      'false',
-    );
+    const control = screen.getByRole('checkbox', { name: /Hidratación/ });
+    expect(control.getAttribute('aria-checked')).toBe('false');
+    expect(control.className).toContain('min-w-0');
   });
 
   it('calls onToggle with the habit key when activated', () => {

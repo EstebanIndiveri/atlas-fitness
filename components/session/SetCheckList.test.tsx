@@ -1,5 +1,6 @@
 import { describe, expect, it, jest } from '@jest/globals';
 import { fireEvent, render, screen } from '@testing-library/react';
+import { useState } from 'react';
 import { SetCheckList } from './SetCheckList';
 
 describe('SetCheckList', () => {
@@ -142,6 +143,11 @@ describe('SetCheckList', () => {
     expect(weightInput.className).toContain('w-full');
     expect(weightInput.className).toContain('min-w-[5.5rem]');
     expect(weightInput.className).toContain('tabular-nums');
+    expect(weightInput.className).toContain('text-center');
+    const repsInput = screen.getByTestId('guided-reps-input');
+    expect(repsInput.className).toContain('min-w-[4rem]');
+    expect(repsInput.className).toContain('text-center');
+    expect(repsInput.className).toContain('tabular-nums');
   });
 
   it('does not allow completing a set with non-positive reps', () => {
@@ -210,6 +216,40 @@ describe('SetCheckList', () => {
     expect(weightInput.className).toContain('min-w-[5.5rem]');
     expect(weightInput.className).toContain('tabular-nums');
     expect(weightInput.className).not.toContain('overflow-hidden');
+  });
+
+  it('adds a set slot through the supplied handler', () => {
+    const onAddSet = jest.fn();
+    const AddableChecklist = (): React.ReactElement => {
+      const [targetSets, setTargetSets] = useState(3);
+
+      return (
+        <SetCheckList
+          targetSets={targetSets}
+          targetReps={8}
+          completedCount={0}
+          completedSets={[]}
+          weight="100"
+          onWeightChange={jest.fn()}
+          reps="12"
+          onRepsChange={jest.fn()}
+          onCompleteSet={jest.fn()}
+          onAddSet={() => {
+            onAddSet();
+            setTargetSets((current) => current + 1);
+          }}
+          busy={false}
+        />
+      );
+    };
+
+    render(<AddableChecklist />);
+
+    fireEvent.click(screen.getByRole('button', { name: '+ Añadir serie' }));
+
+    expect(onAddSet).toHaveBeenCalledTimes(1);
+    expect(screen.getAllByRole('listitem')).toHaveLength(4);
+    expect(screen.getByText('SERIE 1 EN CURSO')).toBeTruthy();
   });
 
 });

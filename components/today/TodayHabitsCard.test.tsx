@@ -48,6 +48,7 @@ describe('TodayHabitsCard', () => {
 
     expect(screen.getByRole('heading', { name: 'Hábitos Diarios' })).toBeTruthy();
     expect(screen.getByText('1 de 4 completados')).toBeTruthy();
+    expect(screen.getByTestId('habit-preview-list').className).toContain('min-w-0');
     expect(screen.getAllByRole('checkbox')).toHaveLength(3);
     expect(screen.getByRole('checkbox', { name: /Pasos Activos/ }).getAttribute('aria-checked')).toBe(
       'false',

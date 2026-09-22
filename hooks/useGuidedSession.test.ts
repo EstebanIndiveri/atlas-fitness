@@ -316,4 +316,28 @@ describe('useGuidedSession skip/hold', () => {
     expect(result.current.completedCount).toBe(1);
     expect(result.current.reps).toBe('8');
   });
+
+  it('adds one local set to the current exercise without changing another exercise', async () => {
+    global.fetch = jest.fn(async (input: string, init?: FetchInit) => {
+      const url = String(input);
+      const method = readMethod(init);
+      if (url === '/api/workouts/8' && method === 'GET') {
+        return jsonResponse(workout);
+      }
+      if (url === '/api/routines/1') {
+        return jsonResponse(routine);
+      }
+      return jsonResponse({ code: 'NOT_FOUND', message: url }, 404);
+    }) as unknown as typeof fetch;
+
+    const { result } = renderHook(() => useGuidedSession('8'));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    act(() => {
+      result.current.addSet();
+    });
+
+    expect(result.current.current?.targetSets).toBe(4);
+    expect(result.current.routine?.exercises.find((item) => item.exerciseId === 20)?.targetSets).toBe(3);
+  });
 });
