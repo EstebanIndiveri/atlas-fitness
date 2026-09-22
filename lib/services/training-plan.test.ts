@@ -6,7 +6,9 @@ import { db } from '@/lib/db/client';
 import { dailyCheckins, routines, scheduledRoutines, trainingPlans, users, workouts } from '@/lib/db/schema';
 import {
   createTrainingPlan,
+  getTrainingPlanById,
   resolveTodayScheduledRoutine,
+  updateTrainingPlan,
 } from '@/lib/services/training-plan';
 import { AppError } from '@/types/errors';
 
@@ -324,5 +326,141 @@ describe('TrainingPlan adaptive service', () => {
       code: 'VALIDATION',
       message: 'Día de semana inválido',
     });
+  });
+
+  it('loads an owned training plan by id with its schedule', async () => {
+    const routineId = await createRoutine('Load editable');
+    const created = await createTrainingPlan({
+      userId,
+      name: 'Plan editable',
+      goal: 'Fuerza',
+      schedule: [{ dayOfWeek: 1, routineId, note: 'Empuje' }],
+    });
+
+    const loaded = await getTrainingPlanById(userId, created.plan.id);
+
+    expect(loaded).toEqual({
+      plan: expect.objectContaining({ id: created.plan.id, userId, name: 'Plan editable' }),
+      schedule: [
+        expect.objectContaining({
+          trainingPlanId: created.plan.id,
+          dayOfWeek: 1,
+          routineId,
+          note: 'Empuje',
+        }),
+      ],
+    });
+  });
+
+  it('returns NOT_FOUND when loading a missing, foreign, or soft-deleted plan', async () => {
+    const routineId = await createRoutine('Foreign editable');
+    const created = await createTrainingPlan({
+      userId,
+      name: 'Plan privado',
+      schedule: [{ dayOfWeek: 1, routineId }],
+    });
+    const [otherUser] = await db
+      .insert(users)
+      .values({
+        name: 'Other User',
+        email: `training-plan-other-${Date.now()}@test.com`,
+        passwordHash: await bcrypt.hash('Test1234!', 10),
+      })
+      .returning();
+
+    await expect(getTrainingPlanById(otherUser.id, created.plan.id)).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+      message: 'Plan no encontrado',
+    });
+    await db.update(trainingPlans).set({ deletedAt: new Date() }).where(eq(trainingPlans.id, created.plan.id));
+    await expect(getTrainingPlanById(userId, created.plan.id)).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+      message: 'Plan no encontrado',
+    });
+    await expect(getTrainingPlanById(userId, 999_999)).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+      message: 'Plan no encontrado',
+    });
+  });
+
+  it('updates an owned training plan metadata and replaces the schedule atomically', async () => {
+    const firstRoutineId = await createRoutine('Old day');
+    const secondRoutineId = await createRoutine('New day');
+    const created = await createTrainingPlan({
+      userId,
+      name: 'Plan anterior',
+      goal: 'Fuerza',
+      schedule: [{ dayOfWeek: 1, routineId: firstRoutineId, note: 'Viejo' }],
+    });
+
+    const updated = await updateTrainingPlan(userId, created.plan.id, {
+      name: 'Plan nuevo',
+      goal: 'Hipertrofia',
+      schedule: [{ dayOfWeek: 3, routineId: secondRoutineId, note: 'Nuevo' }],
+    });
+
+    expect(updated.plan).toMatchObject({ id: created.plan.id, userId, name: 'Plan nuevo', goal: 'Hipertrofia' });
+    expect(updated.schedule).toEqual([
+      expect.objectContaining({
+        trainingPlanId: created.plan.id,
+        dayOfWeek: 3,
+        routineId: secondRoutineId,
+        note: 'Nuevo',
+      }),
+    ]);
+    await expect(getTrainingPlanById(userId, created.plan.id)).resolves.toMatchObject({
+      schedule: [expect.objectContaining({ dayOfWeek: 3, routineId: secondRoutineId })],
+    });
+  });
+
+  it('rejects update with empty schedule, invalid weekday, missing plan, or foreign routine', async () => {
+    const routineId = await createRoutine('Validation update');
+    const created = await createTrainingPlan({
+      userId,
+      name: 'Plan base',
+      schedule: [{ dayOfWeek: 1, routineId }],
+    });
+    const [otherUser] = await db
+      .insert(users)
+      .values({
+        name: 'Routine Owner',
+        email: `training-plan-routine-owner-${Date.now()}@test.com`,
+        passwordHash: await bcrypt.hash('Test1234!', 10),
+      })
+      .returning();
+    const [foreignRoutine] = await db
+      .insert(routines)
+      .values({
+        slug: `foreign-routine-${Date.now()}`,
+        name: 'Foreign routine',
+        kind: 'gym',
+        restSeconds: 90,
+        isSystem: false,
+        userId: otherUser.id,
+      })
+      .returning();
+
+    await expect(updateTrainingPlan(userId, created.plan.id, { name: 'Vacío', schedule: [] })).rejects.toMatchObject({
+      code: 'VALIDATION',
+      message: 'El plan debe tener al menos un día asignado',
+    });
+    await expect(
+      updateTrainingPlan(userId, created.plan.id, {
+        name: 'Inválido',
+        schedule: [{ dayOfWeek: 8, routineId }],
+      }),
+    ).rejects.toMatchObject({ code: 'VALIDATION', message: 'Día de semana inválido' });
+    await expect(
+      updateTrainingPlan(userId, 999_999, {
+        name: 'Missing',
+        schedule: [{ dayOfWeek: 1, routineId }],
+      }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND', message: 'Plan no encontrado' });
+    await expect(
+      updateTrainingPlan(userId, created.plan.id, {
+        name: 'Ajena',
+        schedule: [{ dayOfWeek: 2, routineId: foreignRoutine.id }],
+      }),
+    ).rejects.toMatchObject({ code: 'VALIDATION', message: 'Rutina no disponible' });
   });
 });

@@ -8,9 +8,11 @@ describe('ProgressSummaryCard', () => {
     render(<ProgressSummaryCard period="month" completedSessions={14} totalDurationMinutes={915} consistencyPercent={88} />);
 
     expect(screen.getByRole('heading', { name: 'Resumen del mes' })).toBeTruthy();
+    expect(screen.getByText('14 sesiones')).toBeTruthy();
     expect(screen.getByLabelText('Sesiones completadas').textContent).toContain('14');
     expect(screen.getByLabelText('Tiempo total').textContent).toContain('15h 15m');
     expect(screen.getByLabelText('Consistencia').textContent).toContain('88%');
+    expect(screen.getByText('Cumplís el 88% de tu consistencia semanal esta semana.')).toBeTruthy();
   });
 
   it('handles zero totals without inventing placeholders', () => {

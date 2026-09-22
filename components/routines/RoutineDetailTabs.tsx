@@ -7,7 +7,7 @@ type RoutineDetailTabsProps = {
 };
 
 const tabBaseClass =
-  'min-h-10 flex-1 rounded-2xl px-3 py-2 text-center text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand';
+  'min-h-11 flex-1 rounded-2xl px-2 py-2 text-center text-xs font-bold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand sm:text-sm';
 
 /**
  * Renders the routine detail segmented navigation, keeping unavailable destinations honest.
@@ -17,14 +17,14 @@ const tabBaseClass =
  */
 export function RoutineDetailTabs({ routineId }: RoutineDetailTabsProps) {
   return (
-    <nav aria-label="Secciones de rutina" className="rounded-2xl border border-line bg-surface p-1 shadow-card">
+    <nav aria-label="Secciones de rutina" className="rounded-[1.35rem] border border-line bg-canvas p-1 shadow-card">
       <div className="flex items-center gap-1">
-        <span className={cn(tabBaseClass, 'bg-brand-muted text-brand')} aria-current="page">
+        <span className={cn(tabBaseClass, 'bg-ink text-canvas shadow-card')} aria-current="page">
           {ROUTINE_COPY.detailTab}
         </span>
         <Link
           href={`/dashboard/routines/${routineId}/edit`}
-          className={cn(tabBaseClass, 'text-ink-muted hover:bg-canvas hover:text-ink')}
+          className={cn(tabBaseClass, 'text-ink-muted hover:bg-surface hover:text-ink')}
         >
           {ROUTINE_COPY.constructorTab}
         </Link>
@@ -34,7 +34,7 @@ export function RoutineDetailTabs({ routineId }: RoutineDetailTabsProps) {
           disabled
           title={ROUTINE_COPY.coachUnavailable}
         >
-          {ROUTINE_COPY.coachTab}
+          ✦ {ROUTINE_COPY.coachTab}
         </button>
       </div>
     </nav>

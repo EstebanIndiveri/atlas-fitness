@@ -24,13 +24,13 @@ function SummaryStat({ label, metricLabel, value, hint }: SummaryStatProps) {
     <div
       aria-label={metricLabel}
       data-testid="progress-summary-stat"
-      className="flex h-full min-w-0 flex-col overflow-hidden rounded-xl bg-canvas p-3"
+      className="flex h-full min-w-0 flex-col overflow-hidden rounded-2xl bg-canvas p-3.5"
     >
       <p className="break-words text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-muted">{label}</p>
       <MetricValue
         metric={metric(value, 'atlas_computed')}
         label={metricLabel}
-        className="mt-2 flex w-full flex-wrap text-base leading-tight [overflow-wrap:anywhere]"
+        className="mt-2 flex w-full flex-wrap text-xl leading-tight [overflow-wrap:anywhere]"
       />
       {hint ? <p className="mt-1 break-words text-[11px] leading-snug text-ink-muted">{hint}</p> : null}
     </div>
@@ -52,8 +52,13 @@ export function ProgressSummaryCard({
   consistencyPercent = null,
 }: ProgressSummaryCardProps) {
   return (
-    <Card className="space-y-4 rounded-2xl p-5">
-      <h2 className="text-base font-semibold text-ink">{PROGRESS_COPY.summary.titles[period]}</h2>
+    <Card className="space-y-4 rounded-[28px] p-5">
+      <div className="flex items-start justify-between gap-3">
+        <h2 className="text-base font-semibold text-ink">{PROGRESS_COPY.summary.titles[period]}</h2>
+        <span className="shrink-0 rounded-full bg-canvas px-3 py-1 text-xs font-semibold text-ink-muted">
+          {completedSessions} {completedSessions === 1 ? 'sesión' : 'sesiones'}
+        </span>
+      </div>
       <div className="grid grid-cols-3 items-stretch gap-2">
         <SummaryStat
           label={PROGRESS_COPY.summary.sessions}
@@ -78,6 +83,11 @@ export function ProgressSummaryCard({
           }
         />
       </div>
+      {consistencyPercent === null ? null : (
+        <p className="rounded-2xl bg-brand-muted px-3.5 py-3 text-sm leading-relaxed text-brand">
+          Cumplís el {consistencyPercent}% de tu consistencia semanal esta semana.
+        </p>
+      )}
     </Card>
   );
 }

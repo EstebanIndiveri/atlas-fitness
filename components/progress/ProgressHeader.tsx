@@ -20,26 +20,43 @@ export function ProgressHeader({ toLocalDate, now = new Date(), updated }: Progr
   const monthLabel = formatProgressMonth(toLocalDate, now);
 
   return (
-    <header className="space-y-3">
+    <header className="space-y-5">
       <div className="flex items-center justify-between gap-3">
-        <div className="inline-flex items-center gap-2 text-sm font-bold text-brand" aria-label="Atlas">
-          <span className="grid h-6 w-6 place-items-center rounded-full bg-brand-muted text-[11px] text-brand">QA</span>
+        <div className="inline-flex items-center gap-2 text-sm font-bold text-ink" aria-label="Atlas">
+          <span className="text-lg leading-none text-brand" aria-hidden>
+            ◎
+          </span>
           <span>{PROGRESS_COPY.brand}</span>
         </div>
-        {updated ? (
-          <span className="rounded-full bg-brand-muted px-3 py-1 text-[11px] font-semibold text-brand">
-            {PROGRESS_COPY.updatedToday}
-          </span>
-        ) : null}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            aria-label="Notificaciones"
+            className="grid h-9 w-9 place-items-center rounded-full bg-surface text-ink shadow-card ring-1 ring-line"
+          >
+            <span aria-hidden>⌁</span>
+          </button>
+          <button
+            type="button"
+            aria-label="Compartir progreso"
+            className="grid h-9 w-9 place-items-center rounded-full bg-surface text-ink shadow-card ring-1 ring-line"
+          >
+            <span aria-hidden>↥</span>
+          </button>
+        </div>
       </div>
       <div>
-        <h1 className="font-serif text-3xl font-semibold tracking-[-0.03em] text-ink">
+        <h1 className="font-serif text-4xl font-semibold tracking-[-0.04em] text-ink">
           {PROGRESS_COPY.title}
         </h1>
-        <p className="mt-1 flex flex-wrap gap-x-1 text-sm text-ink-muted">
-          <span>{PROGRESS_COPY.subtitle}</span>
-          <span aria-hidden>·</span>
+        <p className="mt-2 flex flex-wrap items-center gap-2 text-sm text-ink-muted">
+          <span>¿Estás avanzando?</span>
           <span>{monthLabel}</span>
+          {updated ? (
+            <span className="rounded-full bg-brand-muted px-3 py-1 text-[11px] font-semibold text-brand">
+              {PROGRESS_COPY.updatedToday}
+            </span>
+          ) : null}
         </p>
       </div>
     </header>

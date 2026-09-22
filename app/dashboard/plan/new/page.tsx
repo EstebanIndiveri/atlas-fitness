@@ -5,11 +5,13 @@ import { useRouter } from 'next/navigation';
 
 import { PlanBuilderForm } from '@/components/plan/PlanBuilderForm';
 import { PageContainer } from '@/components/shell/PageContainer';
+import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState, LoadingState } from '@/components/ui/states';
 import { usePlanBuilder } from '@/hooks/usePlanBuilder';
 import { useRoutineList } from '@/hooks/useRoutineList';
 import { PLAN_COPY } from '@/lib/copy/plan';
+import { buttonClassName } from '@/components/ui/Button';
 
 export default function NewPlanPage() {
   const router = useRouter();
@@ -23,6 +25,16 @@ export default function NewPlanPage() {
       </Link>
 
       <div className="mt-4">
+        <Card className="mb-4 rounded-2xl border border-brand/20 bg-brand-muted/60">
+          <p className="text-sm font-semibold uppercase tracking-wide text-brand">Coach Atlas</p>
+          <h1 className="mt-1 text-xl font-bold text-ink">Armá tu semana con guía</h1>
+          <p className="mt-2 text-sm leading-6 text-ink-muted">
+            Respondé un brief corto, revisá los días propuestos y guardá el plan completo.
+          </p>
+          <Link href="/dashboard/plan/guided" className={buttonClassName({ className: 'mt-4 w-full' })}>
+            ✦ Crear con Coach Atlas (guiado)
+          </Link>
+        </Card>
         {loading ? (
           <LoadingState />
         ) : error ? (

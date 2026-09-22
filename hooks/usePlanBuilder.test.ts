@@ -30,14 +30,16 @@ jest.mock('@/lib/api/training-plan', () => {
     __esModule: true,
     TrainingPlanClientError: MockTrainingPlanClientError,
     createTrainingPlan: jest.fn(),
+    updateTrainingPlan: jest.fn(),
   };
 });
 
-import { createTrainingPlan, TrainingPlanClientError } from '@/lib/api/training-plan';
+import { createTrainingPlan, TrainingPlanClientError, updateTrainingPlan } from '@/lib/api/training-plan';
 import { usePlanBuilder } from './usePlanBuilder';
 import { PLAN_COPY } from '@/lib/copy/plan';
 
 const createTrainingPlanMock = jest.mocked(createTrainingPlan);
+const updateTrainingPlanMock = jest.mocked(updateTrainingPlan);
 
 function routine(id: number, name: string): RoutineSummary {
   return {
@@ -70,6 +72,7 @@ const planResult: CreateTrainingPlanResult = {
 
 afterEach(() => {
   createTrainingPlanMock.mockReset();
+  updateTrainingPlanMock.mockReset();
 });
 
 describe('usePlanBuilder', () => {
@@ -185,5 +188,45 @@ describe('usePlanBuilder', () => {
 
     await waitFor(() => expect(result.current.error).toBe('Plan inválido'));
     expect(result.current.submitting).toBe(false);
+  });
+
+  it('initializes edit mode from an existing plan and patches the same id', async () => {
+    updateTrainingPlanMock.mockResolvedValue(planResult);
+    const { result } = renderHook(() =>
+      usePlanBuilder(routines, {
+        mode: 'edit',
+        initialPlan: {
+          plan: { ...planResult.plan, id: 77, name: 'Semana actual', goal: 'Fuerza' },
+          schedule: [
+            {
+              id: 21,
+              trainingPlanId: 77,
+              dayOfWeek: 2,
+              routineId: 10,
+              note: 'Técnica',
+              createdAt: new Date(0),
+            },
+          ],
+        },
+      }),
+    );
+
+    expect(result.current.name).toBe('Semana actual');
+    expect(result.current.goal).toBe('Fuerza');
+    expect(result.current.assignments[2]).toEqual({ routineId: 10, note: 'Técnica' });
+
+    act(() => {
+      result.current.setDayNote(2, '  Fuerza  ');
+    });
+    await act(async () => {
+      await result.current.submit();
+    });
+
+    expect(createTrainingPlanMock).not.toHaveBeenCalled();
+    expect(updateTrainingPlanMock).toHaveBeenCalledWith(77, {
+      name: 'Semana actual',
+      goal: 'Fuerza',
+      schedule: [{ dayOfWeek: 2, routineId: 10, note: 'Fuerza' }],
+    });
   });
 });

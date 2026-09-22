@@ -3,7 +3,7 @@
  */
 import { afterEach, describe, expect, it, jest } from '@jest/globals';
 
-import { createTrainingPlan } from './training-plan';
+import { createTrainingPlan, getTrainingPlan, updateTrainingPlan } from './training-plan';
 
 function jsonResponse(body: unknown, status = 200): Response {
   return {
@@ -149,5 +149,57 @@ describe('training plan client', () => {
     await expect(
       createTrainingPlan({ name: 'Semana base', schedule: [{ dayOfWeek: 1, routineId: 7 }] }),
     ).rejects.toMatchObject({ kind: 'generic', name: 'TrainingPlanClientError' });
+  });
+
+  it('gets one training plan by id and parses its schedule', async () => {
+    const payload = validBody();
+    global.fetch = jest.fn(async () => jsonResponse(payload)) as unknown as typeof fetch;
+
+    await expect(getTrainingPlan(11)).resolves.toMatchObject({
+      plan: { id: 11, name: 'Semana base' },
+      schedule: [{ dayOfWeek: 1, routineId: 7 }],
+    });
+    expect(global.fetch).toHaveBeenCalledWith('/api/training-plan/11');
+  });
+
+  it('patches one training plan by id with JSON', async () => {
+    const payload = validBody();
+    global.fetch = jest.fn(async () => jsonResponse(payload)) as unknown as typeof fetch;
+
+    await expect(
+      updateTrainingPlan(11, {
+        name: 'Semana editada',
+        goal: 'Hipertrofia',
+        schedule: [{ dayOfWeek: 3, routineId: 9, note: 'Piernas' }],
+      }),
+    ).resolves.toMatchObject({ plan: { id: 11 } });
+    expect(global.fetch).toHaveBeenCalledWith('/api/training-plan/11', {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        name: 'Semana editada',
+        goal: 'Hipertrofia',
+        schedule: [{ dayOfWeek: 3, routineId: 9, note: 'Piernas' }],
+      }),
+    });
+  });
+
+  it('maps get and update 404 responses to not_found errors', async () => {
+    global.fetch = jest.fn(async () =>
+      jsonResponse({ code: 'NOT_FOUND', message: 'Plan no encontrado' }, 404),
+    ) as unknown as typeof fetch;
+
+    await expect(getTrainingPlan(99)).rejects.toMatchObject({
+      kind: 'not_found',
+      status: 404,
+      message: 'Plan no encontrado',
+    });
+    await expect(
+      updateTrainingPlan(99, { name: 'No existe', schedule: [{ dayOfWeek: 1, routineId: 7 }] }),
+    ).rejects.toMatchObject({
+      kind: 'not_found',
+      status: 404,
+      message: 'Plan no encontrado',
+    });
   });
 });

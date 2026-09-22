@@ -10,6 +10,7 @@ import type { TrainingPlanDayOfWeek } from '@/lib/services/training-plan';
 import type { RoutineSummary } from '@/types/routine';
 
 export interface PlanBuilderFormProps {
+  mode?: 'create' | 'edit';
   routines: readonly RoutineSummary[];
   name: string;
   goal: string;
@@ -32,6 +33,7 @@ export interface PlanBuilderFormProps {
  * @returns The plan builder form; note fields appear only for days with an assigned routine.
  */
 export function PlanBuilderForm({
+  mode = 'create',
   routines,
   name,
   goal,
@@ -167,7 +169,7 @@ export function PlanBuilderForm({
         data-testid={PLAN_TEST_IDS.submit}
         disabled={!canSubmit || submitting}
       >
-        {submitting ? PLAN_COPY.submitting : PLAN_COPY.submit}
+        {submitting ? PLAN_COPY.submitting : mode === 'edit' ? 'Guardar cambios' : PLAN_COPY.submit}
       </Button>
     </form>
   );
