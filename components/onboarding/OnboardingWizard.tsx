@@ -1,18 +1,17 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, type KeyboardEvent } from 'react';
 
 import { Button } from '@/components/ui/Button';
 import {
   ONBOARDING_COPY,
   ONBOARDING_TEST_IDS,
-  type OnboardingOption,
   type OnboardingSelectableStep,
 } from '@/lib/copy/onboarding';
 import type { OnboardingAnswers } from '@/lib/onboarding/state';
-import { cn } from '@/lib/ui/cn';
 
 import { OnboardingHeader } from './OnboardingHeader';
+import { OptionCard } from './OptionCard';
 
 const SELECTABLE_STEPS = ONBOARDING_COPY.steps as readonly OnboardingSelectableStep[];
 const PROPOSAL_INDEX = SELECTABLE_STEPS.length;
@@ -33,46 +32,6 @@ function optionTitle(step: OnboardingSelectableStep, optionId: string | null): s
     ?? ONBOARDING_COPY.proposal.emptyValue;
 }
 
-function OptionCard({
-  option,
-  selected,
-  onSelect,
-}: {
-  option: OnboardingOption;
-  selected: boolean;
-  onSelect: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      role="radio"
-      aria-checked={selected}
-      onClick={onSelect}
-      data-testid={ONBOARDING_TEST_IDS.option}
-      className={cn(
-        'flex w-full items-start gap-3 rounded-2xl border p-4 text-left transition',
-        selected
-          ? 'border-brand bg-surface shadow-card'
-          : 'border-line bg-surface/80 hover:border-brand/40',
-      )}
-    >
-      <span className="min-w-0 flex-1">
-        <span className="block text-base font-semibold text-ink">{option.title}</span>
-        <span className="mt-1 block text-sm leading-6 text-ink-muted">{option.description}</span>
-      </span>
-      <span
-        aria-hidden="true"
-        className={cn(
-          'mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full border',
-          selected ? 'border-brand bg-brand text-brand-foreground' : 'border-line',
-        )}
-      >
-        {selected ? '✓' : ''}
-      </span>
-    </button>
-  );
-}
-
 function ProposalSummary({ answers }: { answers: OnboardingAnswers }) {
   const [goalStep, paceStep, equipmentStep] = SELECTABLE_STEPS;
   const rows = [
@@ -85,19 +44,20 @@ function ProposalSummary({ answers }: { answers: OnboardingAnswers }) {
   ];
 
   return (
-    <div className="space-y-4">
-      <span className="inline-flex items-center rounded-full bg-brand-muted px-3 py-1 text-xs font-semibold text-brand">
-        {ONBOARDING_COPY.proposal.badge}
+    <div className="space-y-5">
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-muted px-3 py-1 text-xs font-semibold text-brand">
+        <span aria-hidden="true">◎</span>
+        <span>{ONBOARDING_COPY.proposal.badge}</span>
       </span>
       <div>
-        <h1 className="text-2xl font-semibold tracking-[-0.02em] text-ink">
+        <h1 className="font-serif text-4xl font-semibold leading-[0.95] tracking-[-0.04em] text-ink">
           {ONBOARDING_COPY.proposal.title}
         </h1>
-        <p className="mt-2 text-base leading-7 text-ink-muted">
+        <p className="mt-3 text-base leading-7 text-ink-muted">
           {ONBOARDING_COPY.proposal.subtitle}
         </p>
       </div>
-      <dl className="divide-y divide-line rounded-2xl border border-line bg-surface/80">
+      <dl className="divide-y divide-line rounded-3xl border border-line bg-surface shadow-[0_1px_0_rgb(11_18_32/0.04)]">
         {rows.map((row) => (
           <div key={row.label} className="flex items-center justify-between gap-4 p-4">
             <dt className="text-sm font-medium text-ink-muted">{row.label}</dt>
@@ -105,7 +65,7 @@ function ProposalSummary({ answers }: { answers: OnboardingAnswers }) {
           </div>
         ))}
       </dl>
-      <div className="rounded-2xl bg-brand-muted p-4">
+      <div className="rounded-3xl bg-brand-muted p-4">
         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand">
           {ONBOARDING_COPY.proposal.goldenPathLabel}
         </p>
@@ -124,22 +84,66 @@ function SelectableStep({
   selectedId: string | null;
   onSelect: (optionId: string) => void;
 }) {
+  const activeOptionIndex = Math.max(
+    0,
+    step.options.findIndex((option) => option.id === selectedId),
+  );
+
+  const handleOptionKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLButtonElement>, optionIndex: number) => {
+      const lastIndex = step.options.length - 1;
+      const nextIndexByKey: Record<string, number> = {
+        ArrowDown: optionIndex === lastIndex ? 0 : optionIndex + 1,
+        ArrowRight: optionIndex === lastIndex ? 0 : optionIndex + 1,
+        ArrowUp: optionIndex === 0 ? lastIndex : optionIndex - 1,
+        ArrowLeft: optionIndex === 0 ? lastIndex : optionIndex - 1,
+        Home: 0,
+        End: lastIndex,
+      };
+      const nextIndex = nextIndexByKey[event.key];
+
+      if (nextIndex === undefined) {
+        return;
+      }
+
+      event.preventDefault();
+      const nextOption = step.options[nextIndex];
+
+      if (!nextOption) {
+        return;
+      }
+
+      onSelect(nextOption.id);
+      const radioGroup = event.currentTarget.closest('[role="radiogroup"]');
+      const radios = Array.from(
+        radioGroup?.querySelectorAll<HTMLElement>('[role="radio"]') ?? [],
+      );
+      radios[nextIndex]?.focus();
+    },
+    [onSelect, step.options],
+  );
+
   return (
     <div className="space-y-5">
       <div className="space-y-2">
-        <span className="inline-flex items-center rounded-full bg-brand-muted px-3 py-1 text-xs font-semibold text-brand">
-          {step.badge}
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-muted px-3 py-1 text-xs font-semibold text-brand">
+          <span aria-hidden="true">◎</span>
+          <span>{step.badge}</span>
         </span>
-        <h1 className="text-2xl font-semibold tracking-[-0.02em] text-ink">{step.title}</h1>
+        <h1 className="font-serif text-4xl font-semibold leading-[0.95] tracking-[-0.04em] text-ink">
+          {step.title}
+        </h1>
         <p className="text-base leading-7 text-ink-muted">{step.subtitle}</p>
       </div>
       <div className="space-y-3" role="radiogroup" aria-label={step.title}>
-        {step.options.map((option) => (
+        {step.options.map((option, index) => (
           <OptionCard
             key={option.id}
             option={option}
             selected={selectedId === option.id}
             onSelect={() => onSelect(option.id)}
+            onKeyDown={(event) => handleOptionKeyDown(event, index)}
+            tabIndex={index === activeOptionIndex ? 0 : -1}
           />
         ))}
       </div>
@@ -216,7 +220,7 @@ export function OnboardingWizard({ onFinish, onSkip }: OnboardingWizardProps) {
 
       <div className="sticky bottom-0 border-t border-line bg-surface/95 px-4 py-4 backdrop-blur">
         <Button
-          className="min-h-12 w-full text-base"
+          className="min-h-12 w-full rounded-full bg-ink text-base text-surface hover:bg-ink/90"
           onClick={handlePrimary}
           disabled={!canContinue}
           data-testid={ONBOARDING_TEST_IDS.continue}

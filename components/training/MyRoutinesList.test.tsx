@@ -63,10 +63,13 @@ describe('MyRoutinesList', () => {
     );
 
     expect(screen.getByRole('heading', { name: 'Mis rutinas' })).toBeTruthy();
+    expect(screen.getByText('1 rutina')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Ordenar' }).getAttribute('href')).toBe(
+      '/dashboard/routines',
+    );
     expect(screen.getByText('Torso')).toBeTruthy();
-    expect(screen.getByText('2 ejercicios')).toBeTruthy();
-    expect(screen.getByText('7 series')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Iniciar' }));
+    expect(screen.getByText('2 ejercicios · 7 series')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '▶ Iniciar' }));
     expect(onStart).toHaveBeenCalledWith(12);
   });
 
@@ -89,6 +92,6 @@ describe('MyRoutinesList', () => {
     expect(screen.getByTestId('continue-active-session').getAttribute('href')).toBe(
       '/dashboard/session/77',
     );
-    expect(screen.getByRole('button', { name: 'Iniciar' })).toHaveProperty('disabled', true);
+    expect(screen.getByRole('button', { name: '▶ Iniciar' })).toHaveProperty('disabled', true);
   });
 });

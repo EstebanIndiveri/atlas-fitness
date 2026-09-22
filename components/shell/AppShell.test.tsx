@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { act, render, screen, within } from '@testing-library/react';
-import { AppShell } from './AppShell';
+import { APP_NAV_LINKS, bottomNavTestId } from './nav-links';
 import type { BeforeInstallPromptEvent } from '@/types/pwa';
 
 class DeferredInstallEvent extends Event implements BeforeInstallPromptEvent {
@@ -27,11 +27,14 @@ function installMatchMedia(): void {
 }
 
 jest.mock('next/navigation', () => ({
-  usePathname: () => '/dashboard',
+  usePathname: () => null,
 }));
+
+import { AppShell } from './AppShell';
 
 describe('AppShell', () => {
   beforeEach(() => {
+    window.history.pushState({}, '', '/dashboard');
     window.localStorage.clear();
     installMatchMedia();
   });
@@ -56,7 +59,13 @@ describe('AppShell', () => {
     expect(within(headerNav).getByRole('link', { name: 'Entrenar' })).toBeTruthy();
     expect(within(headerNav).getByRole('link', { name: 'Progreso' })).toBeTruthy();
     expect(screen.getByTestId('profile-link').textContent).toBe('Perfil');
-    expect(screen.getByTestId('bottom-nav-profile').textContent).toContain('Perfil');
+    const tabNav = screen.getByRole('navigation', { name: 'Pestañas' });
+    for (const link of APP_NAV_LINKS) {
+      const tab = within(tabNav).getByTestId(bottomNavTestId(link.tabId));
+      expect(tab.textContent).toContain(link.label);
+      expect(tab.getAttribute('href')).toBe(link.href);
+      expect(within(tab).getByTestId(`${link.tabId}-tab-icon`)).toBeTruthy();
+    }
     expect(screen.getByRole('button', { name: 'Notificaciones' })).toBeTruthy();
     expect((screen.getByTestId('notifications-button') as HTMLButtonElement).disabled).toBe(true);
     expect(screen.getByRole('button', { name: 'Cerrar sesión' })).toBeTruthy();
@@ -70,6 +79,28 @@ describe('AppShell', () => {
     });
 
     expect(screen.queryByTestId('app-install-prompt')).toBeNull();
+  });
+
+  it('marks the active bottom tab with aria-current and keeps inactive tabs muted', () => {
+    window.history.pushState({}, '', '/dashboard/session');
+
+    render(
+      <AppShell variant="app">
+        <p>Entreno</p>
+      </AppShell>,
+    );
+
+    const activeTab = screen.getByTestId('bottom-nav-session');
+    expect(activeTab.getAttribute('aria-current')).toBe('page');
+    expect(activeTab.className).toContain('text-brand');
+    expect(activeTab.className).toContain('bg-brand-muted');
+
+    for (const tabId of ['today', 'progress', 'profile']) {
+      const inactiveTab = screen.getByTestId(bottomNavTestId(tabId));
+      expect(inactiveTab.getAttribute('aria-current')).toBeNull();
+      expect(inactiveTab.className).toContain('text-ink-muted');
+      expect(inactiveTab.className).not.toContain('text-brand');
+    }
   });
 
   it('keeps header nav for desktop and bottom tabs for the app variant', () => {
