@@ -1,7 +1,7 @@
 # Backlog — Atlas Fitness
 
 Fuente de verdad de alcance junto a los ADRs en [`docs/architecture/`](../architecture/) y el harness de trabajo en [`AGENTS.md`](../../AGENTS.md).  
-Este backlog refleja el estado posterior a v0.3.1 → v0.5.0 y convive con la visión estratégica de [`handoff-atlas-adaptive-core.md`](./handoff-atlas-adaptive-core.md): ese documento marca el norte de **Atlas Adaptive Core V1**; este README traduce el estado operativo y lo que queda.
+Este backlog refleja el estado **posterior a v0.6.1** y convive con la visión estratégica de [`handoff-atlas-adaptive-core.md`](./handoff-atlas-adaptive-core.md): ese documento marca el norte de **Atlas Adaptive Core V1**; este README traduce el estado operativo y lo que queda. Para el checkpoint paso-a-paso ver [`handoff-2026-09.md`](./handoff-2026-09.md).
 
 ## Estado actual del producto
 
@@ -21,8 +21,10 @@ Atlas ya dejó atrás el scaffold: existe un loop usable de **onboarding → Hoy
   - Entrenar hub;
   - Perfil;
   - bottom nav con tabs/iconos/estado activo;
-  - Hoy home screen en esta wave (rama actual, Unreleased hasta merge/release).
+  - **Hoy home screen (released v0.6.0; regresiones de dispositivo corregidas en v0.6.1)**.
 - ✅ **CTA “Crear con Coach Atlas”** en rutinas/plan para creación guiada.
+- ✅ **Coach AI weekly-plan (v0.6.0)**: `lib/ai/weekly-plan-draft.ts` + `weekly-plan-prompt.ts` generan el plan semanal con Gemini cuando hay key y caen a un draft determinístico sobre catálogo real (timeout/error/JSON malformado/sin key), validando IDs y `dayOfWeek`.
+- ✅ **Fixes UX player + Hoy (v0.6.1)**: CTA verde+check, timer de descanso siempre visible, "Añadir serie" funcional, contraste del ánimo (raíz `cn()` sin tailwind-merge), overflow de hábitos, hero+progress bar, equipamiento real en Perfil.
 
 ## MoSCoW actualizado
 
@@ -41,24 +43,31 @@ Atlas ya dejó atrás el scaffold: existe un loop usable de **onboarding → Hoy
 - Telegram link/webhook modular e idempotente.
 - Data honesty por tipos (`Metric<T>`, `MetricValue`) y empty states honestos.
 
-### Must — en progreso
+### Must — cerrado en release
 
-- 🚧 **coach-weekly-plan AI**: el flujo guiado semanal existe y genera draft determinístico sobre catálogo real. Falta completar/validar el cableado Gemini semanal directo manteniendo fallback determinístico, validación estricta y cero bloqueo si no hay `GEMINI_API_KEY`.
-- 🚧 **Hoy Figma convergence**: componentes `components/today/**` están en la wave actual. Tratar como Unreleased hasta que se mergee/releasee.
+- ✅ **coach-weekly-plan AI (v0.6.0)**: flujo guiado semanal con Gemini + fallback determinístico verificable sobre catálogo real; no bloquea si no hay `GEMINI_API_KEY`.
+- ✅ **Hoy Figma convergence (v0.6.0/v0.6.1)**: released y con regresiones de dispositivo corregidas.
 
 ### Should — próximos candidatos
 
-- Mejorar la explicación de Coach Atlas en creación semanal: mostrar claramente qué vino de IA vs fallback y por qué cada día quedó asignado.
+- Mejorar la explicación de Coach Atlas en creación semanal: mostrar claramente qué vino de IA (`source: 'gemini'`) vs fallback y por qué cada día quedó asignado.
 - Endurecer UX de errores en creación guiada cuando falla una rutina intermedia o falla la limpieza compensatoria.
-- Playwright Must end-to-end completo del golden path cuando el producto se estabilice visualmente.
+- Playwright Must end-to-end completo del golden path (la UI ya está estable).
 - Rate-limit durable y observabilidad más completa para endpoints sensibles si aumenta uso real.
 - Telegram Mini App consumiendo los mismos `/api/*` (ADR-002), si aporta más que la PWA instalada.
 
 ### Deferred / follow-up (perfil)
 
-- **Preferencias de Coach** y **Notificaciones y recordatorios** quedan intencionalmente diferidos; las filas de Perfil se remueven hasta que existan pantallas/acciones reales.
-- Pantalla dedicada para editar **Equipamiento/Objetivos** desde Perfil, sin duplicar el flujo guiado actual.
-- Tour de onboarding que alimente a Coach Atlas para generación de plan con más contexto trazable.
+- **Preferencias de Coach** y **Notificaciones y recordatorios**: filas removidas de "Mi Atlas" en v0.6.1; reintroducir solo cuando existan pantallas/acciones reales.
+- Pantalla dedicada para editar **Equipamiento/Objetivos** desde Perfil, sin obligar a rehacer el flujo guiado (hoy Equipamiento muestra el valor real del onboarding y enlaza al plan builder).
+- **Pantalla de Hábitos de bienestar** dedicada (hoy la fila enlaza a Hoy, donde viven los hábitos).
+- **Tour de onboarding** que exponga `goal/pace/equipment` a Coach Atlas para generación de plan con más contexto trazable, y permita al usuario contrastarlo/editarlo.
+
+### UX gaps conocidos (pendientes de verificar/priorizar)
+
+- **Alerta superior vs modal**: quitar el recuadro superior persistente por página y dejar solo el toast transitorio, extendiendo su duración a ~5–10 s.
+- **Editar descanso entre series**: al borrar el default (p. ej. 90) queda un `0` no borrable en el editor de rutina; revisar el input numérico.
+- **Progreso de fuerza**: validar punto de partida real con sesiones ya registradas por QA, sin inventar valores.
 
 ### Could
 
@@ -84,11 +93,11 @@ Atlas ya dejó atrás el scaffold: existe un loop usable de **onboarding → Hoy
 
 ## Orden sugerido de entrega
 
-1. Cerrar wave Unreleased: Hoy Figma convergence + coach-weekly-plan AI con fallback.
-2. Revalidar golden path manual/Playwright: onboarding → today → start/adapt → guided session → post-workout → progress.
-3. Auditoría pre-PR completa con agente code-review y suite full limpia.
-4. Cortar release candidate desde `develop` cuando branch protection/CI estén alineados.
-5. Recién después explorar Should: explicabilidad del plan semanal, Mini App o progresión avanzada.
+1. Revalidar el golden path en dispositivo real + Playwright Must (onboarding → today → start/adapt → guided session → post-workout → progress).
+2. Cerrar los **UX gaps conocidos** (alerta vs modal, `0` no borrable en descanso, punto de partida de fuerza).
+3. Explicabilidad del plan semanal (IA vs fallback) y tour de onboarding que alimente a Coach.
+4. Editores dedicados de Perfil (Equipamiento/Objetivos) y pantalla de Hábitos si PO prioriza.
+5. Cada entrega: TDD → auditoría pre-PR con `code-review` → suite full limpia → PR a `develop` → release candidate desde `develop` → `main` + tag + back-merge.
 
 ## Handoffs
 

@@ -2,7 +2,7 @@
 
 Asistente de fitness personal para registrar entrenamientos, pesos, consejos, media de ejercicios y motivación — vía **web app** y **bot de Telegram** (misma lógica de producto que Hermes Finance: un dominio, dos canales).
 
-> Estado: **v0.5.0 + wave Unreleased** — MVP de hábito/adaptive core usable: onboarding, Hoy, planes, adaptar, sesión guiada, feedback/progreso, PWA y Telegram. En curso: convergencia final de Hoy y generación semanal con Coach Atlas/Gemini + fallback.
+> Estado: **v0.6.1** — MVP de hábito/adaptive core usable end-to-end: onboarding, Hoy (convergido a Figma), planes semanales (manual + guiado con Coach Atlas/Gemini + fallback), adaptar, sesión guiada, feedback/progreso, PWA y Telegram. Ver el checkpoint operativo y los pendientes en [`docs/backlog/handoff-2026-09.md`](./docs/backlog/handoff-2026-09.md).
 
 ## Visión (borrador)
 
@@ -178,24 +178,23 @@ Ver [`AGENTS.md`](./AGENTS.md) §3–5 para el branching model completo.
 - **Owner:** [EstebanIndiveri](https://github.com/EstebanIndiveri)
 - **Producto hermano:** [hermes-finantial-tracker](https://github.com/EstebanIndiveri/hermes-finantial-tracker)
 
-## Estado Actual (v0.5.0 + Unreleased)
+## Estado Actual (v0.6.1)
 
 ✅ **Completado / usable:**
 - Auth + sesiones HMAC revocables, link Telegram y webhooks modulares
 - Turso/libSQL + Drizzle con migraciones, seed local/QA y ownership de catálogo
 - PWA instalable con manifest, service worker de shell y prompts iOS/Chrome
 - Onboarding Figma-aligned de 4 pasos
-- Hoy con check-in ánimo/energía, hero de entrenamiento, motivo honesto y acciones Empezar/Adaptar
+- Hoy con check-in ánimo/energía, hero de entrenamiento, motivo honesto y acciones Empezar/Adaptar (convergencia Figma released en v0.6.0, regresiones de dispositivo corregidas en v0.6.1)
 - Plan semanal manual + edición (`/dashboard/plan/[id]/edit`)
 - Plan guiado “Crear con Coach Atlas” sobre catálogo real, con cleanup compensatorio
-- Entrenar hub, rutinas, detalle de rutina y sesión guiada responsive
+- Coach AI weekly-plan (v0.6.0): Gemini con fallback determinístico verificable sobre catálogo real
+- Entrenar hub, rutinas, detalle de rutina y sesión guiada responsive (player pulido en v0.6.1: CTA verde+check, timer de descanso siempre visible, "Añadir serie")
 - Coach adaptation con preview/apply, freeText y fallback determinístico
 - Post-workout feedback y Progreso con métricas honestas (consistencia, fuerza, bienestar, hábitos, sesiones)
 - Perfil/Settings y bottom nav con tabs, iconos y estados activos
 
-🚧 **En curso (Unreleased):**
-- Convergencia final de Hoy (`components/today/**`)
-- Generación semanal con Coach Atlas/Gemini en `lib/ai/weekly-plan-draft.ts`, conservando fallback determinístico
+🔜 **Backlog / diferido:** ver [`docs/backlog/README.md`](./docs/backlog/README.md) y el checkpoint paso-a-paso en el handoff.
 
 📚 **Handoff actual:** [`docs/backlog/handoff-2026-09.md`](./docs/backlog/handoff-2026-09.md)  
 📝 **Cambios por versión:** [`CHANGELOG.md`](./CHANGELOG.md)
