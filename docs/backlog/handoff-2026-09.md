@@ -1,4 +1,6 @@
-# Handoff — Atlas Fitness · Septiembre 2026
+# Handoff — Atlas Fitness · Checkpoint v0.6.1 (Septiembre 2026)
+
+> **Documento de checkpoint operativo.** Es la fuente de verdad para que un agente o persona entienda el estado actual del proyecto, qué está hecho/released, qué quedó diferido en backlog y cómo continuar paso a paso. Última actualización: 2026-09-23 (post release v0.6.1).
 
 ## 1. Recap producto / visión
 
@@ -33,47 +35,69 @@ Aplicación práctica:
 Estado del recorrido **onboarding → today → start/adapt → guided session → post-workout → progress**:
 
 1. **Onboarding**: completo visualmente con wizard de 4 pasos, opciones accesibles y CTA sticky en [`components/onboarding/OnboardingWizard.tsx`](../../components/onboarding/OnboardingWizard.tsx).
-2. **Today**: en convergencia Figma en la wave actual. [`app/dashboard/today/page.tsx`](../../app/dashboard/today/page.tsx) compone header, check-in, hero, Coach, hábitos, semana e install toast. Aún debe tratarse como Unreleased hasta merge/release.
+2. **Today**: **convergido a Figma y released (v0.6.0/v0.6.1)**. [`app/dashboard/today/page.tsx`](../../app/dashboard/today/page.tsx) compone header, check-in ánimo/energía, hero, Coach, hábitos, semana e install toast. En v0.6.1 se corrigieron regresiones de dispositivo real: contraste del ánimo seleccionado, overflow de hábitos y hero/progress bar.
 3. **Start/adapt**: Hoy y Entrenar pueden iniciar rutina programada; Adaptar navega a `/dashboard/session/adapt` con rutina/objetivo. Coach adaptation existe con preview/apply y fallback.
-4. **Guided session**: completo para sesión guiada responsive: header, ejercicio activo, Técnica/media, Notas, set table, rest/skip/hold y CTA fija de completar serie (`components/session/**`, `app/dashboard/session/[workoutId]/page.tsx`).
+4. **Guided session**: completo y responsive: header, ejercicio activo, Técnica/media, Notas, set table, rest/skip/hold y CTA de completar serie (`components/session/**`, `app/dashboard/session/[workoutId]/page.tsx`). En v0.6.1: CTA verde con check, timer de descanso como barra fija siempre visible, "Añadir serie" funcional (`addSet()` cap 12) y estados de serie con círculos; sin inventar historial previo.
 5. **Post-workout**: feedback post-workout y close summary existen en services/routes/componentes de sesión.
 6. **Progress**: pantalla Progreso Figma-aligned con interpretación, resumen, consistencia semanal, fuerza, bienestar, hábitos y sesiones recientes en [`app/dashboard/progress/page.tsx`](../../app/dashboard/progress/page.tsx).
 
-DoD funcional: el loop está implementado por piezas. DoD de release exige todavía revalidación end-to-end completa, auditoría pre-PR y suite full limpia.
+DoD funcional: el loop está implementado y released end-to-end hasta v0.6.1. DoD de release por wave sigue exigiendo revalidación end-to-end, auditoría pre-PR y suite full limpia.
 
-## 5. Entregado v0.3.1 → v0.5.0
+## 5. Entregado v0.3.1 → v0.6.1
 
 - **v0.3.1**: Coach adaptation interpreta freeText (tiempo/fatiga/sin máquinas), motivos trazables, Today completed-state + Adaptar, sesión guiada mobile con set table/notas/CTA fija y fixes de inputs de descanso/sets.
 - **v0.3.2**: `dayReason` honesto y determinístico, Progress fixes (chart desde 1 punto, labels/overflow), CTA “Crear con Coach Atlas” en rutinas/plan.
 - **v0.4.0**: edición de plan semanal (`GET/PATCH /api/training-plan/[id]`, `/dashboard/plan/[id]/edit`, `usePlanBuilder` edit), wizard guiado de plan semanal, persistencia de rutinas por día con cleanup compensatorio, convergencia Figma de sesión guiada/Progreso/detalle de rutina.
 - **v0.5.0**: convergencia Figma de Onboarding, Entrenar hub, Perfil/Settings y bottom nav con iconos + active states.
+- **v0.6.0**: convergencia Figma de Hoy home; generación de plan semanal Coach AI (Gemini + fallback determinístico verificable); CHANGELOG + handoff. Fix del contrato `streak-chip` (golden-path E2E).
+- **v0.6.1**: fixes UX/UI de dispositivo real + Figma (`12:1830` player, `8-1413` hero): CTA verde+check, descanso siempre visible, "Añadir serie", contraste de ánimo (raíz `cn()` sin tailwind-merge), overflow de hábitos, hero+progress bar, equipamiento real en Perfil y limpieza de filas backlog.
 
 Ver [`../../CHANGELOG.md`](../../CHANGELOG.md) para detalle agrupado Added/Changed/Fixed.
 
-## 6. En progreso ahora
+## 6. Checkpoint actual (post v0.6.1)
 
-- **Hoy home screen Figma convergence**: cambios en `components/today/**` y `app/dashboard/today/page.tsx` de la rama actual. No asumir released hasta merge.
-- **Coach AI weekly-plan generation**: [`lib/ai/weekly-plan-draft.ts`](../../lib/ai/weekly-plan-draft.ts) ya arma plan semanal determinístico sobre catálogo real componiendo drafts de rutina. El cableado Gemini semanal directo está en curso; debe validar IDs del catálogo, limitar texto, mantener fallback y no requerir `GEMINI_API_KEY` para funcionar.
-- **Documentación**: este handoff y backlog quedan como fuente operativa para nuevos agentes/personas.
+**Rama base**: `develop` está alineada con `main` en `v0.6.1` (producción desplegada en Vercel: `https://atlas-fitness-eindi-acme.vercel.app`). No hay wave abierta; el árbol está limpio.
+
+**Salud del repo (verificado en v0.6.1)**: `tsc --noEmit` limpio, suite Jest **1126/1126** verde, eslint 0, Playwright E2E verde en CI.
+
+**Qué está cerrado**: el golden path completo (onboarding → Hoy → start/adapt → sesión guiada → post-workout → progreso) está implementado, convergido a Figma y released. Coach AI weekly-plan quedó completo con Gemini + fallback determinístico y tests de contrato.
+
+**Paso a paso para retomar (nuevo agente o persona)**:
+
+1. Leé este handoff + [`AGENTS.md`](../../AGENTS.md) + los ADRs relevantes antes de tocar código.
+2. Node 20 (CI usa 20). En este entorno: `export PATH=$HOME/.nvm/versions/node/v20.15.0/bin:$PATH`. Instalá con `npm install` y, para datos locales, `npm run setup:local` (usuario `qa@atlas.test`).
+3. Verificá el baseline con binarios de repo-root (no `npx`, que reinstala): `node_modules/.bin/tsc --noEmit`, `node_modules/.bin/jest --silent`, `node_modules/.bin/eslint <archivos>`.
+4. Elegí un item del backlog (§7). Creá rama con prefijo correcto (`feat/`, `fix/`, `chore/`, `docs/`) desde `develop` actualizado.
+5. TDD: escribí el test que falla, implementá lo mínimo, mantené verde. Sin `any`; JSDoc + tipos de retorno en funciones públicas; archivos ~200–250 líneas.
+6. Si el trabajo es grande y paralelizable, despachá subagentes con **ownership de archivos disjuntos** (un archivo = un agente); vos orquestás todo el git/PR. Verificá con `git status` que no se pisaron paths.
+7. Convergencia Figma: los tools MCP `figma-*` están deferidos — buscá con el tool de búsqueda de tools y llamá `figma-get_screenshot` con el `nodeId` (frames pulidos = serie `12:*`; hero Hoy = `8-1413`). Los subagentes no pueden llamar Figma; el orquestador baja el screenshot y embebe el spec.
+8. Auditoría pre-PR obligatoria: full suite verde → agente `code-review` sobre el diff completo → aplicar **todas** las observaciones → re-correr suite → commits Conventional Commits → PR a `develop`.
+9. Release: cortar `release/x.y.z` desde `develop`, bump `package.json`, PR a `main` (`--merge`, no squash), tag `vX.Y.Z`, back-merge `main→develop` (fast-forward), verificar prod con `curl` (`/`, `/login`, `/onboarding` = 200; `/dashboard/today` = 307).
 
 ## 7. Backlog restante
 
 ### Alto impacto / próximo
 
-- Completar **coach-weekly-plan AI** con Gemini + fallback determinístico verificable. No bloquear el wizard si Gemini falla.
-- Revalidar golden path completo con datos reales y empty states.
-- Playwright Must para el recorrido cuando la UI cierre la wave.
+- Revalidar el golden path completo en dispositivo real con datos de QA (usuario `qa@atlas.test`) y empty states; sumar Playwright Must del recorrido ahora que la UI está estable.
+- **Explicabilidad del plan semanal**: mostrar al usuario por qué cada día/rutina fue propuesta y si vino de IA (`source: 'gemini'`) o de fallback determinístico.
+- **Tour de onboarding que alimente a Coach**: el onboarding ya persiste `goal/pace/equipment` (localStorage `atlas:onboarding:answers`), pero esa info debería quedar disponible/visible para que Coach Atlas arme o sugiera rutinas y el usuario la pueda contrastar/editar. Hoy la pantalla "cómo vas a entrenar" no lo deja claro.
+
+### Deferred / follow-up (Perfil — rows quitadas o sin editor propio)
+
+- **Preferencias de Coach** y **Notificaciones y recordatorios**: filas removidas de "Mi Atlas" en v0.6.1; reintroducir solo cuando existan pantallas/acciones reales.
+- **Editor dedicado de Equipamiento/Objetivos** desde Perfil: hoy "Equipamiento" muestra el valor real del onboarding y enlaza al plan builder; falta un editor puntual que no obligue a rehacer el flujo guiado.
+- **Pantalla de Hábitos de bienestar**: la fila enlaza a Hoy (donde viven los hábitos); si PO prioriza, crear una vista dedicada.
+
+### UX gaps conocidos (pendientes de verificar/priorizar)
+
+- **Alerta superior vs modal**: quitar el recuadro/alerta superior persistente por página y dejar solo el toast/modal transitorio, extendiendo su duración a ~5–10 s.
+- **Editar descanso entre series**: al borrar el valor por defecto (p. ej. 90) queda un `0` no borrable en el editor de rutina; revisar el input numérico.
+- **Progreso de fuerza**: validar que el gráfico muestre un punto de partida real cuando el usuario de QA ya registró sesiones; no convertir en porcentaje/valor falso si no hay fuente.
+- Perfil conserva valores "No configurado" por diseño honesto; convertirlos en flows reales solo si PO prioriza.
 
 ### Bloqueado
 
-- **Branch protection** en `develop`/`main`: requiere permisos de repo admin; no se resuelve con cambios de código.
-
-### UX gaps conocidos
-
-- Explicabilidad del plan semanal: mostrar al usuario por qué cada día/rutina fue propuesta y si vino de IA o fallback.
-- Manejo de errores del wizard guiado: hacer más visible cuando falló la creación de una rutina o la limpieza compensatoria.
-- Perfil todavía tiene varios valores “No configurado” por diseño honesto; convertirlos en flows reales solo si PO prioriza.
-- Progreso de hábitos muestra contexto de hoy, no consistencia histórica; no convertirlo en porcentaje falso.
+- **Branch protection** en `develop`/`main`: requiere permisos de repo admin; no se resuelve desde código. Documentado como riesgo organizacional.
 
 ## 8. Guidelines obligatorias para contributors/agentes
 
