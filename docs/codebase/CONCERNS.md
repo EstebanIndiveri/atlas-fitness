@@ -1,6 +1,23 @@
 # Hallazgos, riesgos y prioridades
 
-## Veredicto
+## Estado actual — develop post PR #114 (2026-09-24)
+
+La evaluación detallada que sigue conserva el estado observado en la auditoría del 18-09-2026 y no debe leerse como inventario actual. Evidencia actual de los cierres:
+
+| ID | Estado actual | Evidencia |
+|---|---|---|
+| P0.1 | Cerrado: producción falla de forma segura si falta el secreto de sesión. | `docs/engineering/p0-hardening.md`; `lib/auth/session.ts`; tests de `lib/auth/session*.test.ts` |
+| P0.2 | Cerrado para producción: el secreto del webhook es obligatorio en producción o con token del bot; modo inseguro limitado a desarrollo/test según configuración. | `docs/engineering/p0-hardening.md`; `lib/telegram/webhook-secret.ts` |
+| P0.3 | Cerrado: Jest usa DB aislada y rechaza `local.db` y URLs remotas. | `lib/db/database-url.ts`; `lib/db/test-database.ts`; `jest.setup-env.ts`; tests de aislamiento |
+| P0.4 | Cerrado: workout activo único, sets finalizados inmutables y `routineId` inválido rechazado. | `lib/services/workouts.ts`; `lib/services/workout-sets.ts`; `docs/engineering/p0-hardening.md` |
+| P1.1 | Cerrado: sesiones con expiración, session ID durable y revocación server-side. | [ADR-004](../architecture/ADR-004-sessions.md); `lib/auth/session-store.ts`; tests de sesión |
+| P1.2 | Cerrado: ownership de catálogo centralizado y aplicado a ejercicios/rutinas/uso desde workouts. | [ADR-005](../architecture/ADR-005-ownership-catalog.md); `lib/auth/ownership.ts`; services de ejercicios/rutinas/workouts |
+| P1.3 | Parcial: rate limit durable implementado para login/register. No se afirma cobertura de Telegram, Gemini o crons. | `docs/engineering/p1-3-rate-limit.md`; rutas auth y servicios de rate limit |
+| P1.9 | Cerrado para las carreras wait/action cubiertas: PR #114 mergeado estabiliza los E2E; auth ya exige login QA exitoso y RoutineEditor cubre `90 → vacío → 30`. | PR #114; `e2e/auth.spec.ts`; `e2e/routines-editor.spec.ts`; [TESTING](TESTING.md) |
+
+Los hallazgos y recomendaciones siguientes se conservan como **HALLAZGOS HISTÓRICOS** del estado auditado en `53bc87b` (18-09-2026). Se mantienen para contexto y no prevalecen sobre la tabla de estado actual. Los ítems que no figuran como cerrados/parciales no se consideran resueltos por este documento.
+
+## Veredicto histórico
 
 Atlas Fitness ya no es un scaffold: tiene un producto MVP funcional con
 autenticación, workouts, rutinas, progreso, mood, Telegram, PWA y sesión guiada
@@ -13,7 +30,7 @@ invariantes de workout quebradas, aislamiento incompleto de datos de usuario y
 un harness de tests capaz de borrar datos locales. Además, la gobernanza
 documentada no está siendo aplicada por GitHub.
 
-## Escenario objetivo confirmado
+## Escenario objetivo confirmado en la auditoría histórica
 
 La priorización asume una **beta pública wellness en Argentina durante los
 próximos tres meses, sin recomendaciones médicas**.
@@ -23,7 +40,7 @@ la sensibilidad de datos de peso, actividad y mood. Para abrir la beta deben
 estar resueltos todos los P0 y, como mínimo, los P1 de sesión, ownership, rate
 limiting, privacidad, gobernanza y confiabilidad de Telegram.
 
-## P0 — bloquear exposición pública
+## HALLAZGOS HISTÓRICOS — P0 — bloquear exposición pública
 
 ### P0.1 Secreto fallback permite falsificar sesiones
 
@@ -90,7 +107,7 @@ Pruebas directas sobre la API/services demostraron:
 - devolver 400 para `routineId` inválido;
 - tests RED de happy, edge, error y concurrencia.
 
-## P1 — antes de beta pública
+## HALLAZGOS HISTÓRICOS — P1 — antes de beta pública
 
 ### P1.1 Sesiones deterministas, no expirables ni revocables
 
@@ -262,7 +279,7 @@ alertas mínimas antes de crecer.
 **Acción:** corregir clasificación/actualización, automatizar escaneo, pin de
 runtime y headers CSP/referrer/permissions/frame.
 
-## Seguridad: resumen independiente
+## Seguridad: resumen independiente de la auditoría histórica
 
 La revisión especializada de solo lectura verificó:
 
@@ -299,7 +316,7 @@ privacidad preventiva.
   Components para carga inicial.
 - Gemini API: SDK oficial y salidas estructuradas con JSON Schema.
 
-## Orden recomendado de remediación
+## Orden recomendado de remediación en la auditoría histórica
 
 1. Aislar DB de tests y escribir regresiones RED.
 2. Eliminar defaults inseguros de sesión/webhook.

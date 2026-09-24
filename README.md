@@ -2,7 +2,7 @@
 
 Asistente de fitness personal para registrar entrenamientos, pesos, consejos, media de ejercicios y motivación — vía **web app** y **bot de Telegram** (misma lógica de producto que Hermes Finance: un dominio, dos canales).
 
-> Estado: **v0.6.1** — MVP de hábito/adaptive core usable end-to-end: onboarding, Hoy (convergido a Figma), planes semanales (manual + guiado con Coach Atlas/Gemini + fallback), adaptar, sesión guiada, feedback/progreso, PWA y Telegram. Ver el checkpoint operativo y los pendientes en [`docs/backlog/handoff-2026-09.md`](./docs/backlog/handoff-2026-09.md).
+> Última versión publicada: **v0.6.1**. `develop` incluye PR #114, que estabiliza la observación de respuestas en Playwright sin cambios de comportamiento de producto. El estado operativo y la evidencia de pruebas están en [`docs/backlog/handoff-2026-09.md`](./docs/backlog/handoff-2026-09.md).
 
 ## Visión (borrador)
 
@@ -178,7 +178,9 @@ Ver [`AGENTS.md`](./AGENTS.md) §3–5 para el branching model completo.
 - **Owner:** [EstebanIndiveri](https://github.com/EstebanIndiveri)
 - **Producto hermano:** [hermes-finantial-tracker](https://github.com/EstebanIndiveri/hermes-finantial-tracker)
 
-## Estado Actual (v0.6.1)
+## Estado Actual (última versión publicada: v0.6.1)
+
+El producto descrito abajo corresponde a v0.6.1. Los cambios posteriores en `develop` incluyen la estabilización de pruebas E2E de PR #114; no representan nuevas funciones de producto.
 
 ✅ **Completado / usable:**
 - Auth + sesiones HMAC revocables, link Telegram y webhooks modulares

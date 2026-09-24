@@ -2,7 +2,9 @@
 
 Must from [`docs/codebase/CONCERNS.md`](../codebase/CONCERNS.md) P1.2.
 
-Status: implemented on `feature/p1-2-ownership` (draft PR until CI green).
+**Hallazgo histórico / estado en el workstream original:** implementado en `feature/p1-2-ownership`; PR señalado como draft hasta CI verde.
+
+**Estado actual:** ownership de ejercicios/rutinas está implementado en `develop`; ver [ADR-005](../architecture/ADR-005-ownership-catalog.md), `lib/auth/ownership.ts` y los services de catálogo/rutinas/workouts.
 
 ## Checklist
 

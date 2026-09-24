@@ -2,7 +2,9 @@
 
 Must from [`docs/codebase/CONCERNS.md`](../codebase/CONCERNS.md) P1.3.
 
-Status: implemented on `feature/p1-3-rate-limit-auth`.
+**Hallazgo histórico / estado en el workstream original:** implementado en `feature/p1-3-rate-limit-auth`.
+
+**Estado actual:** el rate limiting durable está implementado para `POST /api/auth/login` y `POST /api/auth/register`. Este cierre no se extiende a las superficies listadas en P1.3b; no se afirma que Telegram, Gemini o crons tengan rate limiting.
 
 ## Scope
 

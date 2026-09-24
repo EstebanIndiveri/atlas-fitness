@@ -1,5 +1,7 @@
 # Integraciones externas
 
+> **Alcance temporal:** inventario y riesgos observados en el snapshot auditado el 18-09-2026. Las afirmaciones sobre webhook que siguen fueron reconciliadas con el comportamiento actual; los demás riesgos no se consideran revalidados por PR #114.
+
 ## Inventario
 
 | Sistema | Uso | Estado |
@@ -25,9 +27,12 @@ atómicas.
 
 ### Entrada
 
-`POST /api/telegram/webhook` comprueba
-`X-Telegram-Bot-Api-Secret-Token` solo si la variable está configurada. Sin
-secret acepta cualquier update y luego confía en `message.from.id`.
+Estado actual (`lib/telegram/webhook-secret.ts`): `POST /api/telegram/webhook`
+requiere `X-Telegram-Bot-Api-Secret-Token` en producción y cuando hay
+`TELEGRAM_BOT_TOKEN`. La excepción de modo inseguro está limitada a
+desarrollo/test mediante flag explícito y sin token del bot. La afirmación
+histórica de que la ausencia de secret acepta cualquier update no describe el
+comportamiento de producción actual.
 
 ### Vinculación
 

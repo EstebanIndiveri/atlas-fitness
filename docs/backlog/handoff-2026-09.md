@@ -1,6 +1,6 @@
-# Handoff — Atlas Fitness · Checkpoint v0.6.1 (Septiembre 2026)
+# Handoff — Atlas Fitness · Checkpoint post PR #114 (Septiembre 2026)
 
-> **Documento de checkpoint operativo.** Es la fuente de verdad para que un agente o persona entienda el estado actual del proyecto, qué está hecho/released, qué quedó diferido en backlog y cómo continuar paso a paso. Última actualización: 2026-09-23 (post release v0.6.1).
+> **Documento de checkpoint operativo.** Es la fuente de verdad para que un agente o persona entienda el estado actual del proyecto, qué está hecho/released, qué quedó diferido en backlog y cómo continuar paso a paso. Última actualización: 2026-09-24. La última versión publicada es v0.6.1; este checkpoint incluye el estado de `develop` tras PR #114 y no declara una nueva release.
 
 ## 1. Recap producto / visión
 
@@ -43,6 +43,8 @@ Estado del recorrido **onboarding → today → start/adapt → guided session �
 
 DoD funcional: el loop está implementado y released end-to-end hasta v0.6.1. DoD de release por wave sigue exigiendo revalidación end-to-end, auditoría pre-PR y suite full limpia.
 
+**E2E en `develop` tras PR #114:** las carreras de observación de respuesta/acción fueron corregidas y el golden path quedó estabilizado según la evidencia de la wave. Resultado registrado: 40 E2E aprobados y 1 omitido intencionalmente; los specs críticos de auth/workouts/session/routines-editor pasaron 51/51 en `repeat-each=3`. RoutineEditor cubre `90 → vacío → 30`. Esto documenta estado de pruebas, no un cambio de producto adicional.
+
 ## 5. Entregado v0.3.1 → v0.6.1
 
 - **v0.3.1**: Coach adaptation interpreta freeText (tiempo/fatiga/sin máquinas), motivos trazables, Today completed-state + Adaptar, sesión guiada mobile con set table/notas/CTA fija y fixes de inputs de descanso/sets.
@@ -54,13 +56,13 @@ DoD funcional: el loop está implementado y released end-to-end hasta v0.6.1. Do
 
 Ver [`../../CHANGELOG.md`](../../CHANGELOG.md) para detalle agrupado Added/Changed/Fixed.
 
-## 6. Checkpoint actual (post v0.6.1)
+## 6. Checkpoint actual (develop post PR #114; última release v0.6.1)
 
-**Rama base**: `develop` está alineada con `main` en `v0.6.1` (producción desplegada en Vercel: `https://atlas-fitness-eindi-acme.vercel.app`). No hay wave abierta; el árbol está limpio.
+**Base verificada**: `develop` está en el merge de PR #114 (`d53c1dfa4904d1f4dc44ebc600ec5510e65148f7`), posterior a la última release `v0.6.1`. No afirmar que `develop` está alineada con `main`.
 
-**Salud del repo (verificado en v0.6.1)**: `tsc --noEmit` limpio, suite Jest **1126/1126** verde, eslint 0, Playwright E2E verde en CI.
+**Salud del repo (evidencia registrada en PR #114)**: typecheck y build aprobados; Jest 198 suites / 1126 tests aprobados; E2E 40 aprobados / 1 omitido intencionalmente; specs críticos auth/workouts/session/routines-editor 51/51 en `repeat-each=3`; lint 0 errores y 1 warning preexistente (`lib/api/habits.test.ts:48`). La cifra Jest y los checks describen la wave, no un claim de release o de nuevas funciones.
 
-**Qué está cerrado**: el golden path completo (onboarding → Hoy → start/adapt → sesión guiada → post-workout → progreso) está implementado, convergido a Figma y released. Coach AI weekly-plan quedó completo con Gemini + fallback determinístico y tests de contrato.
+**Qué está cerrado**: el golden path de producto (onboarding → Hoy → start/adapt → sesión guiada → post-workout → progreso) está implementado y released hasta v0.6.1. PR #114 cierra la inestabilidad E2E de carreras wait/action; la evidencia de la wave está arriba. Coach AI weekly-plan quedó completo con Gemini + fallback determinístico y tests de contrato.
 
 **Paso a paso para retomar (nuevo agente o persona)**:
 
@@ -78,7 +80,7 @@ Ver [`../../CHANGELOG.md`](../../CHANGELOG.md) para detalle agrupado Added/Chang
 
 ### Alto impacto / próximo
 
-- Revalidar el golden path completo en dispositivo real con datos de QA (usuario `qa@atlas.test`) y empty states; sumar Playwright Must del recorrido ahora que la UI está estable.
+- La estabilidad E2E del golden path quedó verificada por PR #114; no queda como tarea Playwright Must. Si PO/QA requiere una validación manual adicional con datos QA reales (`qa@atlas.test`) y empty states, mantenerla separada de los resultados E2E registrados.
 - **Explicabilidad del plan semanal**: mostrar al usuario por qué cada día/rutina fue propuesta y si vino de IA (`source: 'gemini'`) o de fallback determinístico.
 - **Tour de onboarding que alimente a Coach**: el onboarding ya persiste `goal/pace/equipment` (localStorage `atlas:onboarding:answers`), pero esa info debería quedar disponible/visible para que Coach Atlas arme o sugiera rutinas y el usuario la pueda contrastar/editar. Hoy la pantalla "cómo vas a entrenar" no lo deja claro.
 
@@ -88,12 +90,15 @@ Ver [`../../CHANGELOG.md`](../../CHANGELOG.md) para detalle agrupado Added/Chang
 - **Editor dedicado de Equipamiento/Objetivos** desde Perfil: hoy "Equipamiento" muestra el valor real del onboarding y enlaza al plan builder; falta un editor puntual que no obligue a rehacer el flujo guiado.
 - **Pantalla de Hábitos de bienestar**: la fila enlaza a Hoy (donde viven los hábitos); si PO prioriza, crear una vista dedicada.
 
-### UX gaps conocidos (pendientes de verificar/priorizar)
+### UX gaps conocidos / validaciones pendientes
 
-- **Alerta superior vs modal**: quitar el recuadro/alerta superior persistente por página y dejar solo el toast/modal transitorio, extendiendo su duración a ~5–10 s.
-- **Editar descanso entre series**: al borrar el valor por defecto (p. ej. 90) queda un `0` no borrable en el editor de rutina; revisar el input numérico.
-- **Progreso de fuerza**: validar que el gráfico muestre un punto de partida real cuando el usuario de QA ya registró sesiones; no convertir en porcentaje/valor falso si no hay fuente.
+- **Progreso de fuerza — validación QA real pendiente, no bug confirmado:** código y tests sintéticos soportan que una sesión elegible se muestre como “Punto de partida”. Todavía falta validar contra historial QA real. No marcar como resuelto ni como backlog stale.
 - Perfil conserva valores "No configurado" por diseño honesto; convertirlos en flows reales solo si PO prioriza.
+
+### Triage no reproducido
+
+- **Persistent Notice:** No reproducido. Reabrir sólo con pantalla/componente/trigger y comportamiento esperado concretos.
+- **RoutineEditor descanso:** PR #114 cubre `90 → vacío → 30` en E2E; la afirmación histórica de un `0` no borrable no describe el comportamiento cubierto.
 
 ### Bloqueado
 
@@ -113,10 +118,9 @@ Ver [`AGENTS.md`](../../AGENTS.md) antes de tocar código. Resumen operativo:
 
 ## 9. Recomendaciones senior: próximos pasos y riesgos
 
-1. **Cerrar la wave antes de sumar alcance**: Hoy + coach-weekly-plan AI deben salir con fallback probado y sin claims inflados.
+1. **Estado de la wave**: Hoy y coach-weekly-plan AI están released hasta v0.6.1; PR #114 estabilizó los E2E. No presentar esa validación como feature nueva.
 2. **Tratar IA como enhancer, no dependencia**: el wizard debe ser útil con catálogo real aunque Gemini no responda; Gemini solo puede mejorar selección/texto validado.
 3. **Agregar tests de contrato para weekly-plan AI**: catálogo vacío, IDs inválidos de Gemini, respuesta malformada, timeout, no key, días 1–6, foco/equipment raros.
 4. **Auditar copy de honestidad**: cualquier “Atlas sabe/aprende/recuperación” debe mapear a datos reales o cambiarse a “Atlas usa tu plan/check-in/historial”.
-5. **No fragmentar ownership en la wave**: `components/today/**` y `lib/ai/**` están activos por otros agentes; quien integre debe resolver conflictos y correr suite completa.
-6. **Branch protection sigue siendo riesgo organizacional**: documentar como bloqueado hasta que el owner del repo active reglas y CI requerida.
-7. **Mantener docs vivas**: actualizar este handoff y changelog en cada release menor; si cambia un contrato público, actualizar ADR/engineering docs relacionados.
+5. **Branch protection sigue siendo riesgo organizacional**: documentar como bloqueado hasta que el owner del repo active reglas y CI requerida.
+6. **Mantener docs vivas**: actualizar este handoff y changelog en cada release menor; si cambia un contrato público, actualizar ADR/engineering docs relacionados.
