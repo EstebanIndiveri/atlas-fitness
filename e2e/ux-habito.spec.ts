@@ -13,11 +13,13 @@ async function registerFreshUser(page: import('@playwright/test').Page): Promise
   const passwordInputs = await page.locator('input[type="password"]').all();
   await passwordInputs[0].fill(testUser.password);
   await passwordInputs[1].fill(testUser.password);
-  await page.click('button[type="submit"]');
-  await page.waitForResponse(
-    (resp) => resp.url().includes('/api/auth/register') && resp.status() === 201,
-  );
-  await page.waitForURL('/dashboard/today', { timeout: 15000 });
+  await Promise.all([
+    page.waitForResponse(
+      (resp) => resp.url().includes('/api/auth/register') && resp.status() === 201,
+    ),
+    page.waitForURL('/dashboard/today', { timeout: 15000 }),
+    page.locator('button[type="submit"]').click(),
+  ]);
 }
 
 test.describe('UX hábito — mobile 390px', () => {
@@ -40,8 +42,10 @@ test.describe('UX hábito — mobile 390px', () => {
     await expect(page.getByTestId('longest-streak')).toHaveText('0');
     await expect(page.getByText('Todavía no tenés racha')).toBeVisible();
 
-    await page.getByTestId('bottom-nav-session').click();
-    await page.waitForURL('**/dashboard/session', { timeout: 10000 });
+    await Promise.all([
+      page.waitForURL('**/dashboard/session', { timeout: 10000 }),
+      page.getByTestId('bottom-nav-session').click(),
+    ]);
     await expect(page.getByRole('heading', { name: 'Entrenar' })).toBeVisible();
     await expect(page.getByTestId('start-routine').first()).toBeVisible({ timeout: 10000 });
     await expect(page.getByTestId('app-bottom-nav')).toBeVisible();

@@ -43,9 +43,9 @@ test.describe('Design system visual smoke', () => {
         (resp) => resp.url().includes('/api/auth/login') && resp.status() === 200,
         { timeout: 10000 },
       ),
+      page.waitForURL('/dashboard/today', { timeout: 20000 }),
       page.click('button[type="submit"]'),
     ]);
-    await page.waitForURL('/dashboard/today', { timeout: 20000 });
     await expect(page.getByTestId('welcome-message')).toBeVisible({ timeout: 10000 });
 
     await expect(page.getByRole('navigation', { name: 'Principal' })).toBeVisible();
@@ -55,8 +55,10 @@ test.describe('Design system visual smoke', () => {
       ATLAS_SMOKE.roundedMd,
     );
 
-    await page.getByTestId('profile-link').click();
-    await page.waitForURL('**/dashboard/settings', { timeout: 10000 });
+    await Promise.all([
+      page.waitForURL('**/dashboard/settings', { timeout: 10000 }),
+      page.getByTestId('profile-link').click(),
+    ]);
     await expect(page.getByRole('heading', { name: 'Perfil' })).toBeVisible();
     await expect(page.getByTestId('app-header')).toBeVisible();
     await expectCssColor(page.locator('main').first(), 'background-color', ATLAS_SMOKE.canvas);

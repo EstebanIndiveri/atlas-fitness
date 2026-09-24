@@ -93,11 +93,13 @@ test.describe('PWA installability', () => {
         (resp) => resp.url().includes('/api/auth/login') && resp.status() === 200,
         { timeout: 10000 }
       ),
+      page.waitForURL('/dashboard/today', { timeout: 20000 }),
       page.click('button[type="submit"]'),
     ]);
-    await page.waitForURL('/dashboard/today', { timeout: 20000 });
-    await page.click('[data-testid="profile-link"]');
-    await page.waitForURL('**/dashboard/settings', { timeout: 10000 });
+    await Promise.all([
+      page.waitForURL('**/dashboard/settings', { timeout: 10000 }),
+      page.getByTestId('profile-link').click(),
+    ]);
 
     const installSection = page.getByTestId('pwa-install-settings');
     const installCard = installSection.getByTestId('app-install-prompt');
