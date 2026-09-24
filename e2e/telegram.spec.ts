@@ -16,12 +16,13 @@ async function registerAndLandOnDashboard(page: import('@playwright/test').Page)
   const passwordInputs = await page.locator('input[type="password"]').all();
   await passwordInputs[0].fill(user.password);
   await passwordInputs[1].fill(user.password);
-  await page.click('button[type="submit"]');
-  await page.waitForResponse(
-    (resp) => resp.url().includes('/api/auth/register') && resp.status() === 201
-  );
-  await page.waitForURL('/dashboard/today', { timeout: 15000 });
-  await page.waitForResponse((resp) => resp.url().includes('/api/auth/me'));
+  await Promise.all([
+    page.waitForResponse(
+      (resp) => resp.url().includes('/api/auth/register') && resp.status() === 201,
+    ),
+    page.waitForURL('/dashboard/today', { timeout: 15000 }),
+    page.locator('button[type="submit"]').click(),
+  ]);
   await expect(page.locator('[data-testid="welcome-message"]')).toBeVisible({ timeout: 10000 });
   return user;
 }
@@ -34,11 +35,12 @@ test.describe('Telegram link + webhook', () => {
     await page.goto('/dashboard/settings');
     await expect(page.getByTestId('telegram-unlinked-status')).toBeVisible();
 
-    const codeResponse = page.waitForResponse(
-      (resp) => resp.url().includes('/api/auth/telegram/link-code') && resp.status() === 200
-    );
-    await page.getByTestId('generate-link-code').click();
-    const generated = await codeResponse;
+    const [generated] = await Promise.all([
+      page.waitForResponse(
+        (resp) => resp.url().includes('/api/auth/telegram/link-code') && resp.status() === 200,
+      ),
+      page.getByTestId('generate-link-code').click(),
+    ]);
     const body = await generated.json();
     expect(body.code).toMatch(/^[A-HJ-NP-Z2-9]{8}$/);
 

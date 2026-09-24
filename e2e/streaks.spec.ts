@@ -39,11 +39,13 @@ async function registerFreshUser(page: import('@playwright/test').Page) {
   const passwordInputs = await page.locator('input[type="password"]').all();
   await passwordInputs[0].fill(testUser.password);
   await passwordInputs[1].fill(testUser.password);
-  await page.click('button[type="submit"]');
-  await page.waitForResponse(
-    (resp) => resp.url().includes('/api/auth/register') && resp.status() === 201
-  );
-  await page.waitForURL('/dashboard/today', { timeout: 15000 });
+  await Promise.all([
+    page.waitForResponse(
+      (resp) => resp.url().includes('/api/auth/register') && resp.status() === 201,
+    ),
+    page.waitForURL('/dashboard/today', { timeout: 15000 }),
+    page.locator('button[type="submit"]').click(),
+  ]);
   await expect(page.getByTestId('streak-chip')).toBeVisible({ timeout: 10000 });
   await expect(page.getByTestId('current-streak')).toBeVisible({ timeout: 10000 });
 }
