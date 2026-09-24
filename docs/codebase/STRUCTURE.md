@@ -1,5 +1,11 @@
 # Estructura del repositorio
 
+> **Alcance temporal:** los conteos y el diagnóstico siguientes describen el snapshot auditado en `53bc87b` (18-09-2026). La afirmación de que ownership no se aplicaba uniformemente quedó superada por ADR-005 y el código actual.
+
+## Estado actual
+
+Ownership de catálogo está centralizado en `lib/auth/ownership.ts` y aplicado en los services de ejercicios y rutinas, además de las validaciones de rutinas/workouts. Ver [ADR-005](../architecture/ADR-005-ownership-catalog.md) y `lib/services/exercises.ts`, `lib/services/routines.ts`, `lib/services/workouts.ts`.
+
 ## Tipo
 
 Es una aplicación Next.js única. Aunque `AGENTS.md` usa la palabra monorepo, no
@@ -123,7 +129,7 @@ usados por la UI, lo que filtra persistencia hacia presentación.
 El hotspot más claro para extraer es la página de workout manual. Telegram ya
 está correctamente dividido entre coordinador y `handlers/`.
 
-## Límites filtrados
+## Límites filtrados observados en el snapshot histórico
 
 - UI importa `Workout`, `WorkoutSet`, `Exercise` y `DailyTip` desde el schema.
 - Fechas DB tipadas como `Date` viajan como strings JSON.

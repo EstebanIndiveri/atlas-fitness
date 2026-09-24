@@ -1,7 +1,8 @@
 # Editor rutinas + media (BE API/schema)
 
-Branch: `feature/editor-rutinas-media` · base `develop`  
-Status: implemented (BE only). FE UI is `feature/editor-rutinas-media-ui`.
+**Hallazgo histórico / workstreams originales:** BE en `feature/editor-rutinas-media`; FE en `feature/editor-rutinas-media-ui`.
+
+**Estado actual:** el editor BE+FE está presente en `develop`. PR #114 incluye E2E del RoutineEditor y valida el input de descanso `90 → vacío → 30`; ver también `docs/engineering/editor-rutinas-media-ui.md`.
 
 No file upload/S3. Media is URL fields on custom exercises.
 

@@ -4,7 +4,7 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Este
 
 ## [Unreleased]
 
-_Sin cambios sin publicar. La rama `develop` está alineada con `main` en `v0.6.1`._
+_Sin cambios de producto sin publicar. La última versión publicada es `v0.6.1`._
 
 ## [0.6.1] - 2026-09-23
 
