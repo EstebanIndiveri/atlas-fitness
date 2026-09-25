@@ -13,7 +13,12 @@ import { ROUTINE_COPY, ROUTINE_TEST_IDS } from '@/lib/copy/routines';
 
 export default function RoutinesPage() {
   const { routines, loading, error, deletingId, remove } = useRoutineList();
-  const [trainingPlanId, setTrainingPlanId] = useState<number | null>(null);
+  const [planNavigation, setPlanNavigation] = useState<
+    | { status: 'loading' }
+    | { status: 'active'; planId: number }
+    | { status: 'none' }
+    | { status: 'error' }
+  >({ status: 'loading' });
 
   useEffect(() => {
     let cancelled = false;
@@ -22,10 +27,14 @@ export default function RoutinesPage() {
       try {
         const today = await fetchToday();
         if (cancelled) return;
-        setTrainingPlanId(today.kind === 'no_plan' ? null : today.trainingPlanId);
+        setPlanNavigation(
+          today.kind === 'no_plan'
+            ? { status: 'none' }
+            : { status: 'active', planId: today.trainingPlanId },
+        );
       } catch {
         if (!cancelled) {
-          setTrainingPlanId(null);
+          setPlanNavigation({ status: 'error' });
         }
       }
     }
@@ -42,6 +51,11 @@ export default function RoutinesPage() {
 
   return (
     <PageContainer>
+      {planNavigation.status === 'error' ? (
+        <p role="alert" className="mb-4 text-sm text-danger">
+          No pudimos cargar el plan semanal. Probá de nuevo.
+        </p>
+      ) : null}
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-title font-bold text-ink">{ROUTINE_COPY.listTitle}</h1>
@@ -64,12 +78,16 @@ export default function RoutinesPage() {
           >
             {ROUTINE_COPY.createCta}
           </Link>
-          {trainingPlanId !== null ? (
+          {planNavigation.status !== 'loading' && planNavigation.status !== 'error' ? (
             <Link
-              href={`/dashboard/plan/${trainingPlanId}/edit`}
+              href={
+                planNavigation.status === 'active'
+                  ? `/dashboard/plan/${planNavigation.planId}`
+                  : '/dashboard/plan/new'
+              }
               className={buttonClassName({ variant: 'secondary', size: 'lg', className: 'min-h-11 sm:w-auto' })}
             >
-              Editar plan semanal
+              {planNavigation.status === 'active' ? 'Gestionar plan' : 'Crear plan semanal'}
             </Link>
           ) : null}
         </div>

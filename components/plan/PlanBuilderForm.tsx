@@ -60,8 +60,12 @@ export function PlanBuilderForm({
   return (
     <form data-testid={PLAN_TEST_IDS.form} onSubmit={handleSubmit} className="space-y-6" noValidate>
       <header className="space-y-1">
-        <h1 className="text-xl font-semibold text-ink">{PLAN_COPY.title}</h1>
-        <p className="text-sm text-ink-muted">{PLAN_COPY.subtitle}</p>
+        <h1 className="text-xl font-semibold text-ink">
+          {mode === 'edit' ? PLAN_COPY.editTitle : PLAN_COPY.title}
+        </h1>
+        <p className="text-sm text-ink-muted">
+          {mode === 'edit' ? PLAN_COPY.editSubtitle : PLAN_COPY.subtitle}
+        </p>
       </header>
 
       <div className="space-y-4">

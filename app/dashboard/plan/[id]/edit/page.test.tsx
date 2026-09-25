@@ -106,6 +106,8 @@ describe('EditPlanPage', () => {
       mode: 'edit',
       initialPlan: loadedPlan,
     });
+    expect(screen.getByRole('heading', { name: 'Editar plan semanal' })).toBeTruthy();
+    expect(screen.getByText('Actualizá los días, las rutinas y el objetivo de tu semana.')).toBeTruthy();
     expect(screen.getByTestId('plan-submit').textContent).toBe('Guardar cambios');
   });
 

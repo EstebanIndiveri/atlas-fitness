@@ -82,7 +82,7 @@ describe('Entrenar page', () => {
 
     expect(screen.getByRole('heading', { name: 'Entrenar' })).toBeTruthy();
     expect(screen.getByRole('link', { name: /Gestionar plan/ }).getAttribute('href')).toBe(
-      '/dashboard/routines',
+      '/dashboard/plan/new',
     );
     expect(screen.getByRole('heading', { name: 'Nueva rutina' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Mis rutinas' })).toBeTruthy();
@@ -145,8 +145,11 @@ describe('Entrenar page', () => {
     render(<Page />);
 
     expect(await screen.findByRole('heading', { name: 'Próximos días' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: /Gestionar plan/ }).getAttribute('href')).toBe(
+      '/dashboard/plan/9',
+    );
     expect(screen.getByRole('link', { name: 'Ver plan completo →' }).getAttribute('href')).toBe(
-      '/dashboard/plan/9/edit',
+      '/dashboard/plan/9',
     );
     expect(await screen.findByText('VIE')).toBeTruthy();
     expect(screen.getByText('25')).toBeTruthy();
