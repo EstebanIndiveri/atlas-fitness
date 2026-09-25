@@ -4,7 +4,7 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Este
 
 ## [Unreleased]
 
-_Contenido preparado para `v0.7.0`, todavía sin publicar. La última versión publicada es `v0.6.2`._
+## [0.7.0] - 2026-09-25
 
 ### Added
 - Contexto de Coach persistido por usuario (`goal`, `pace`, `equipment`) y sección explícita de edición/guardado en Perfil. `hasSavedPreferences` refleja si existe una fila guardada, incluso cuando sus tres valores son `null`.
