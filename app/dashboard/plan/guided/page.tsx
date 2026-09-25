@@ -62,7 +62,10 @@ function GuidedPlanWizard({ catalog }: { catalog: readonly ExerciseCatalogItem[]
           form={guided.form}
           busy={guided.busy}
           canGenerate={guided.canGenerate}
+          preferenceStatus={guided.preferenceStatus}
+          preferenceError={guided.preferenceError}
           onFieldChange={guided.updateField}
+          onRetryPreferences={guided.retryPreferences}
           onSubmit={guided.generateDraft}
         />
       )}
