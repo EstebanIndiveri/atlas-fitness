@@ -7,9 +7,10 @@ import * as coachPreview from '@/lib/api/coach-preview';
 import type { CoachAdaptationResult } from '@/types/coach';
 
 export type CoachAdaptStep = 'motivo' | 'comparacion' | 'confirmado';
+export type CoachWorkoutStartStatus = 'idle' | 'pending' | 'conflict' | 'error' | 'started';
 
 export interface UseCoachAdaptInput {
-  routineId: number;
+  routineId: number | null;
 }
 
 export interface UseCoachAdaptResult {
@@ -18,7 +19,8 @@ export interface UseCoachAdaptResult {
   error: string | null;
   previewing: boolean;
   starting: boolean;
-  previewWithContext: (freeText: string) => Promise<void>;
+  startStatus: CoachWorkoutStartStatus;
+  previewWithContext: (freeText: string) => Promise<CoachAdaptationResult | null>;
   startWorkout: (applyAdaptation?: boolean) => Promise<void>;
   adjustAgain: () => void;
 }
@@ -26,6 +28,8 @@ export interface UseCoachAdaptResult {
 const COPY = {
   previewFallback: 'No se pudo cargar la adaptación de Coach Atlas.',
   startFallback: 'No se pudo iniciar el entrenamiento. Probá de nuevo en unos minutos.',
+  startConflict: 'Ya hay un entrenamiento activo. Continuá esa sesión antes de iniciar otra.',
+  missingRoutine: 'Necesitás un entrenamiento de hoy para adaptar.',
 } as const;
 
 /**
@@ -43,15 +47,21 @@ export function useCoachAdapt({ routineId }: UseCoachAdaptInput): UseCoachAdaptR
   const [error, setError] = useState<string | null>(null);
   const [previewing, setPreviewing] = useState(false);
   const [starting, setStarting] = useState(false);
+  const [startStatus, setStartStatus] = useState<CoachWorkoutStartStatus>('idle');
   const startingRef = useRef(false);
   const adaptationRef = useRef<{ result: CoachAdaptationResult; freeText: string } | null>(null);
 
   const previewWithContext = useCallback(
-    async (freeText: string): Promise<void> => {
+    async (freeText: string): Promise<CoachAdaptationResult | null> => {
+      if (routineId === null) {
+        setError(COPY.missingRoutine);
+        return null;
+      }
       const trimmed = freeText.trim();
       setPreviewing(true);
       setError(null);
       setResult(null);
+      setStartStatus('idle');
       try {
         const preview = await coachPreview.previewCoachAdaptation({
           routineId,
@@ -60,9 +70,11 @@ export function useCoachAdapt({ routineId }: UseCoachAdaptInput): UseCoachAdaptR
         setResult(preview);
         adaptationRef.current = { result: preview, freeText: trimmed };
         setStep('comparacion');
+        return preview;
       } catch (caught) {
         setError(mapPreviewError(caught));
         setStep('motivo');
+        return null;
       } finally {
         setPreviewing(false);
       }
@@ -74,8 +86,14 @@ export function useCoachAdapt({ routineId }: UseCoachAdaptInput): UseCoachAdaptR
     if (startingRef.current) {
       return;
     }
+    if (routineId === null) {
+      setError(COPY.missingRoutine);
+      setStartStatus('error');
+      return;
+    }
     startingRef.current = true;
     setStarting(true);
+    setStartStatus('pending');
     setError(null);
     try {
       const adaptation = applyAdaptation ? adaptationRef.current : null;
@@ -95,20 +113,24 @@ export function useCoachAdapt({ routineId }: UseCoachAdaptInput): UseCoachAdaptR
       });
       const body: unknown = await response.json();
       if (response.status === 409) {
-        const activeId = await fetchActiveWorkoutId();
-        if (activeId !== null) {
-          setStep('confirmado');
-          router.push(activeId.href);
-          return;
-        }
+        setError(readApiMessage(body) ?? COPY.startConflict);
+        setStartStatus('conflict');
+        return;
       }
-      if (!response.ok || !isRecord(body) || !isPositiveInteger(body.id)) {
+      if (!response.ok) {
+        setError(readApiMessage(body) ?? COPY.startFallback);
+        setStartStatus('error');
+        return;
+      }
+      if (response.status !== 201 || !isRecord(body) || !isPositiveInteger(body.id)) {
         throw new Error('Invalid workout start response');
       }
       setStep('confirmado');
+      setStartStatus('started');
       router.push(`/dashboard/session/${body.id}`);
     } catch {
       setError(COPY.startFallback);
+      setStartStatus('error');
     } finally {
       startingRef.current = false;
       setStarting(false);
@@ -119,25 +141,32 @@ export function useCoachAdapt({ routineId }: UseCoachAdaptInput): UseCoachAdaptR
     setStep('motivo');
     setResult(null);
     setError(null);
+    setStartStatus('idle');
     adaptationRef.current = null;
   }, []);
 
-  return { step, result, error, previewing, starting, previewWithContext, startWorkout, adjustAgain };
+  return {
+    step,
+    result,
+    error,
+    previewing,
+    starting,
+    startStatus,
+    previewWithContext,
+    startWorkout,
+    adjustAgain,
+  };
 }
 
-async function fetchActiveWorkoutId(): Promise<{ href: string } | null> {
-  const response = await fetch('/api/workouts/active');
-  if (!response.ok) {
+function readApiMessage(value: unknown): string | null {
+  if (
+    !isRecord(value) ||
+    typeof value.message !== 'string' ||
+    value.message.trim().length === 0
+  ) {
     return null;
   }
-  const body: unknown = await response.json();
-  if (!isRecord(body) || !isPositiveInteger(body.id)) {
-    return null;
-  }
-  const href = isPositiveInteger(body.routineId)
-    ? `/dashboard/session/${body.id}`
-    : `/dashboard/workout/${body.id}`;
-  return { href };
+  return value.message;
 }
 
 function mapPreviewError(caught: unknown): string {

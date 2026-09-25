@@ -1,12 +1,17 @@
 /**
  * @jest-environment jsdom
  */
-import { beforeEach, describe, expect, it } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it } from '@jest/globals';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { CoachAdaptationResult } from '@/types/coach';
-import type { CoachRecommendationDto } from '@/lib/services/coach-recommendation';
 
 declare const jest: typeof import('@jest/globals').jest;
+
+const pushMock = jest.fn<(href: string) => void>();
+
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({ push: pushMock }),
+}));
 
 jest.mock('@/lib/api/coach-preview', () => {
   class MockCoachPreviewClientError extends Error {
@@ -35,45 +40,10 @@ jest.mock('@/lib/api/coach-preview', () => {
   };
 });
 
-jest.mock('@/lib/api/coach-recommendations', () => {
-  class MockCoachRecommendationsClientError extends Error {
-    kind: 'unauthorized' | 'validation' | 'not_found' | 'conflict' | 'generic';
-    status: number;
-    api: { code: string; message: string } | null;
-
-    constructor(
-      kind: 'unauthorized' | 'validation' | 'not_found' | 'conflict' | 'generic',
-      message: string,
-      status: number,
-      api: { code: string; message: string } | null = null,
-    ) {
-      super(message);
-      this.name = 'CoachRecommendationsClientError';
-      this.kind = kind;
-      this.status = status;
-      this.api = api;
-    }
-  }
-
-  return {
-    __esModule: true,
-    CoachRecommendationsClientError: MockCoachRecommendationsClientError,
-    recordCoachRecommendation: jest.fn(),
-    decideCoachRecommendation: jest.fn(),
-  };
-});
-
 import { CoachPreviewClientError, previewCoachAdaptation } from '@/lib/api/coach-preview';
-import {
-  CoachRecommendationsClientError,
-  decideCoachRecommendation,
-  recordCoachRecommendation,
-} from '@/lib/api/coach-recommendations';
 import { CoachAtlasCard } from './CoachAtlasCard';
 
 const previewMock = jest.mocked(previewCoachAdaptation);
-const recordMock = jest.mocked(recordCoachRecommendation);
-const decideMock = jest.mocked(decideCoachRecommendation);
 
 const result: CoachAdaptationResult = {
   original: { exerciseCount: 5, setCount: 16, estMinutes: 55 },
@@ -85,34 +55,23 @@ const result: CoachAdaptationResult = {
   source: 'deterministic',
 };
 
-function recommendation(decision: CoachRecommendationDto['decision'] = 'pending'): CoachRecommendationDto {
-  return {
-    id: 101,
-    userId: 7,
-    workoutId: 88,
-    dailyCheckInId: null,
-    contextSnapshot: null,
-    source: 'deterministic',
-    result,
-    decision,
-    decidedAt: decision === 'pending' ? null : '2026-09-20T21:03:00.000Z',
-    createdAt: '2026-09-20T21:00:00.000Z',
-    updatedAt: '2026-09-20T21:03:00.000Z',
-  };
-}
-
 describe('CoachAtlasCard', () => {
+  const originalFetch = global.fetch;
+
   beforeEach(() => {
     previewMock.mockReset();
-    recordMock.mockReset();
-    decideMock.mockReset();
+    pushMock.mockReset();
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
   });
 
   it('renders the Figma heading, honest provenance copy, three preset chips and free-text input row', () => {
     render(<CoachAtlasCard routineId={42} />);
 
     expect(screen.getByRole('heading', { name: '◎ Coach Atlas' })).toBeTruthy();
-    expect(screen.getByText('Basado en datos biométricos')).toBeTruthy();
+    expect(screen.queryByText('Basado en datos biométricos')).toBeNull();
     expect(screen.getByText('Ajustes rápidos para tu sesión:')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Tengo 30 min' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Estoy cansado' })).toBeTruthy();
@@ -219,69 +178,78 @@ describe('CoachAtlasCard', () => {
     await screen.findByText('Sugerencia de Atlas');
   });
 
-  it('hides recommendation decision buttons when no workoutId is provided', async () => {
+  it('keeps a preview unapplied and starts the exact adaptation only after explicit activation', async () => {
     previewMock.mockResolvedValue(result);
+    const fetchMock = jest.fn<typeof fetch>().mockResolvedValue({
+      ok: true,
+      status: 201,
+      json: async () => ({ id: 91 }),
+    } as Response);
+    global.fetch = fetchMock as unknown as typeof fetch;
     render(<CoachAtlasCard routineId={42} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Estoy cansado' }));
 
     expect(await screen.findByText('Sugerencia de Atlas')).toBeTruthy();
+    expect(screen.getByText('Vista previa: tu rutina guardada no cambia hasta iniciar la sesión.')).toBeTruthy();
+    expect(screen.queryByText('Aplicado')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Aplicar' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Descartar' })).toBeNull();
-  });
+    expect(fetchMock).not.toHaveBeenCalled();
 
-  it('records then accepts a shown preview when Aplicar is clicked', async () => {
-    previewMock.mockResolvedValue(result);
-    recordMock.mockResolvedValue(recommendation());
-    decideMock.mockResolvedValue(recommendation('accepted'));
-    render(<CoachAtlasCard routineId={42} workoutId={88} />);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Estoy cansado' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Aplicar' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Empezar entrenamiento adaptado' }));
 
     await waitFor(() => {
-      expect(recordMock).toHaveBeenCalledWith({
-        workoutId: 88,
-        source: 'deterministic',
-        result,
+      expect(fetchMock).toHaveBeenCalledWith('/api/workouts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          routineId: 42,
+          adaptation: { result, freeText: 'Estoy cansado' },
+        }),
       });
     });
-    expect(decideMock).toHaveBeenCalledWith({ id: 101, decision: 'accepted' });
-    expect(await screen.findByText('Aplicado')).toBeTruthy();
+    expect(pushMock).toHaveBeenCalledWith('/dashboard/session/91');
   });
 
-  it('records then rejects a shown preview when Descartar is clicked', async () => {
+  it('shows the pending state while the persisted start request is in flight', async () => {
     previewMock.mockResolvedValue(result);
-    recordMock.mockResolvedValue(recommendation());
-    decideMock.mockResolvedValue(recommendation('rejected'));
-    render(<CoachAtlasCard routineId={42} workoutId={88} />);
+    let resolveStart: (response: Response) => void = () => undefined;
+    global.fetch = jest.fn<typeof fetch>(
+      () => new Promise<Response>((resolve) => { resolveStart = resolve; }),
+    ) as unknown as typeof fetch;
+    render(<CoachAtlasCard routineId={42} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Estoy cansado' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Descartar' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Tengo 30 min' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Empezar entrenamiento adaptado' }));
 
-    await waitFor(() => {
-      expect(decideMock).toHaveBeenCalledWith({ id: 101, decision: 'rejected' });
-    });
-    expect(await screen.findByText('Descartado')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Iniciando entrenamiento…' }).hasAttribute('disabled')).toBe(true);
+    expect(screen.getByRole('status').textContent).toContain('Iniciando entrenamiento');
+    expect(pushMock).not.toHaveBeenCalled();
+
+    resolveStart({
+      ok: true,
+      status: 201,
+      json: async () => ({ id: 92 }),
+    } as Response);
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith('/dashboard/session/92'));
   });
 
-  it('shows a recommendation persistence error and keeps decision actions available', async () => {
+  it('keeps the preview unapplied and displays a conflict without navigating', async () => {
     previewMock.mockResolvedValue(result);
-    recordMock.mockRejectedValue(
-      new CoachRecommendationsClientError(
-        'validation',
-        'No se pudo guardar la recomendación.',
-        400,
-        { code: 'VALIDATION', message: 'No se pudo guardar la recomendación.' },
-      ),
-    );
-    render(<CoachAtlasCard routineId={42} workoutId={88} />);
+    global.fetch = jest.fn<typeof fetch>().mockResolvedValue({
+      ok: false,
+      status: 409,
+      json: async () => ({ code: 'CONFLICT', message: 'Ya tenés un entrenamiento en curso.' }),
+    } as Response) as unknown as typeof fetch;
+    render(<CoachAtlasCard routineId={42} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Estoy cansado' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Aplicar' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Empezar entrenamiento adaptado' }));
 
-    expect(await screen.findByText('No se pudo guardar la recomendación.')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Aplicar' })).toBeTruthy();
-    expect(decideMock).not.toHaveBeenCalled();
+    expect(await screen.findByText('Ya tenés un entrenamiento en curso.')).toBeTruthy();
+    expect(screen.getByText('Sugerencia de Atlas')).toBeTruthy();
+    expect(screen.queryByText('Aplicado')).toBeNull();
+    expect(pushMock).not.toHaveBeenCalled();
   });
 });

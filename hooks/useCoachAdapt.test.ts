@@ -84,7 +84,9 @@ describe('useCoachAdapt', () => {
   });
 
   it('starts the workout, marks confirmado, and navigates to the guided session', async () => {
-    global.fetch = jest.fn<typeof fetch>().mockResolvedValue(textResponse({ id: 88 })) as unknown as typeof fetch;
+    global.fetch = jest.fn<typeof fetch>().mockResolvedValue(
+      textResponse({ id: 88 }, true, 201),
+    ) as unknown as typeof fetch;
     const { useCoachAdapt } = await import('./useCoachAdapt');
     const { result } = renderHook(() => useCoachAdapt({ routineId: 12 }));
 
@@ -98,6 +100,7 @@ describe('useCoachAdapt', () => {
       body: JSON.stringify({ routineId: 12 }),
     });
     expect(result.current.step).toBe('confirmado');
+    expect(result.current.startStatus).toBe('started');
     expect(pushMock).toHaveBeenCalledWith('/dashboard/session/88');
   });
 
@@ -105,7 +108,7 @@ describe('useCoachAdapt', () => {
     const fetchMock = jest
       .fn<typeof fetch>()
       .mockResolvedValueOnce(textResponse(preview))
-      .mockResolvedValueOnce(textResponse({ id: 91 }));
+      .mockResolvedValueOnce(textResponse({ id: 91 }, true, 201));
     global.fetch = fetchMock as unknown as typeof fetch;
     const { useCoachAdapt } = await import('./useCoachAdapt');
     const { result } = renderHook(() => useCoachAdapt({ routineId: 12 }));
@@ -132,7 +135,7 @@ describe('useCoachAdapt', () => {
     const fetchMock = jest
       .fn<typeof fetch>()
       .mockResolvedValueOnce(textResponse(preview))
-      .mockResolvedValueOnce(textResponse({ id: 92 }));
+      .mockResolvedValueOnce(textResponse({ id: 92 }, true, 201));
     global.fetch = fetchMock as unknown as typeof fetch;
     const { useCoachAdapt } = await import('./useCoachAdapt');
     const { result } = renderHook(() => useCoachAdapt({ routineId: 12 }));
@@ -169,21 +172,60 @@ describe('useCoachAdapt', () => {
     expect(result.current.error).toBeNull();
   });
 
-  it('continues an active free workout on start conflict using the free-workout route', async () => {
+  it('keeps the preview and reports a start conflict without navigating to another workout', async () => {
     const fetchMock = jest
       .fn<typeof fetch>()
-      .mockResolvedValueOnce(textResponse({ code: 'CONFLICT', message: 'Ya tienes un entrenamiento en curso' }, false, 409))
+      .mockResolvedValueOnce(textResponse(preview))
+      .mockResolvedValueOnce(
+        textResponse(
+          { code: 'CONFLICT', message: 'Ya tenés un entrenamiento en curso.' },
+          false,
+          409,
+        ),
+      )
       .mockResolvedValueOnce(textResponse({ id: 44, routineId: null }));
     global.fetch = fetchMock as unknown as typeof fetch;
     const { useCoachAdapt } = await import('./useCoachAdapt');
     const { result } = renderHook(() => useCoachAdapt({ routineId: 12 }));
 
     await act(async () => {
+      await result.current.previewWithContext('Estoy cansado');
       await result.current.startWorkout();
     });
 
-    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/workouts/active');
-    expect(pushMock).toHaveBeenCalledWith('/dashboard/workout/44');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(result.current.step).toBe('comparacion');
+    expect(result.current.result).toEqual(preview);
+    expect(result.current.error).toBe('Ya tenés un entrenamiento en curso.');
+    expect(result.current.startStatus).toBe('conflict');
+    expect(pushMock).not.toHaveBeenCalled();
+  });
+
+  it('shows the server start failure and keeps the preview for retry', async () => {
+    const fetchMock = jest
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(textResponse(preview))
+      .mockResolvedValueOnce(
+        textResponse(
+          { code: 'SERVICE_UNAVAILABLE', message: 'No se pudo crear la sesión.' },
+          false,
+          503,
+        ),
+      );
+    global.fetch = fetchMock as unknown as typeof fetch;
+    const { useCoachAdapt } = await import('./useCoachAdapt');
+    const { result } = renderHook(() => useCoachAdapt({ routineId: 12 }));
+
+    await act(async () => {
+      await result.current.previewWithContext('Estoy cansado');
+      await result.current.startWorkout();
+    });
+
+    expect(result.current.step).toBe('comparacion');
+    expect(result.current.result).toEqual(preview);
+    expect(result.current.error).toBe('No se pudo crear la sesión.');
+    expect(result.current.startStatus).toBe('error');
+    expect(pushMock).not.toHaveBeenCalled();
   });
 
   it('guards against double start submit while a request is in flight', async () => {
@@ -201,7 +243,7 @@ describe('useCoachAdapt', () => {
 
     await act(async () => {
       await result.current.startWorkout();
-      resolveStart(textResponse({ id: 99 }));
+      resolveStart(textResponse({ id: 99 }, true, 201));
     });
 
     await waitFor(() => expect(pushMock).toHaveBeenCalledWith('/dashboard/session/99'));
