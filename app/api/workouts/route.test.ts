@@ -38,11 +38,11 @@ let POST: typeof import('./route')['POST'];
 const workout = { id: 55, userId: 7, routineId: 12 } as unknown as Workout;
 
 const result: CoachAdaptationResult = {
-  original: { exerciseCount: 3, setCount: 9, estMinutes: 45 },
-  adapted: { exerciseCount: 2, setCount: 6, estMinutes: 30 },
+  original: { exerciseCount: 2, setCount: 7, estMinutes: 45 },
+  adapted: { exerciseCount: 1, setCount: 3, estMinutes: 30 },
   exerciseDeltas: [
     { exerciseId: 10, name: 'Sentadilla', action: 'removed', fromSets: 3, toSets: 0 },
-    { exerciseId: 11, name: 'Press', action: 'kept', fromSets: 3, toSets: 3 },
+    { exerciseId: 11, name: 'Press', action: 'reduced', fromSets: 4, toSets: 3 },
   ],
   reason: 'Menos tiempo disponible hoy',
   source: 'deterministic',
@@ -82,6 +82,32 @@ describe('POST /api/workouts', () => {
     mockStartAdaptedWorkout.mockResolvedValue({ workout, recommendation: null });
 
     const response = await POST(
+      request({
+        routineId: 12,
+        adaptation: {
+          result,
+          freeText: 'Tengo 30 minutos',
+          dailyCheckInId: 17,
+          checkInContext: { mood: 4, energy: 'low' },
+        },
+      }),
+    );
+
+    expect(response.status).toBe(201);
+    expect(mockStartAdaptedWorkout).toHaveBeenCalledWith({
+      userId: 7,
+      routineId: 12,
+      result,
+      contextSnapshot: { mood: 4, energy: 'low', freeText: 'Tengo 30 minutos' },
+      dailyCheckInId: 17,
+    });
+    expect(mockCreateWorkout).not.toHaveBeenCalled();
+  });
+
+  it('keeps legacy adaptation callers without check-in context compatible', async () => {
+    mockStartAdaptedWorkout.mockResolvedValue({ workout, recommendation: null });
+
+    const response = await POST(
       request({ routineId: 12, adaptation: { result, freeText: 'Tengo 30 minutos' } }),
     );
 
@@ -92,7 +118,34 @@ describe('POST /api/workouts', () => {
       result,
       contextSnapshot: { freeText: 'Tengo 30 minutos' },
     });
-    expect(mockCreateWorkout).not.toHaveBeenCalled();
+  });
+
+  it('rejects an invalid check-in context', async () => {
+    const response = await POST(
+      request({
+        routineId: 12,
+        adaptation: {
+          result,
+          dailyCheckInId: 17,
+          checkInContext: { mood: 6, energy: 'low' },
+        },
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(mockStartAdaptedWorkout).not.toHaveBeenCalled();
+  });
+
+  it('rejects a check-in context without its persisted check-in id', async () => {
+    const response = await POST(
+      request({
+        routineId: 12,
+        adaptation: { result, checkInContext: { mood: 4, energy: 'low' } },
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(mockStartAdaptedWorkout).not.toHaveBeenCalled();
   });
 
   it('rejects an adaptation without a routineId', async () => {

@@ -11,6 +11,7 @@ import { parseWorkoutQueueState } from '@/lib/session/parse-action';
 import { completedExerciseIdsForRoutine } from '@/lib/session/progress';
 import {
   applyComplete,
+  applyTargetSetsOverrides,
   emptyWorkoutQueue,
   queueItemsFromRoutine,
   reconcileWorkoutQueue,
@@ -76,7 +77,14 @@ export function useGuidedSession(workoutId: string) {
       throw new Error('routine');
     }
     const routineData = (await routineRes.json()) as RoutineSummary;
-    setRoutine(routineData);
+    const parsedQueue = parseWorkoutQueueState(workoutData.queue);
+    setRoutine({
+      ...routineData,
+      exercises: applyTargetSetsOverrides(
+        routineData.exercises,
+        parsedQueue?.targetSetsOverrides,
+      ),
+    });
     return workoutData;
   }, [workoutId]);
 

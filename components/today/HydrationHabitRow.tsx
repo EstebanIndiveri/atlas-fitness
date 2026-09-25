@@ -1,11 +1,11 @@
 import type { JSX } from 'react';
 
 import { MetricValue } from '@/components/ui/MetricValue';
+import type { HabitPreview } from '@/components/habits/habit-catalog';
 import { formatHydrationLiters } from '@/lib/format/hydration';
 import { cn } from '@/lib/ui/cn';
 import { isQuantitativeHabitKey } from '@/types/habit';
 import { metric } from '@/types/metric';
-import type { HabitPreview } from '@/components/today/HabitPreviewRow';
 import type { QuantitativeHabitKey } from '@/types/habit';
 
 const COPY = {

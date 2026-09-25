@@ -1,6 +1,6 @@
-# Handoff — Atlas Fitness · Coach Context v0.7.0 post-release (Septiembre 2026)
+# Handoff — Atlas Fitness · v0.7.1 release candidate (Septiembre 2026)
 
-> **Documento de checkpoint operativo.** Es la fuente de verdad para que un agente o persona entienda el estado actual del proyecto, qué está hecho/released, qué quedó diferido en backlog y cómo continuar. Última actualización: 2026-09-25. v0.7.0 se publicó mediante el PR #126 y el tag `v0.7.0` apunta al commit `dae2bc949538f9cb9fa02faf8db0712d04b9d9f9`. Al cierre del release, PR #127 fast-forwarded `develop` a ese SHA, sincronizándola con `main` en ese momento. El deployment de producción en [`atlas-fitness-655yg94r0-eindi-acme.vercel.app`](https://atlas-fitness-655yg94r0-eindi-acme.vercel.app) terminó correctamente: la raíz respondió HTTP 200 y el workflow de migración de producción pasó.
+> **Documento de checkpoint operativo.** Es la fuente de verdad para que un agente o persona entienda el estado actual del proyecto, qué está hecho/released, qué quedó diferido en backlog y cómo continuar. Última actualización: 2026-09-25. v0.7.0 se publicó mediante el PR #126 y el tag `v0.7.0` apunta al commit `dae2bc949538f9cb9fa02faf8db0712d04b9d9f9`. El candidato v0.7.1 parte del merge QA #136 en `develop` (`6996dd8463d2c4b2cf08c40f900639c9ea504eca`); su CI post-merge (run 36201073118) pasó. `main` es la base prevista para la release PR y actualmente apunta a `fb232dc9a3065939b16b6d52bcc1f565c6968d2b`. v0.7.1 todavía no está publicado ni etiquetado. No hubo cambios de migraciones desde el tag v0.7.0.
 
 ## 1. Recap producto / visión
 
@@ -50,7 +50,7 @@ DoD funcional: el loop principal y Coach Context están incluidos en la release 
 
 **E2E de PR #114 (evidencia histórica):** las carreras de observación de respuesta/acción fueron corregidas y el golden path quedó estabilizado según la evidencia de esa wave. Resultado registrado entonces: 40 E2E aprobados y 1 omitido intencionalmente; los specs críticos de auth/workouts/session/routines-editor pasaron 51/51 en `repeat-each=3`. RoutineEditor cubre `90 → vacío → 30`. PR #124 agrega `e2e/coach-context.spec.ts`; las cifras de PR #114 no representan una corrida de la suite sobre el estado posterior a #124.
 
-## 5. Entregado v0.3.1 → v0.7.0
+## 5. Entregado v0.3.1 → v0.7.0; candidato v0.7.1
 
 - **v0.3.1**: Coach adaptation interpreta freeText (tiempo/fatiga/sin máquinas), motivos trazables, Today completed-state + Adaptar, sesión guiada mobile con set table/notas/CTA fija y fixes de inputs de descanso/sets.
 - **v0.3.2**: `dayReason` honesto y determinístico, Progress fixes (chart desde 1 punto, labels/overflow), CTA “Crear con Coach Atlas” en rutinas/plan.
@@ -59,12 +59,17 @@ DoD funcional: el loop principal y Coach Context están incluidos en la release 
 - **v0.6.0**: convergencia Figma de Hoy home; generación de plan semanal Coach AI (Gemini + fallback determinístico verificable); CHANGELOG + handoff. Fix del contrato `streak-chip` (golden-path E2E).
 - **v0.6.1**: fixes UX/UI de dispositivo real + Figma (`12:1830` player, `8-1413` hero): CTA verde+check, descanso siempre visible, "Añadir serie", contraste de ánimo (raíz `cn()` sin tailwind-merge), overflow de hábitos, hero+progress bar, equipamiento real en Perfil y limpieza de filas backlog.
 - **v0.7.0 (publicado 2026-09-25, release PR #126)**: incluye el trabajo de Coach Context de los PR #118–#124: preferencias `goal/pace/equipment` persistidas por usuario; Finish de onboarding sincroniza y Skip no; importación legacy con preview, confirmación y protección condicional de filas existentes; edición explícita en Perfil sin cambiar el plan activo; precarga editable del brief guiado; generación semanal autenticada con atribución Gemini/fallback; guardado explícito e idempotente. Ver límites en §6–§7.
+- **Candidato v0.7.1 (PR #130–#137 integrados en `develop`)**: pantalla dedicada de Hábitos; hub del plan semanal activo y mejora con comparación/confirmación explícita; Mi Atlas basado en preferencias guardadas y actividad real; inicio de entrenamientos adaptados desde Hoy y persistencia del check-in, ejercicios omitidos y objetivos reducidos al reanudar; corrección de overflow móvil de los controles de ánimo. Todavía no publicado.
 
 Ver [`../../CHANGELOG.md`](../../CHANGELOG.md) para detalle agrupado Added/Changed/Fixed.
 
 ## 6. Estado del release y snapshot de base
 
 **Release v0.7.0 (2026-09-25):** el PR #126 se fusionó en `main`; el tag `v0.7.0` apunta a `dae2bc949538f9cb9fa02faf8db0712d04b9d9f9`. Como parte del back-merge, PR #127 fast-forwarded `develop` a ese SHA; al completar esos pasos, `main` y `develop` quedaron sincronizadas en el commit del release. El deployment de producción en [`https://atlas-fitness-655yg94r0-eindi-acme.vercel.app`](https://atlas-fitness-655yg94r0-eindi-acme.vercel.app) sobre ese commit tuvo éxito; la raíz respondió HTTP 200 y el workflow de migración de producción pasó.
+
+**Candidato v0.7.1:** el SHA de entrada de `develop` y base de esta preparación es `6996dd8463d2c4b2cf08c40f900639c9ea504eca`; el CI post-merge run 36201073118 pasó Playwright, ESLint, typecheck, Jest y build. La base prevista de la PR de release es `main` (`fb232dc9a3065939b16b6d52bcc1f565c6968d2b`). No hay cambios de migraciones desde `v0.7.0` y esta preparación no requiere una migración nueva. El candidato no está publicado y aún no tiene tag.
+
+**Validación local de la preparación:** con Node 22.22.1, Jest pasó 221 suites / 1.320 tests, typecheck y build pasaron; lint terminó con 0 errores y 1 warning preexistente en `lib/api/habits.test.ts:48`. El build conserva el warning preexistente `MODULE_TYPELESS_PACKAGE_JSON` para `tailwind.config.ts`.
 
 **Snapshot histórico previo al release:** el `HEAD` de trabajo y `origin/develop` estaban en `6552667a37329799bb1d644534072c4f58f50fe0`, con PR #118–#124 integrados. Ese SHA documenta la base anterior al release, no el estado actual de `main` o `develop`; en ese snapshot v0.6.2 era la última versión publicada y Coach Context aún no estaba publicado.
 
@@ -103,7 +108,6 @@ Ver [`../../CHANGELOG.md`](../../CHANGELOG.md) para detalle agrupado Added/Chang
 ### Deferred / follow-up (Perfil)
 
 - **Notificaciones y recordatorios**: siguen diferidos; no hay pantalla ni acción real implementada.
-- **Pantalla de Hábitos de bienestar**: la fila enlaza a Hoy (donde viven los hábitos); si PO prioriza, crear una vista dedicada.
 
 Coach Context no aprende de las preferencias ni modifica el plan activo al editarlas. Los campos son entradas explícitas del usuario y, en el plan guiado, solo inicializan controles editables; generación, revisión y guardado requieren acciones separadas del usuario.
 

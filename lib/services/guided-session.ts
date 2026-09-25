@@ -5,6 +5,7 @@ import { db } from '@/lib/db/client';
 import { exercises, workoutSets, workouts } from '@/lib/db/schema';
 import { compareMaxWeight } from '@/lib/session/compare-sets';
 import { completedExerciseIdsForRoutine } from '@/lib/session/progress';
+import { applyTargetSetsOverrides } from '@/lib/session/queue';
 import { resolveNextExerciseSuggestion } from '@/lib/session/resolve-next';
 import { getRoutineById } from '@/lib/services/routines';
 import { getStreakForUser } from '@/lib/services/streaks';
@@ -71,13 +72,20 @@ export async function suggestNextExerciseForWorkout(
   }
 
   const routine = await getRoutineById(workout.routineId, userId);
+  const adaptedRoutine = {
+    ...routine,
+    exercises: applyTargetSetsOverrides(
+      routine.exercises,
+      workout.queue.targetSetsOverrides,
+    ),
+  };
   const remaining = workout.queue.pendingExerciseIds.flatMap((exerciseId) => {
     const item = routine.exercises.find((exercise) => exercise.exerciseId === exerciseId);
     return item ? [{ id: exerciseId, name: item.exerciseName }] : [];
   });
 
-  const completedIds = completedExerciseIdsForRoutine(routine, workout.sets);
-  const lastCompleted = [...routine.exercises]
+  const completedIds = completedExerciseIdsForRoutine(adaptedRoutine, workout.sets);
+  const lastCompleted = [...adaptedRoutine.exercises]
     .reverse()
     .find((item) => completedIds.includes(item.exerciseId));
 

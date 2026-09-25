@@ -16,6 +16,11 @@ export interface AuthUser {
   telegramUserId: string | null;
 }
 
+export interface AuthProfile extends AuthUser {
+  createdAt: string;
+  activeTrainingPlanId: number | null;
+}
+
 export interface SessionData {
   userId: number;
   sessionId: string;

@@ -66,6 +66,7 @@ export function ProfileTelegramCard({
             type="button"
             variant="secondary"
             size="sm"
+            className="min-h-11"
             onClick={onRequestCode}
             disabled={loading}
             data-testid="generate-link-code"

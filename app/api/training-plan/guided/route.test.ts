@@ -133,4 +133,34 @@ describe('POST /api/training-plan/guided', () => {
     expect(response.status).toBe(409);
     await expect(response.json()).resolves.toMatchObject({ code: 'CONFLICT' });
   });
+
+  it('does not expose plan replacement through the generic guided-save endpoint', async () => {
+    mockRequireAuth.mockResolvedValue(session(42));
+    mockCreateGuidedTrainingPlan.mockResolvedValue(resultFor(42));
+    const response = await post(
+      jsonPost({
+        mutationId: 'a5e2cd80-5783-4aad-a2fd-cda735384a69',
+        name: 'Semana mejorada',
+        goal: 'Fuerza',
+        replacePlanId: 11,
+        replacePlanUpdatedAt: '2026-09-25T12:00:00.000Z',
+        replacePlanStateHash: 'a'.repeat(64),
+        days: [
+          {
+            dayOfWeek: 1,
+            note: 'Empuje',
+            routine: {
+              name: 'Semana mejorada · Empuje',
+              kind: 'gym',
+              restSeconds: 90,
+              exercises: [{ exerciseId: 7, sortOrder: 0, targetSets: 3, targetReps: 8 }],
+            },
+          },
+        ],
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(mockCreateGuidedTrainingPlan).not.toHaveBeenCalled();
+  });
 });

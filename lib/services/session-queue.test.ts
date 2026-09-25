@@ -2,6 +2,7 @@
  * @jest-environment node
  */
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import {
   botMessages,
@@ -148,6 +149,49 @@ describe('applyWorkoutQueueAction', () => {
     const reloaded = await getWorkoutById(workout.id, userId);
     expect(reloaded.queue.pendingExerciseIds).toEqual([squatId, rowId]);
     expect(reloaded.queue.skippedExerciseIds).toEqual([benchId]);
+  });
+
+  it('preserves adapted set targets across queue actions and GET reloads', async () => {
+    const workout = await createWorkout(userId, routineId, {
+      targetSetsOverrides: { [benchId]: 1 },
+    });
+
+    await applyWorkoutQueueAction({
+      workoutId: workout.id,
+      userId,
+      action: 'skip',
+      exerciseId: squatId,
+      clientMutationId: 'mut-skip-with-adaptation',
+    });
+
+    const reloaded = await getWorkoutById(workout.id, userId);
+    expect(reloaded.queue.targetSetsOverrides).toEqual({ [benchId]: 1 });
+    expect(reloaded.queue.skippedExerciseIds).toEqual([squatId]);
+  });
+
+  it('fails GET on corrupted adaptation state without replacing the stored skip queue', async () => {
+    const workout = await createWorkout(userId, routineId, {
+      skippedExerciseIds: [benchId],
+      targetSetsOverrides: { [squatId]: 1 },
+    });
+    const corruptedQueue = JSON.stringify({
+      pendingExerciseIds: [squatId, rowId],
+      skippedExerciseIds: [benchId],
+      heldExerciseIds: [],
+      targetSetsOverrides: { [squatId]: 0 },
+    });
+    await db
+      .update(workouts)
+      .set({ queueJson: corruptedQueue })
+      .where(eq(workouts.id, workout.id));
+
+    await expect(getWorkoutById(workout.id, userId)).rejects.toThrow(
+      'Invalid target set overrides in persisted workout queue',
+    );
+    const persisted = await db.query.workouts.findFirst({
+      where: eq(workouts.id, workout.id),
+    });
+    expect(persisted?.queueJson).toBe(corruptedQueue);
   });
 
   it('hold moves the exercise to the end of pending and keeps it held', async () => {

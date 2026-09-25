@@ -1,19 +1,27 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
-import { Button } from '@/components/ui/Button';
+import { useState } from 'react';
+import type { FormEvent } from 'react';
+
 import { CoachResult } from '@/components/today/CoachAtlasCardResult';
 import { Card } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
 import { ErrorState, LoadingState } from '@/components/ui/states';
-import * as coachPreview from '@/lib/api/coach-preview';
-import * as coachRecommendations from '@/lib/api/coach-recommendations';
+import { useCoachAdapt } from '@/hooks/useCoachAdapt';
+import type { CoachCheckInContext } from '@/hooks/useCoachAdapt';
 import { cn } from '@/lib/ui/cn';
 import type { CoachAdaptationResult } from '@/types/coach';
-import type { CoachDecisionAction, CoachDecisionStatus } from '@/components/today/CoachAtlasCardResult';
+
+export type TodayAvailability = 'loading' | 'error' | 'empty' | 'ready';
+export type CheckInAvailability = 'loading' | 'saving' | 'error' | 'missing' | 'ready';
 
 type CoachAtlasCardProps = {
   routineId: number | null;
-  workoutId?: number | null;
+  todayAvailability: TodayAvailability;
+  todayError: string | null;
+  checkInAvailability: CheckInAvailability;
+  checkInError: string | null;
+  checkInContext: CoachCheckInContext | null;
   onResult?: (result: CoachAdaptationResult) => void;
 };
 
@@ -24,18 +32,22 @@ type Preset = {
 };
 
 const COPY = {
-  eyebrow: 'Basado en datos biométricos',
-  insight: 'Usamos tu check-in, tu rutina y tus registros reales cuando pedís una adaptación. Si falta contexto, Atlas lo muestra como estado vacío.',
+  eyebrow: 'Rutina + datos que registraste',
+  insight: 'La propuesta combina la rutina de hoy, tu check-in de ánimo y energía, y el ajuste que elegís o escribís.',
   quickAdjustments: 'Ajustes rápidos para tu sesión:',
+  previewOnly: 'Vista previa: tu rutina guardada no cambia hasta iniciar la sesión.',
   noRoutine: 'Necesitás un entrenamiento de hoy para adaptar.',
+  todayLoading: 'Cargando el entrenamiento de hoy…',
+  checkInRequired: 'Registrá tu ánimo y energía para preparar una vista previa.',
+  checkInLoading: 'Cargando tu check-in de hoy…',
+  checkInSaving: 'Guardando tu check-in…',
   inputLabel: 'Preguntarle algo a Atlas',
   inputPlaceholder: 'Preguntarle algo a Atlas',
   submitAria: 'Enviar pregunta a Atlas',
   loading: 'Atlas está ajustando la rutina…',
-  saving: 'Guardando decisión de Atlas…',
-  provenance: 'Sugerencia de Atlas',
-  defaultError: 'No se pudo cargar la adaptación de Coach Atlas.',
-  defaultDecisionError: 'No se pudo guardar la recomendación de Coach Atlas.',
+  starting: 'Iniciando entrenamiento…',
+  opening: 'Abriendo sesión…',
+  start: 'Empezar entrenamiento adaptado',
 } as const;
 
 const PRESETS: readonly Preset[] = [
@@ -45,71 +57,46 @@ const PRESETS: readonly Preset[] = [
 ] as const;
 
 /**
- * Renders Coach Atlas quick-adaptation controls for today's workout routine.
+ * Renders a data-honest Coach Atlas preview and starts the adapted workout only
+ * after the user confirms the session start.
  *
- * @param props.routineId Today's workout routine id, or null when there is nothing honest to adapt.
- * @param props.workoutId Optional real workout id required to persist and decide recommendations.
- * @param props.onResult Optional callback invoked with the preview returned by the typed Coach client.
- * @returns A mobile-first Coach Atlas adaptation card.
+ * @param props Today's routine and check-in availability plus an optional preview callback.
+ * @returns The Today Coach Atlas card.
  * @example
- * <CoachAtlasCard routineId={today.kind === 'workout' ? today.routineId : null} workoutId={today.workoutId} />
+ * <CoachAtlasCard routineId={12} todayAvailability="ready" todayError={null}
+ *   checkInAvailability="ready" checkInError={null} />
  */
-export function CoachAtlasCard({ routineId, workoutId = null, onResult }: CoachAtlasCardProps) {
+export function CoachAtlasCard({
+  routineId,
+  todayAvailability,
+  todayError,
+  checkInAvailability,
+  checkInError,
+  checkInContext,
+  onResult,
+}: CoachAtlasCardProps) {
+  const todayReady = todayAvailability === 'ready' && routineId !== null;
+  const checkInReady = checkInAvailability === 'ready' && checkInContext !== null;
+  const adapt = useCoachAdapt({ routineId, checkInContext: todayReady && checkInReady ? checkInContext : null });
   const [loadingKey, setLoadingKey] = useState<string | null>(null);
-  const [decisionLoading, setDecisionLoading] = useState<CoachDecisionAction | null>(null);
-  const [decisionStatus, setDecisionStatus] = useState<CoachDecisionStatus | null>(null);
-  const [result, setResult] = useState<CoachAdaptationResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [freeText, setFreeText] = useState('');
-  const canAdapt = routineId !== null;
-  const canDecide = typeof workoutId === 'number' && Number.isInteger(workoutId) && workoutId > 0;
-  const loading = loadingKey !== null;
-  const deciding = decisionLoading !== null;
-  const busy = loading || deciding;
+  const started = adapt.startStatus === 'started';
+  const busy = adapt.previewing || adapt.starting || started;
+  const canAdapt = todayReady && checkInReady;
 
   const requestPreview = async (text: string, key: string): Promise<void> => {
-    if (!canAdapt) {
+    if (!canAdapt || busy) {
       return;
     }
 
     setLoadingKey(key);
-    setError(null);
-    setResult(null);
-    setDecisionStatus(null);
     try {
-      const preview = await coachPreview.previewCoachAdaptation({ routineId, freeText: text });
-      setResult(preview);
-      onResult?.(preview);
-    } catch (caught) {
-      setError(mapPreviewError(caught));
+      const preview = await adapt.previewWithContext(text);
+      if (preview) {
+        onResult?.(preview);
+      }
     } finally {
       setLoadingKey(null);
-    }
-  };
-
-  const decideRecommendation = async (decision: CoachDecisionAction): Promise<void> => {
-    if (!result || !canDecide || deciding) {
-      return;
-    }
-
-    setDecisionLoading(decision);
-    setDecisionStatus(null);
-    setError(null);
-    try {
-      const recommendation = await coachRecommendations.recordCoachRecommendation({
-        workoutId,
-        source: result.source,
-        result,
-      });
-      const decided = await coachRecommendations.decideCoachRecommendation({
-        id: recommendation.id,
-        decision,
-      });
-      setDecisionStatus(decided.decision === 'accepted' ? 'applied' : 'discarded');
-    } catch (caught) {
-      setError(mapRecommendationError(caught));
-    } finally {
-      setDecisionLoading(null);
     }
   };
 
@@ -135,7 +122,6 @@ export function CoachAtlasCard({ routineId, workoutId = null, onResult }: CoachA
       <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="Adaptaciones rápidas de Atlas">
         {PRESETS.map((preset) => {
           const presetLoading = loadingKey === preset.label;
-          const disabled = !canAdapt || busy;
           return (
             <Button
               key={preset.label}
@@ -145,7 +131,7 @@ export function CoachAtlasCard({ routineId, workoutId = null, onResult }: CoachA
                 'min-h-11 justify-start gap-2 rounded-full px-4 text-left text-xs sm:text-sm',
                 presetLoading && 'ring-2 ring-brand',
               )}
-              disabled={disabled}
+              disabled={!canAdapt || busy}
               aria-busy={presetLoading}
               onClick={() => void requestPreview(preset.freeText, preset.label)}
             >
@@ -156,7 +142,31 @@ export function CoachAtlasCard({ routineId, workoutId = null, onResult }: CoachA
         })}
       </div>
 
-      {!canAdapt ? <p className="mt-3 text-xs text-ink-muted">{COPY.noRoutine}</p> : null}
+      {todayAvailability === 'loading' ? <LoadingState label={COPY.todayLoading} compact /> : null}
+      {todayAvailability === 'error' ? (
+        <div className="mt-3"><ErrorState message={todayError ?? 'No se pudo cargar el plan de hoy.'} /></div>
+      ) : null}
+      {todayAvailability === 'empty' ? (
+        <p className="mt-3 text-xs text-ink-muted">{COPY.noRoutine}</p>
+      ) : null}
+      {todayAvailability === 'ready' && routineId === null ? (
+        <p className="mt-3 text-xs text-ink-muted">{COPY.noRoutine}</p>
+      ) : null}
+      {todayReady && checkInAvailability === 'loading' ? (
+        <LoadingState label={COPY.checkInLoading} compact />
+      ) : null}
+      {todayReady && checkInAvailability === 'saving' ? (
+        <LoadingState label={COPY.checkInSaving} compact />
+      ) : null}
+      {todayReady && checkInAvailability === 'error' ? (
+        <div className="mt-3"><ErrorState message={checkInError ?? 'No se pudo cargar el check-in de hoy.'} /></div>
+      ) : null}
+      {todayReady && (
+        checkInAvailability === 'missing' ||
+        (checkInAvailability === 'ready' && checkInContext === null)
+      ) ? (
+        <p className="mt-3 text-xs text-ink-muted">{COPY.checkInRequired}</p>
+      ) : null}
 
       <form onSubmit={submitFreeText} className="mt-4">
         <label className="sr-only" htmlFor="coach-atlas-free-text">
@@ -183,32 +193,25 @@ export function CoachAtlasCard({ routineId, workoutId = null, onResult }: CoachA
         </div>
       </form>
 
-      {loading ? <LoadingState label={COPY.loading} compact /> : null}
-      {deciding ? <LoadingState label={COPY.saving} compact /> : null}
-      {error ? <div className="mt-4"><ErrorState message={error} /></div> : null}
-      {result ? (
-        <CoachResult
-          result={result}
-          canDecide={canDecide}
-          decisionLoading={decisionLoading}
-          decisionStatus={decisionStatus}
-          onDecide={decideRecommendation}
-        />
+      {adapt.previewing ? <LoadingState label={COPY.loading} compact /> : null}
+      {adapt.startStatus === 'pending' ? <LoadingState label={COPY.starting} compact /> : null}
+      {started ? <LoadingState label={COPY.opening} compact /> : null}
+      {adapt.error ? <div className="mt-4"><ErrorState message={adapt.error} /></div> : null}
+      {adapt.result ? (
+        <div className="mt-4 space-y-3">
+          <CoachResult result={adapt.result} />
+          <p className="text-xs leading-5 text-ink-muted">{COPY.previewOnly}</p>
+          <Button
+            size="lg"
+            className="min-h-12 rounded-xl"
+            disabled={busy}
+            aria-busy={adapt.startStatus === 'pending' || started}
+            onClick={() => void adapt.startWorkout(true)}
+          >
+            {adapt.starting ? COPY.starting : started ? COPY.opening : COPY.start}
+          </Button>
+        </div>
       ) : null}
     </Card>
   );
-}
-
-function mapPreviewError(caught: unknown): string {
-  if (caught instanceof coachPreview.CoachPreviewClientError) {
-    return caught.message || COPY.defaultError;
-  }
-  return COPY.defaultError;
-}
-
-function mapRecommendationError(caught: unknown): string {
-  if (caught instanceof coachRecommendations.CoachRecommendationsClientError) {
-    return caught.message || COPY.defaultDecisionError;
-  }
-  return COPY.defaultDecisionError;
 }

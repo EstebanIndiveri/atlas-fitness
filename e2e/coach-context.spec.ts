@@ -231,7 +231,7 @@ test.describe('Coach Context', () => {
     }, ONBOARDING_ANSWERS_KEY);
 
     await page.goto('/dashboard/settings');
-    await expect(page.getByRole('heading', { name: 'Preferencias de Coach' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Mi Atlas' })).toBeVisible();
     await expect(page.getByText('Guardadas en tu perfil')).toBeVisible();
     await expect(page.getByText('Ganar fuerza', { exact: true })).toBeVisible();
     await expect(page.getByText('5 o más días', { exact: true })).toBeVisible();
@@ -452,6 +452,29 @@ test.describe('Coach Context', () => {
         })),
       );
     }
+
+    await page.goto('/dashboard/settings');
+    await expect(page.getByRole('heading', { name: 'Mi Atlas' })).toBeVisible();
+    const activePlanLink = page.getByTestId('training-plan-settings');
+    await expect(activePlanLink).toHaveAttribute(
+      'href',
+      `/dashboard/plan/${savedPlan.plan.id}`,
+    );
+    await activePlanLink.click();
+    await expect(page).toHaveURL(new RegExp(`/dashboard/plan/${savedPlan.plan.id}$`));
+    await expect(page.getByText('Plan activo', { exact: true })).toBeVisible();
+    const weekGrid = page.getByTestId('plan-hub-week-grid');
+    await expect(weekGrid).toBeVisible();
+    await expect(weekGrid.getByRole('listitem')).toHaveCount(7);
+    await expect(weekGrid.getByRole('heading', { level: 3 })).toHaveText([
+      'Lunes',
+      'Martes',
+      'Miércoles',
+      'Jueves',
+      'Viernes',
+      'Sábado',
+      'Domingo',
+    ]);
   });
 
   test('imports legacy browser answers only after preview and explicit confirmation when no row exists', async ({
@@ -482,10 +505,27 @@ test.describe('Coach Context', () => {
     });
 
     await page.goto('/dashboard/settings');
-    await expect(page.getByRole('heading', { name: 'Preferencias de Coach' })).toBeVisible();
+    await page.setViewportSize({ width: 375, height: 812 });
+    await expect(page.getByRole('heading', { name: 'Mi Atlas' })).toBeVisible();
+    const definePreferences = page.getByRole('button', { name: 'Definir preferencias' });
+    await expect(definePreferences).toHaveCSS('min-height', '44px');
+    await definePreferences.click();
+    await expect(page.getByTestId('profile-preferences-save')).toHaveCSS('min-height', '44px');
+    await expect(page.getByTestId('profile-preferences-cancel')).toHaveCSS('min-height', '44px');
+    await page.getByTestId('profile-preferences-cancel').click();
+    await expect(page.getByTestId('profile-review-legacy-import')).toHaveCSS('min-height', '44px');
+    await expect(page.getByTestId('generate-link-code')).toHaveCSS('min-height', '44px');
     await page.getByTestId('profile-review-legacy-import').click();
     await expect(page.getByText('Respuestas anteriores de este navegador')).toBeVisible();
     await expect(page.getByText('Ganar músculo', { exact: true })).toBeVisible();
+    await expect(page.getByTestId('profile-confirm-legacy-import')).toHaveCSS(
+      'min-height',
+      '44px',
+    );
+    await expect(page.getByRole('button', { name: 'Cancelar', exact: true })).toHaveCSS(
+      'min-height',
+      '44px',
+    );
     expect(preferenceWrites).toHaveLength(0);
 
     const [importResponse] = await Promise.all([

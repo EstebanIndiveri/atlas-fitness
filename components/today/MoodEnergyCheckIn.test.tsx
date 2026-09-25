@@ -46,15 +46,16 @@ describe('MoodEnergyCheckIn', () => {
     jest.clearAllMocks();
   });
 
-  it('renders the Figma mood prompt with four honest mood choices and three energy pills', () => {
+  it('renders all five mood values and three energy pills', () => {
     mockCheckin();
 
     render(<MoodEnergyCheckIn />);
 
     expect(screen.getByRole('heading', { name: '¿Cómo te sentís hoy?' })).toBeTruthy();
     expect(screen.getByText('⚡ Sin registrar energía')).toBeTruthy();
-    expect(screen.getAllByRole('radio')).toHaveLength(4);
+    expect(screen.getAllByRole('radio')).toHaveLength(5);
     expect(screen.getByRole('radio', { name: 'Agotado' })).toBeTruthy();
+    expect(screen.getByRole('radio', { name: 'Bajoneado' })).toBeTruthy();
     expect(screen.getByRole('radio', { name: 'Normal' })).toBeTruthy();
     expect(screen.getByRole('radio', { name: 'Con energía' })).toBeTruthy();
     expect(screen.getByRole('radio', { name: 'Excelente' })).toBeTruthy();
@@ -124,15 +125,70 @@ describe('MoodEnergyCheckIn', () => {
     expect(screen.getByText('⚡ Alta energía')).toBeTruthy();
   });
 
+  it('keeps persisted mood 2 selected and in the keyboard tab order', () => {
+    mockCheckin({ checkin: { ...recordedCheckin, mood: 2 } });
 
-  it('moves and saves mood selection with arrow keys inside the radiogroup', () => {
+    render(<MoodEnergyCheckIn />);
+
+    const moodTwo = screen.getByRole('radio', { name: 'Bajoneado' });
+    expect(moodTwo.getAttribute('aria-checked')).toBe('true');
+    expect(moodTwo.getAttribute('tabindex')).toBe('0');
+  });
+
+  it('reports the loaded user check-in to the Today Coach parent', () => {
+    mockCheckin({ checkin: recordedCheckin });
+    const onStateChange = jest.fn();
+
+    render(<MoodEnergyCheckIn onStateChange={onStateChange} />);
+
+    expect(onStateChange).toHaveBeenCalledWith({
+      checkin: recordedCheckin,
+      loading: false,
+      saving: false,
+      error: null,
+    });
+  });
+
+  it('reports a pending check-in save to the Today Coach parent', () => {
+    mockCheckin({ checkin: recordedCheckin, saving: true });
+    const onStateChange = jest.fn();
+
+    render(<MoodEnergyCheckIn onStateChange={onStateChange} />);
+
+    expect(onStateChange).toHaveBeenCalledWith({
+      checkin: recordedCheckin,
+      loading: false,
+      saving: true,
+      error: null,
+    });
+  });
+
+  it('reports a pending save immediately when the user changes mood', () => {
+    const { submit } = mockCheckin({ checkin: recordedCheckin });
+    const onStateChange = jest.fn();
+    render(<MoodEnergyCheckIn onStateChange={onStateChange} />);
+    onStateChange.mockClear();
+
+    fireEvent.click(screen.getByRole('radio', { name: 'Agotado' }));
+
+    expect(onStateChange).toHaveBeenCalledWith({
+      checkin: recordedCheckin,
+      loading: false,
+      saving: true,
+      error: null,
+    });
+    expect(submit).toHaveBeenCalledWith({ mood: 1, energy: 'high' });
+  });
+
+
+  it('moves and saves mood selection with arrow keys through all five values', () => {
     const { submit } = mockCheckin({ checkin: { ...recordedCheckin, mood: 3, energy: 'medium' } });
 
     render(<MoodEnergyCheckIn />);
     fireEvent.keyDown(screen.getByRole('radio', { name: 'Normal' }), { key: 'ArrowRight' });
 
-    expect(submit).toHaveBeenCalledWith({ mood: 1, energy: 'medium' });
-    expect(screen.getByRole('radio', { name: 'Agotado' }).getAttribute('aria-checked')).toBe('true');
+    expect(submit).toHaveBeenCalledWith({ mood: 2, energy: 'medium' });
+    expect(screen.getByRole('radio', { name: 'Bajoneado' }).getAttribute('aria-checked')).toBe('true');
   });
 
   it('does not fabricate a mood when energy is tapped first', () => {

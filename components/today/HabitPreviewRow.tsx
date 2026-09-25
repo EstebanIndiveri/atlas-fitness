@@ -1,14 +1,10 @@
 import type { JSX } from 'react';
 
+import type { HabitPreview } from '@/components/habits/habit-catalog';
 import { cn } from '@/lib/ui/cn';
 import type { HabitKey } from '@/types/habit';
 
-export interface HabitPreview {
-  id: HabitKey;
-  name: string;
-  hint: string;
-  icon: string;
-}
+export type { HabitPreview } from '@/components/habits/habit-catalog';
 
 interface HabitPreviewRowProps {
   habit: HabitPreview;
