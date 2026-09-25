@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 
 import { AppInstallPrompt } from '@/components/pwa/AppInstallPrompt';
+import { ProfileCoachContext } from '@/components/profile/ProfileCoachContext';
 import { ProfileHeaderCard } from '@/components/profile/ProfileHeaderCard';
 import { ProfileTelegramCard } from '@/components/profile/ProfileTelegramCard';
 import { SettingsRow } from '@/components/profile/SettingsRow';
@@ -207,6 +208,8 @@ export default function SettingsPage() {
           href="/dashboard/today"
         />
       </SettingsSection>
+
+      <ProfileCoachContext />
 
       <ProfileTelegramCard
         linked={linked}
