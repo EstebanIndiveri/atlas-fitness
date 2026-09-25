@@ -15,3 +15,8 @@ export interface UserPreferences {
   pace: UserPacePreference | null;
   equipment: UserEquipmentPreference | null;
 }
+
+export interface UserPreferencesResponse {
+  hasSavedPreferences: boolean;
+  preferences: UserPreferences;
+}

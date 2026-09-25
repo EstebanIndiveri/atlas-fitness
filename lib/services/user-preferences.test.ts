@@ -1,7 +1,11 @@
 import { describe, expect, it } from '@jest/globals';
 import { db } from '@/lib/db/client';
 import { users } from '@/lib/db/schema';
-import { getUserPreferences, saveUserPreferences } from './user-preferences';
+import {
+  getUserPreferences,
+  saveUserPreferences,
+  saveUserPreferencesIfMissing,
+} from './user-preferences';
 import { AppError } from '@/types/errors';
 
 let userSequence = 0;
@@ -25,9 +29,12 @@ describe('user preferences service', () => {
     const userId = await createUser();
 
     await expect(getUserPreferences(userId)).resolves.toEqual({
-      goal: null,
-      pace: null,
-      equipment: null,
+      hasSavedPreferences: false,
+      preferences: {
+        goal: null,
+        pace: null,
+        equipment: null,
+      },
     });
   });
 
@@ -41,9 +48,12 @@ describe('user preferences service', () => {
         equipment: 'bands',
       }),
     ).resolves.toEqual({
-      goal: 'strength',
-      pace: 'days-5',
-      equipment: 'bands',
+      hasSavedPreferences: true,
+      preferences: {
+        goal: 'strength',
+        pace: 'days-5',
+        equipment: 'bands',
+      },
     });
   });
 
@@ -57,9 +67,12 @@ describe('user preferences service', () => {
         equipment: null,
       }),
     ).resolves.toEqual({
-      goal: null,
-      pace: null,
-      equipment: null,
+      hasSavedPreferences: true,
+      preferences: {
+        goal: null,
+        pace: null,
+        equipment: null,
+      },
     });
   });
 
@@ -86,14 +99,60 @@ describe('user preferences service', () => {
     });
 
     await expect(getUserPreferences(otherUserId)).resolves.toEqual({
+      hasSavedPreferences: false,
+      preferences: {
+        goal: null,
+        pace: null,
+        equipment: null,
+      },
+    });
+    await expect(getUserPreferences(ownerId)).resolves.toEqual({
+      hasSavedPreferences: true,
+      preferences: {
+        goal: 'muscle',
+        pace: 'days-4',
+        equipment: 'gym',
+      },
+    });
+  });
+
+  it('creates preferences if absent and never overwrites an existing explicit null row', async () => {
+    const userId = await createUser();
+
+    await expect(
+      saveUserPreferencesIfMissing(userId, {
+        goal: 'strength',
+        pace: 'days-3',
+        equipment: 'gym',
+      }),
+    ).resolves.toEqual({
+      hasSavedPreferences: true,
+      preferences: {
+        goal: 'strength',
+        pace: 'days-3',
+        equipment: 'gym',
+      },
+    });
+
+    await saveUserPreferences(userId, {
       goal: null,
       pace: null,
       equipment: null,
     });
-    await expect(getUserPreferences(ownerId)).resolves.toEqual({
-      goal: 'muscle',
-      pace: 'days-4',
-      equipment: 'gym',
+    await expect(
+      saveUserPreferencesIfMissing(userId, {
+        goal: 'muscle',
+        pace: 'days-4',
+        equipment: 'bands',
+      }),
+    ).rejects.toMatchObject({ code: 'CONFLICT' });
+    await expect(getUserPreferences(userId)).resolves.toEqual({
+      hasSavedPreferences: true,
+      preferences: {
+        goal: null,
+        pace: null,
+        equipment: null,
+      },
     });
   });
 
