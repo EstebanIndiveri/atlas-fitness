@@ -38,6 +38,23 @@ export const ONBOARDING_COPY = {
     start: 'Empezar',
     back: 'Atrás',
   },
+  sync: {
+    finishFailure:
+      'No pudimos guardar tus preferencias en tu cuenta. Tus respuestas siguen guardadas en este dispositivo. Revisá tu conexión e intentá sincronizar de nuevo.',
+    retry: 'Reintentar sincronización',
+    importAction: 'Revisar respuestas anteriores',
+    importPrompt: 'Si ya habías respondido el onboarding en este navegador, podés revisar esas respuestas antes de importarlas.',
+    importTitle: 'Respuestas anteriores de este navegador',
+    importConfirm: 'Confirmar importación',
+    importCancel: 'Cancelar',
+    importMissing: 'No encontramos respuestas anteriores guardadas en este navegador.',
+    importFailure:
+      'No pudimos comprobar o importar las respuestas. La copia de este navegador se conserva. Revisá tu conexión e intentá de nuevo.',
+    importUnauthorized: 'Iniciá sesión para importar estas respuestas a tu cuenta.',
+    importAlreadySaved:
+      'Ya hay preferencias guardadas en tu cuenta. No se reemplazaron con estas respuestas.',
+    importSuccess: 'Las respuestas anteriores ya están guardadas en tu cuenta.',
+  },
   steps: [
     {
       id: 'goal',

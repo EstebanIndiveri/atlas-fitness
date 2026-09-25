@@ -62,9 +62,12 @@ describe('/api/profile/preferences', () => {
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({
-      goal: null,
-      pace: null,
-      equipment: null,
+      hasSavedPreferences: false,
+      preferences: {
+        goal: null,
+        pace: null,
+        equipment: null,
+      },
     });
     const rows = await db
       .select()
@@ -84,9 +87,15 @@ describe('/api/profile/preferences', () => {
     const putResponse = await PUT(request('PUT', account.cookie, preferences));
 
     expect(putResponse.status).toBe(200);
-    await expect(putResponse.json()).resolves.toEqual(preferences);
+    await expect(putResponse.json()).resolves.toEqual({
+      hasSavedPreferences: true,
+      preferences,
+    });
     const getResponse = await GET(request('GET', account.cookie));
-    await expect(getResponse.json()).resolves.toEqual(preferences);
+    await expect(getResponse.json()).resolves.toEqual({
+      hasSavedPreferences: true,
+      preferences,
+    });
   });
 
   it('accepts explicit null values to clear saved preferences', async () => {
@@ -102,9 +111,90 @@ describe('/api/profile/preferences', () => {
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({
-      goal: null,
-      pace: null,
-      equipment: null,
+      hasSavedPreferences: true,
+      preferences: {
+        goal: null,
+        pace: null,
+        equipment: null,
+      },
+    });
+
+    const getResponse = await GET(request('GET', account.cookie));
+    await expect(getResponse.json()).resolves.toEqual({
+      hasSavedPreferences: true,
+      preferences: {
+        goal: null,
+        pace: null,
+        equipment: null,
+      },
+    });
+  });
+
+  it('does not overwrite a saved row during a conditional legacy import', async () => {
+    const account = await createAccount();
+    await PUT(
+      request('PUT', account.cookie, {
+        goal: null,
+        pace: null,
+        equipment: null,
+      }),
+    );
+
+    const response = await PUT(
+      new NextRequest('http://localhost:3000/api/profile/preferences', {
+        method: 'PUT',
+        headers: {
+          cookie: account.cookie,
+          'content-type': 'application/json',
+          'if-none-match': '*',
+        },
+        body: JSON.stringify({
+          goal: 'strength',
+          pace: 'days-3',
+          equipment: 'gym',
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toMatchObject({ code: 'CONFLICT' });
+    const getResponse = await GET(request('GET', account.cookie));
+    await expect(getResponse.json()).resolves.toEqual({
+      hasSavedPreferences: true,
+      preferences: {
+        goal: null,
+        pace: null,
+        equipment: null,
+      },
+    });
+  });
+
+  it('conditionally creates preferences only when no row exists', async () => {
+    const account = await createAccount();
+    const response = await PUT(
+      new NextRequest('http://localhost:3000/api/profile/preferences', {
+        method: 'PUT',
+        headers: {
+          cookie: account.cookie,
+          'content-type': 'application/json',
+          'if-none-match': '*',
+        },
+        body: JSON.stringify({
+          goal: 'strength',
+          pace: 'days-3',
+          equipment: 'gym',
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      hasSavedPreferences: true,
+      preferences: {
+        goal: 'strength',
+        pace: 'days-3',
+        equipment: 'gym',
+      },
     });
   });
 
@@ -178,9 +268,12 @@ describe('/api/profile/preferences', () => {
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({
-      goal: null,
-      pace: null,
-      equipment: null,
+      hasSavedPreferences: false,
+      preferences: {
+        goal: null,
+        pace: null,
+        equipment: null,
+      },
     });
   });
 

@@ -9,6 +9,7 @@ import {
   saveOnboardingAnswers,
   type OnboardingAnswers,
 } from '@/lib/onboarding/state';
+import { syncOnboardingPreferences } from '@/lib/onboarding/preferences-sync';
 
 const HOME_ROUTE = '/dashboard/today';
 
@@ -21,8 +22,9 @@ export default function OnboardingPage() {
   const router = useRouter();
 
   const finish = useCallback(
-    (answers: OnboardingAnswers): void => {
+    async (answers: OnboardingAnswers): Promise<void> => {
       saveOnboardingAnswers(answers);
+      await syncOnboardingPreferences(answers);
       markOnboardingDone();
       router.replace(HOME_ROUTE);
     },
