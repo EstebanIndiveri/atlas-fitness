@@ -58,6 +58,31 @@ describe('GuidedPlanPage', () => {
     const fetchMock = jest
       .fn<typeof fetch>()
       .mockResolvedValueOnce(jsonResponse(catalog))
+      .mockResolvedValueOnce(jsonResponse({
+        source: 'fallback',
+        name: 'Coach Atlas · fuerza general',
+        goal: 'fuerza general',
+        days: [
+          {
+            dayOfWeek: 1,
+            title: 'Día 1',
+            focus: 'Empuje',
+            exercises: [{ exerciseId: 1, exerciseName: 'Press banca', muscleGroup: 'Pecho', sortOrder: 0, targetSets: 3, targetReps: 8 }],
+          },
+          {
+            dayOfWeek: 3,
+            title: 'Día 2',
+            focus: 'Tirón',
+            exercises: [{ exerciseId: 2, exerciseName: 'Remo', muscleGroup: 'Espalda', sortOrder: 0, targetSets: 3, targetReps: 8 }],
+          },
+          {
+            dayOfWeek: 5,
+            title: 'Día 3',
+            focus: 'Piernas',
+            exercises: [{ exerciseId: 3, exerciseName: 'Sentadilla', muscleGroup: 'Piernas', sortOrder: 0, targetSets: 3, targetReps: 8 }],
+          },
+        ],
+      }))
       .mockResolvedValueOnce(jsonResponse({ id: 10 }))
       .mockResolvedValueOnce(jsonResponse({ id: 20 }))
       .mockResolvedValueOnce(jsonResponse({ id: 30 }))

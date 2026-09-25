@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from 'react';
 
-import { generateWeeklyPlanDraft } from '@/lib/ai/weekly-plan-draft';
+import { isWeeklyPlanDraft } from '@/lib/api/weekly-plan-draft';
 import type { WeeklyPlanDraft } from '@/lib/ai/weekly-plan-draft';
 import type { RoutineDraftLevel } from '@/lib/ai/routine-draft';
 import type { RoutineKind } from '@/types/routine';
@@ -64,16 +64,6 @@ function inferRoutineKind(availableEquipment: string): RoutineKind {
     : 'home';
 }
 
-function planDays(value: string): number {
-  const parsed = Number.parseInt(value, 10);
-  return Number.isFinite(parsed) ? parsed : 3;
-}
-
-function sessionMinutes(value: string): number {
-  const parsed = Number.parseInt(value, 10);
-  return Number.isFinite(parsed) ? parsed : 55;
-}
-
 function routinePayload(day: WeeklyPlanDraft['days'][number], kind: RoutineKind) {
   return {
     name: `Coach Atlas · ${day.title} · ${day.focus}`,
@@ -131,15 +121,27 @@ export function useGuidedPlan({ catalog, onSaved }: UseGuidedPlanOptions) {
     setBusy(true);
     setError(null);
     try {
-      const nextDraft = await generateWeeklyPlanDraft({
-        goal: currentForm.goal,
-        daysPerWeek: planDays(currentForm.daysPerWeek),
-        experience: currentForm.experience,
-        availableEquipment: splitList(currentForm.availableEquipment),
-        sessionLengthMinutes: sessionMinutes(currentForm.sessionLengthMinutes),
-        focusAreas: splitList(currentForm.focusAreas),
-        catalog,
+      const requestedDays = Number(currentForm.daysPerWeek);
+      const response = await fetch('/api/training-plan/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          goal: currentForm.goal,
+          daysPerWeek: requestedDays,
+          experience: currentForm.experience,
+          availableEquipment: splitList(currentForm.availableEquipment),
+          sessionLengthMinutes: Number(currentForm.sessionLengthMinutes),
+          focusAreas: splitList(currentForm.focusAreas),
+        }),
       });
+      if (!response.ok) {
+        throw new Error(await readApiMessage(response, 'No se pudo generar el plan.'));
+      }
+      const body: unknown = await response.json();
+      if (!isWeeklyPlanDraft(body) || body.days.length !== requestedDays) {
+        throw new Error('La propuesta recibida no es válida.');
+      }
+      const nextDraft = body;
       draftRef.current = nextDraft;
       setDraft(nextDraft);
       setWizardStep('review');
@@ -205,7 +207,7 @@ export function useGuidedPlan({ catalog, onSaved }: UseGuidedPlanOptions) {
       const schedule = currentDraft.days.map((day, index) => ({
         dayOfWeek: day.dayOfWeek,
         routineId: routineIds[index],
-        note: `${day.title} · ${day.focus}`,
+        note: `${day.title} · ${day.focus}`.slice(0, 140),
       }));
       const response = await fetch('/api/training-plan', {
         method: 'POST',

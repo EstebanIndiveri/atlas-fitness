@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { PLAN_DAY_LABELS } from '@/lib/copy/plan';
 import type { WeeklyPlanDraft } from '@/lib/ai/weekly-plan-draft';
 
 interface GuidedPlanReviewStepProps {
@@ -10,14 +11,21 @@ interface GuidedPlanReviewStepProps {
 }
 
 export function GuidedPlanReviewStep({ draft, saving, onBack, onConfirm }: GuidedPlanReviewStepProps) {
+  const sourceLabel = draft.source === 'gemini'
+    ? 'Propuesta de Gemini · catálogo y objetivos validados y normalizados por Atlas'
+    : 'Respaldo determinista de Atlas';
+
   return (
     <Card className="space-y-4 rounded-2xl">
       <div>
-        <p className="text-sm font-semibold uppercase tracking-wide text-brand">Propuesta Atlas</p>
+        <p className="text-sm font-semibold uppercase tracking-wide text-brand">{sourceLabel}</p>
         <h2 className="text-xl font-bold text-ink">Revisá la semana propuesta</h2>
         <p className="mt-2 text-sm leading-6 text-ink-muted">
-          Basado en: <span className="font-semibold text-ink">{draft.goal}</span>. Podés volver al brief
+          Objetivo indicado: <span className="font-semibold text-ink">{draft.goal}</span>. Podés volver al brief
           si querés regenerar antes de guardar.
+        </p>
+        <p className="mt-2 text-sm leading-6 text-ink-muted">
+          Series y repeticiones son objetivos propuestos para revisar antes de guardar.
         </p>
       </div>
 
@@ -30,7 +38,7 @@ export function GuidedPlanReviewStep({ draft, saving, onBack, onConfirm }: Guide
                 <p className="text-sm text-brand">{day.focus}</p>
               </div>
               <span className="rounded-full bg-surface px-3 py-1 text-xs font-semibold text-ink-muted">
-                Semana día {day.dayOfWeek}
+                {PLAN_DAY_LABELS[day.dayOfWeek]}
               </span>
             </div>
             <ul className="mt-3 space-y-2">

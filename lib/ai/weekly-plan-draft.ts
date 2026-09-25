@@ -10,7 +10,7 @@ export type WeeklyPlanDraftSource = 'gemini' | 'fallback';
 
 export interface WeeklyPlanDraftDay { dayOfWeek: WeeklyPlanDayOfWeek; title: string; focus: string; exercises: RoutineDraftExercise[]; }
 
-export interface WeeklyPlanDraft { source?: WeeklyPlanDraftSource; name: string; goal: string; days: WeeklyPlanDraftDay[]; }
+export interface WeeklyPlanDraft { source: WeeklyPlanDraftSource; name: string; goal: string; days: WeeklyPlanDraftDay[]; }
 
 export interface WeeklyPlanDraftInput {
   goal: string; daysPerWeek: number; experience: RoutineDraftLevel; availableEquipment: readonly string[];
@@ -63,8 +63,8 @@ function clampInteger(value: unknown, min: number, max: number, fallback: number
   return Math.min(max, Math.max(min, value));
 }
 
-function validDayOfWeek(value: unknown, fallback: WeeklyPlanDayOfWeek): WeeklyPlanDayOfWeek {
-  if (typeof value !== 'number' || !Number.isInteger(value) || value < 0 || value > 6) return fallback;
+function parseDayOfWeek(value: unknown): WeeklyPlanDayOfWeek | null {
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < 0 || value > 6) return null;
   return value as WeeklyPlanDayOfWeek;
 }
 
@@ -170,24 +170,28 @@ function normalizeGeminiDraft(
   input: WeeklyPlanDraftInput,
 ): WeeklyPlanDraft | null {
   const rawDays = Array.isArray(rawDraft.days) ? rawDraft.days : [];
-  if (rawDays.length === 0) return null;
+  if (rawDays.length !== fallback.days.length) return null;
   const catalogById = new Map(input.catalog.map((item) => [item.id, item]));
   const targets = LEVEL_TARGETS[input.experience];
   const days: WeeklyPlanDraftDay[] = [];
-  for (const rawDay of rawDays.slice(0, fallback.days.length)) {
+  const usedWeekdays = new Set<WeeklyPlanDayOfWeek>();
+  for (const [index, rawDay] of rawDays.entries()) {
     if (!isRecord(rawDay)) continue;
     const day = rawDay as RawGeminiDay;
-    const fallbackDay = fallback.days[days.length];
+    const fallbackDay = fallback.days[index];
     if (!fallbackDay) continue;
+    const dayOfWeek = parseDayOfWeek(day.dayOfWeek);
+    if (dayOfWeek === null || usedWeekdays.has(dayOfWeek)) return null;
     const exercises = normalizeGeminiExercises(day.exercises, catalogById, targets);
     if (exercises.length === 0) continue;
+    usedWeekdays.add(dayOfWeek);
     days.push({
-      dayOfWeek: validDayOfWeek(day.dayOfWeek, fallbackDay.dayOfWeek), title: cleanText(day.title, fallbackDay.title, 60, 2),
+      dayOfWeek, title: cleanText(day.title, fallbackDay.title, 60, 2),
       focus: cleanText(day.focus, fallbackDay.focus, 80, 2), exercises,
     });
   }
   if (days.length !== fallback.days.length) return null;
-  return { source: 'gemini', name: cleanText(rawDraft.name, fallback.name, 80, 2), goal: normalizeGoal(cleanText(rawDraft.goal, fallback.goal, MAX_GOAL_LENGTH, 2)), days };
+  return { source: 'gemini', name: cleanText(rawDraft.name, fallback.name, 80, 2), goal: fallback.goal, days };
 }
 
 async function fetchGeminiWeeklyPlanDraft(
