@@ -9,7 +9,7 @@ import type { RoutineKind } from '@/types/routine';
 import type { ExerciseCatalogItem } from '@/types/exercise';
 
 export type GuidedPlanStep = 'brief' | 'review' | 'saving' | 'success';
-export type GuidedPlanErrorKind = 'validation' | 'generate' | 'routine_create' | 'plan_create';
+export type GuidedPlanErrorKind = 'validation' | 'generate' | 'plan_create';
 export type GuidedPlanField = keyof GuidedPlanFormState;
 
 export interface GuidedPlanError {
@@ -79,6 +79,18 @@ function routinePayload(day: WeeklyPlanDraft['days'][number], kind: RoutineKind)
   };
 }
 
+function isGuidedPlanError(value: unknown): value is GuidedPlanError {
+  if (typeof value !== 'object' || value === null || !('kind' in value) || !('message' in value)) {
+    return false;
+  }
+
+  return (
+    (value.kind === 'validation' || value.kind === 'generate' || value.kind === 'plan_create') &&
+    typeof value.message === 'string' &&
+    (!('status' in value) || typeof value.status === 'number')
+  );
+}
+
 /**
  * Drives the guided weekly plan wizard and persists accepted drafts through existing HTTP APIs.
  *
@@ -91,6 +103,7 @@ export function useGuidedPlan({ catalog, onSaved }: UseGuidedPlanOptions) {
   const [form, setForm] = useState<GuidedPlanFormState>(INITIAL_FORM);
   const formRef = useRef<GuidedPlanFormState>(INITIAL_FORM);
   const draftRef = useRef<WeeklyPlanDraft | null>(null);
+  const mutationIdRef = useRef<string | null>(null);
   const stepRef = useRef<GuidedPlanStep>('brief');
   const [draft, setDraft] = useState<WeeklyPlanDraft | null>(null);
   const [step, setStep] = useState<GuidedPlanStep>('brief');
@@ -143,6 +156,7 @@ export function useGuidedPlan({ catalog, onSaved }: UseGuidedPlanOptions) {
       }
       const nextDraft = body;
       draftRef.current = nextDraft;
+      mutationIdRef.current = null;
       setDraft(nextDraft);
       setWizardStep('review');
     } catch (caught) {
@@ -151,39 +165,6 @@ export function useGuidedPlan({ catalog, onSaved }: UseGuidedPlanOptions) {
     } finally {
       setBusy(false);
     }
-  }
-
-  async function createRoutine(day: WeeklyPlanDraft['days'][number], kind: RoutineKind): Promise<number> {
-    const response = await fetch('/api/routines', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(routinePayload(day, kind)),
-    });
-    if (!response.ok) {
-      throw {
-        kind: 'routine_create',
-        message: await readApiMessage(response, 'No se pudo crear una rutina del plan.'),
-        status: response.status,
-      } satisfies GuidedPlanError;
-    }
-    const body: unknown = await response.json();
-    const id = body && typeof body === 'object' && 'id' in body ? (body as { id?: unknown }).id : null;
-    if (typeof id !== 'number') {
-      throw { kind: 'routine_create', message: 'La API no devolvió el id de rutina.' } satisfies GuidedPlanError;
-    }
-    return id;
-  }
-
-  async function cleanupCreatedRoutines(routineIds: readonly number[]): Promise<boolean> {
-    const results = await Promise.allSettled(
-      routineIds.map(async (routineId) => {
-        const response = await fetch(`/api/routines/${routineId}`, { method: 'DELETE' });
-        if (!response.ok) {
-          throw new Error(`No se pudo eliminar la rutina ${routineId}.`);
-        }
-      }),
-    );
-    return results.some((result) => result.status === 'rejected');
   }
 
   async function confirmDraft(): Promise<void> {
@@ -198,21 +179,24 @@ export function useGuidedPlan({ catalog, onSaved }: UseGuidedPlanOptions) {
     setSaving(true);
     setWizardStep('saving');
     setError(null);
-    const routineIds: number[] = [];
     try {
       const kind = inferRoutineKind(formRef.current.availableEquipment);
-      for (const day of currentDraft.days) {
-        routineIds.push(await createRoutine(day, kind));
-      }
-      const schedule = currentDraft.days.map((day, index) => ({
+      const mutationId = mutationIdRef.current ?? globalThis.crypto.randomUUID();
+      mutationIdRef.current = mutationId;
+      const days = currentDraft.days.map((day) => ({
         dayOfWeek: day.dayOfWeek,
-        routineId: routineIds[index],
         note: `${day.title} · ${day.focus}`.slice(0, 140),
+        routine: routinePayload(day, kind),
       }));
-      const response = await fetch('/api/training-plan', {
+      const response = await fetch('/api/training-plan/guided', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: currentDraft.name, goal: currentDraft.goal, schedule }),
+        body: JSON.stringify({
+          mutationId,
+          name: currentDraft.name,
+          goal: currentDraft.goal,
+          days,
+        }),
       });
       if (!response.ok) {
         throw {
@@ -221,16 +205,13 @@ export function useGuidedPlan({ catalog, onSaved }: UseGuidedPlanOptions) {
           status: response.status,
         } satisfies GuidedPlanError;
       }
+      mutationIdRef.current = null;
       setWizardStep('success');
       onSaved?.('/dashboard/today');
     } catch (caught) {
-      const cleanupFailed = routineIds.length > 0 ? await cleanupCreatedRoutines(routineIds) : false;
-      const nextError = caught && typeof caught === 'object' && 'kind' in caught
-        ? caught as GuidedPlanError
+      const nextError = isGuidedPlanError(caught)
+        ? caught
         : { kind: 'plan_create', message: 'No se pudo guardar el plan semanal.' } satisfies GuidedPlanError;
-      if (cleanupFailed) {
-        nextError.message = `${nextError.message} Algunas rutinas creadas no se pudieron limpiar automáticamente.`;
-      }
       setError(nextError);
       setWizardStep('review');
     } finally {
