@@ -1,6 +1,6 @@
 # Handoff — Atlas Fitness · Checkpoint post PR #114 (Septiembre 2026)
 
-> **Documento de checkpoint operativo.** Es la fuente de verdad para que un agente o persona entienda el estado actual del proyecto, qué está hecho/released, qué quedó diferido en backlog y cómo continuar paso a paso. Última actualización: 2026-09-24. La última versión publicada es v0.6.1; este checkpoint incluye el estado de `develop` tras PR #114 y no declara una nueva release.
+> **Documento de checkpoint operativo.** Es la fuente de verdad para que un agente o persona entienda el estado actual del proyecto, qué está hecho/released, qué quedó diferido en backlog y cómo continuar paso a paso. Última actualización: 2026-09-24. La última versión publicada es v0.6.2, una release de estabilidad de testing/documentación sin nuevas funcionalidades de producto; este checkpoint conserva el contexto de `develop` tras PR #114.
 
 ## 1. Recap producto / visión
 
@@ -56,7 +56,7 @@ DoD funcional: el loop está implementado y released end-to-end hasta v0.6.1. Do
 
 Ver [`../../CHANGELOG.md`](../../CHANGELOG.md) para detalle agrupado Added/Changed/Fixed.
 
-## 6. Checkpoint actual (develop post PR #114; última release v0.6.1)
+## 6. Checkpoint actual (develop post PR #114; última release v0.6.2)
 
 **Base verificada**: `develop` está en el merge de PR #114 (`d53c1dfa4904d1f4dc44ebc600ec5510e65148f7`), posterior a la última release `v0.6.1`. No afirmar que `develop` está alineada con `main`.
 

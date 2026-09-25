@@ -4,7 +4,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Este
 
 ## [Unreleased]
 
-_Sin cambios de producto sin publicar. La última versión publicada es `v0.6.1`._
+_Sin cambios de producto sin publicar. La última versión publicada es `v0.6.2`._
+
+## [0.6.2] - 2026-09-24
+
+### Changed
+- Cierre formal de la wave de estabilización post v0.6.1: consolida la estabilidad de las pruebas E2E y la documentación operativa. Release de testing/documentación, sin nuevas funcionalidades ni cambios de comportamiento de producto.
 
 ## [0.6.1] - 2026-09-23
 
