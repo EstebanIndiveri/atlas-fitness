@@ -3,7 +3,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 
 import { Button } from '@/components/ui/Button';
-import { SettingsSection } from '@/components/profile/SettingsSection';
 import { ProfilePreferencesForm } from '@/components/profile/ProfilePreferencesForm';
 import { ProfilePreferencesLegacyImport } from '@/components/profile/ProfilePreferencesLegacyImport';
 import { ProfilePreferencesSummary } from '@/components/profile/ProfilePreferencesSummary';
@@ -182,19 +181,25 @@ export function ProfileCoachContext() {
   }
 
   return (
-    <SettingsSection title={PROFILE_PREFERENCES_COPY.title} eyebrow={PROFILE_PREFERENCES_COPY.eyebrow}>
+    <div
+      id="profile-preferences"
+      className="space-y-3 p-4"
+      data-testid="profile-preferences"
+      role="group"
+      aria-label="Datos personales de Mi Atlas"
+    >
       {isLoading ? (
-        <p role="status" className="p-4 text-sm text-ink-muted">{PROFILE_PREFERENCES_COPY.load}</p>
+        <p role="status" className="text-sm text-ink-muted">{PROFILE_PREFERENCES_COPY.load}</p>
       ) : loadError ? (
-        <div className="space-y-3 p-4">
+        <div className="space-y-3">
           <p role="alert" className="text-sm text-danger">{loadError}</p>
-          <Button variant="secondary" onClick={retryLoadingPreferences}>
+          <Button variant="secondary" className="min-h-11" onClick={retryLoadingPreferences}>
             {PROFILE_PREFERENCES_COPY.retry}
           </Button>
         </div>
       ) : (
         <>
-          <p className="px-4 pt-4 text-sm leading-6 text-ink-muted">
+          <p className="text-sm leading-6 text-ink-muted">
             {PROFILE_PREFERENCES_COPY.description}
           </p>
           {preferences?.hasSavedPreferences ? (
@@ -202,8 +207,12 @@ export function ProfileCoachContext() {
               {PROFILE_PREFERENCES_COPY.savedLabel}
             </p>
           ) : (
-            <p className="px-4 pt-3 text-sm text-ink-muted">{PROFILE_PREFERENCES_COPY.empty}</p>
+            <p className="text-sm text-ink-muted">{PROFILE_PREFERENCES_COPY.empty}</p>
           )}
+          <ProfilePreferencesSummary
+            preferences={preferences?.preferences ?? EMPTY_USER_PREFERENCES}
+            onEdit={beginEditing}
+          />
           {isEditing ? (
             <ProfilePreferencesForm
               draft={draft}
@@ -212,17 +221,18 @@ export function ProfileCoachContext() {
               onChange={updateDraft}
               onSubmit={(event) => void handleSave(event)}
             />
-          ) : preferences?.hasSavedPreferences ? (
-            <ProfilePreferencesSummary preferences={preferences.preferences} />
           ) : null}
           {!isEditing ? (
-            <div className="p-4">
-              <Button variant="secondary" onClick={beginEditing} disabled={isImporting}>
-                {preferences?.hasSavedPreferences
-                  ? PROFILE_PREFERENCES_COPY.edit
-                  : PROFILE_PREFERENCES_COPY.create}
-              </Button>
-            </div>
+            <Button
+              variant="secondary"
+              className="min-h-11"
+              onClick={beginEditing}
+              disabled={isImporting}
+            >
+              {preferences?.hasSavedPreferences
+                ? PROFILE_PREFERENCES_COPY.edit
+                : PROFILE_PREFERENCES_COPY.create}
+            </Button>
           ) : null}
           {!preferences?.hasSavedPreferences && !isEditing ? (
             <ProfilePreferencesLegacyImport
@@ -233,10 +243,10 @@ export function ProfileCoachContext() {
               onReview={handleReviewLegacyAnswers}
             />
           ) : null}
-          {actionError ? <p role="alert" className="px-4 pb-4 text-sm text-danger">{actionError}</p> : null}
-          {status ? <p role="status" className="px-4 pb-4 text-sm text-success">{status}</p> : null}
+          {actionError ? <p role="alert" className="text-sm text-danger">{actionError}</p> : null}
+          {status ? <p role="status" className="text-sm text-success">{status}</p> : null}
         </>
       )}
-    </SettingsSection>
+    </div>
   );
 }

@@ -1,12 +1,10 @@
 /**
  * @jest-environment jsdom
  */
-import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
+import { afterEach, describe, expect, it, jest } from '@jest/globals';
 import { render, screen, waitFor } from '@testing-library/react';
-import type { OnboardingAnswers } from '@/lib/onboarding/state';
 
 const requestCode = jest.fn<() => Promise<void>>();
-const mockReadOnboardingAnswers = jest.fn<() => OnboardingAnswers | null>();
 
 jest.mock('@/hooks/useLinkCode', () => ({
   useLinkCode: () => ({
@@ -28,10 +26,6 @@ jest.mock('@/hooks/useInstallPrompt', () => ({
   }),
 }));
 
-jest.mock('@/lib/onboarding/state', () => ({
-  readOnboardingAnswers: mockReadOnboardingAnswers,
-}));
-
 function jsonResponse(body: unknown, ok = true): Response {
   return {
     ok,
@@ -44,12 +38,9 @@ function jsonResponse(body: unknown, ok = true): Response {
 describe('SettingsPage', () => {
   const originalFetch = global.fetch;
 
-  beforeEach(() => {
-    mockReadOnboardingAnswers.mockReturnValue(null);
-  });
-
   afterEach(() => {
     global.fetch = originalFetch;
+    localStorage.clear();
     jest.clearAllMocks();
   });
 
@@ -72,19 +63,22 @@ describe('SettingsPage', () => {
     expect(screen.getByText('No pudimos cargar tu perfil. Probá de nuevo.')).toBeTruthy();
   });
 
-  it('renders honest profile data, Figma sections, version, Telegram, PWA and logout blocks', async () => {
+  it('renders saved profile data, real activity, canonical links, Telegram, PWA and logout blocks', async () => {
     const Page = (await import('./page')).default;
-    mockReadOnboardingAnswers.mockReturnValue({
-      goal: 'muscle',
-      pace: 'days-3',
-      equipment: 'dumbbells',
-    });
+    localStorage.setItem('atlas:onboarding:answers', JSON.stringify({
+      goal: 'fitness',
+      pace: 'days-2',
+      equipment: 'bodyweight',
+    }));
     global.fetch = jest.fn(async (input: unknown) => {
       if (String(input) === '/api/profile/preferences') {
         return jsonResponse({
-          hasSavedPreferences: false,
-          preferences: { goal: null, pace: null, equipment: null },
+          hasSavedPreferences: true,
+          preferences: { goal: 'muscle', pace: 'days-3', equipment: 'dumbbells' },
         });
+      }
+      if (String(input) === '/api/stats/week') {
+        return jsonResponse({ activeCount: 2 });
       }
       if (String(input) === '/api/today') {
         return jsonResponse({
@@ -106,6 +100,8 @@ describe('SettingsPage', () => {
         name: 'Esteban Indiveri',
         email: 'esteban@example.com',
         telegramUserId: '4242',
+        createdAt: '2024-09-15T15:00:00.000Z',
+        activeTrainingPlanId: 3,
       });
     }) as unknown as typeof fetch;
 
@@ -115,18 +111,22 @@ describe('SettingsPage', () => {
     expect(screen.getByRole('button', { name: 'Editar perfil (no configurado)' }).getAttribute('disabled')).toBe('');
     expect(screen.getByText('Esteban Indiveri')).toBeTruthy();
     expect(screen.getByText('esteban@example.com')).toBeTruthy();
-    expect(screen.getByText('Plan Hipertrofia · Empuje')).toBeTruthy();
+    expect(screen.getByText('Plan activo · Hipertrofia · Empuje')).toBeTruthy();
     expect(screen.getByText('ENTRENAMIENTO & HÁBITOS')).toBeTruthy();
-    expect(screen.getByText('Objetivos')).toBeTruthy();
-    expect(screen.getByText('Hipertrofia')).toBeTruthy();
     expect(screen.getByText('Plan de entrenamiento')).toBeTruthy();
-    expect(screen.getByText('Empuje')).toBeTruthy();
-    expect(screen.getByRole('heading', { level: 2, name: 'Preferencias de Coach' })).toBeTruthy();
-    expect(screen.getByText('Equipamiento disponible')).toBeTruthy();
+    expect(screen.getByText('Objetivo del plan: Hipertrofia')).toBeTruthy();
+    expect(screen.queryByRole('heading', { level: 2, name: 'Preferencias de Coach' })).toBeNull();
     expect(await screen.findByText('Mancuernas en casa')).toBeTruthy();
-    expect(screen.getByTestId('equipment-settings').getAttribute('href')).toBe('/dashboard/plan/new');
+    expect(screen.getByRole('button', { name: 'Editar equipo disponible' })).toBeTruthy();
+    expect(screen.getByTestId('training-plan-settings').getAttribute('href')).toBe('/dashboard/plan/3');
+    expect(screen.getByTestId('routines-settings').getAttribute('href')).toBe('/dashboard/routines');
+    expect(screen.getByTestId('habits-settings').getAttribute('href')).toBe('/dashboard/habits');
+    expect(screen.getByText('EN ATLAS')).toBeTruthy();
+    expect(screen.getByText('Desde septiembre de 2024')).toBeTruthy();
+    expect(screen.getByText('DÍAS ACTIVOS ESTA SEMANA')).toBeTruthy();
+    expect(await screen.findByText('2 de 7 días')).toBeTruthy();
+    expect(screen.getByText('Entreno finalizado o check-in')).toBeTruthy();
     expect(screen.queryByText('Notificaciones y recordatorios')).toBeNull();
-    expect(screen.getByText('No configurado')).toBeTruthy();
     expect(screen.getByTestId('telegram-settings')).toBeTruthy();
     expect(screen.getByTestId('telegram-linked-status')).toBeTruthy();
     expect(screen.getByTestId('generate-link-code')).toBeTruthy();
@@ -141,6 +141,7 @@ describe('SettingsPage', () => {
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith('/api/auth/me');
       expect(global.fetch).toHaveBeenCalledWith('/api/today');
+      expect(global.fetch).toHaveBeenCalledWith('/api/stats/week');
     });
   });
 
@@ -156,26 +157,33 @@ describe('SettingsPage', () => {
           preferences: { goal: null, pace: null, equipment: null },
         });
       }
+      if (String(input) === '/api/stats/week') {
+        return jsonResponse({ activeCount: 0 });
+      }
 
       return jsonResponse({
         id: 8,
         name: 'QA Test User',
         email: 'qa@atlas.test',
         telegramUserId: null,
+        createdAt: '2024-09-15T15:00:00.000Z',
+        activeTrainingPlanId: null,
       });
     }) as unknown as typeof fetch;
 
     render(<Page />);
 
     expect(await screen.findByText('QA Test User')).toBeTruthy();
-    expect(screen.getByText('Plan no configurado')).toBeTruthy();
-    expect(screen.getByText('Sin plan activo')).toBeTruthy();
+    expect(screen.getAllByText('Sin plan activo')).toHaveLength(2);
     expect(screen.getByTestId('telegram-unlinked-status')).toBeTruthy();
+    expect(screen.getByTestId('training-plan-settings').getAttribute('href')).toBe('/dashboard/plan/new');
+    expect(screen.getByTestId('routines-settings').getAttribute('href')).toBe('/dashboard/routines');
+    expect(screen.getByTestId('habits-settings').getAttribute('href')).toBe('/dashboard/habits');
+    expect(screen.getByText('0 de 7 días')).toBeTruthy();
     expect(screen.queryByText('@qatest_atlas_bot')).toBeNull();
-    expect(screen.queryByText('82% adherencia')).toBeNull();
   });
 
-  it('shows Coach preferences as a separate editable profile section', async () => {
+  it('keeps an active plan link independent from today scheduled-routine data', async () => {
     const Page = (await import('./page')).default;
     global.fetch = jest.fn(async (input: unknown) => {
       if (String(input) === '/api/today') {
@@ -187,19 +195,56 @@ describe('SettingsPage', () => {
           preferences: { goal: null, pace: null, equipment: null },
         });
       }
+      if (String(input) === '/api/stats/week') {
+        return jsonResponse({ activeCount: 0 });
+      }
 
       return jsonResponse({
         id: 8,
         name: 'QA Test User',
         email: 'qa@atlas.test',
         telegramUserId: null,
+        createdAt: '2024-09-15T15:00:00.000Z',
+        activeTrainingPlanId: 19,
       });
     }) as unknown as typeof fetch;
 
     render(<Page />);
 
-    expect(await screen.findByRole('heading', { level: 2, name: 'Preferencias de Coach' })).toBeTruthy();
-    expect(await screen.findByRole('button', { name: 'Definir preferencias' })).toBeTruthy();
-    expect(screen.getByText('Sin plan activo')).toBeTruthy();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Perfil' })).toBeTruthy();
+    expect(screen.getByTestId('training-plan-settings').getAttribute('href')).toBe('/dashboard/plan/19');
+    expect(screen.getByTestId('training-plan-settings').textContent).toContain('Plan activo');
+  });
+
+  it('shows an honest error state when weekly activity cannot be loaded', async () => {
+    const Page = (await import('./page')).default;
+    global.fetch = jest.fn(async (input: unknown) => {
+      if (String(input) === '/api/today') {
+        return jsonResponse({ kind: 'no_plan', localDate: '2026-09-22', dayOfWeek: 2 });
+      }
+      if (String(input) === '/api/profile/preferences') {
+        return jsonResponse({
+          hasSavedPreferences: false,
+          preferences: { goal: null, pace: null, equipment: null },
+        });
+      }
+      if (String(input) === '/api/stats/week') {
+        return jsonResponse({ code: 'SERVICE_UNAVAILABLE' }, false);
+      }
+
+      return jsonResponse({
+        id: 8,
+        name: 'QA Test User',
+        email: 'qa@atlas.test',
+        telegramUserId: null,
+        createdAt: '2024-09-15T15:00:00.000Z',
+        activeTrainingPlanId: null,
+      });
+    }) as unknown as typeof fetch;
+
+    render(<Page />);
+
+    expect(await screen.findByText('No disponible')).toBeTruthy();
+    expect(screen.getByRole('alert').textContent).toContain('No pudimos cargar tu actividad semanal.');
   });
 });
