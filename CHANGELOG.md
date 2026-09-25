@@ -4,6 +4,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Este
 
 ## [Unreleased]
 
+Los cambios posteriores a v0.7.0 se registrarán en esta sección.
+
 ## [0.7.0] - 2026-09-25
 
 ### Added

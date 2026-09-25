@@ -2,7 +2,7 @@
 
 Asistente de fitness personal para registrar entrenamientos, pesos, consejos, media de ejercicios y motivación — vía **web app** y **bot de Telegram** (misma lógica de producto que Hermes Finance: un dominio, dos canales).
 
-> Última versión publicada: **v0.6.2**, release de estabilidad de testing/documentación sin nuevas funcionalidades de producto. Los PR #118–#124 de Coach Context están integrados en `develop` y preparan v0.7.0, todavía sin publicar. El estado operativo y la evidencia de pruebas están en [`docs/backlog/handoff-2026-09.md`](./docs/backlog/handoff-2026-09.md).
+> Última versión publicada: **v0.7.0** (2026-09-25). Al cierre del release, el PR #126 fusionó v0.7.0 en `main` y el PR #127 sincronizó `develop` con el commit `dae2bc949538f9cb9fa02faf8db0712d04b9d9f9`, al que apunta el tag `v0.7.0`. El estado operativo y la evidencia están en [`docs/backlog/handoff-2026-09.md`](./docs/backlog/handoff-2026-09.md).
 
 ## Visión (borrador)
 
@@ -178,9 +178,9 @@ Ver [`AGENTS.md`](./AGENTS.md) §3–5 para el branching model completo.
 - **Owner:** [EstebanIndiveri](https://github.com/EstebanIndiveri)
 - **Producto hermano:** [hermes-finantial-tracker](https://github.com/EstebanIndiveri/hermes-finantial-tracker)
 
-## Estado Actual (última versión publicada: v0.6.2)
+## Estado Actual (última versión publicada: v0.7.0)
 
-La versión publicada sigue siendo v0.6.2. La lista refleja también el estado de `develop`: Coach Context se integró en los PR #118–#124 y está preparado para v0.7.0, aún sin release.
+v0.7.0 es la última versión publicada. Incluye el trabajo de Coach Context integrado en los PR #118–#124; el release se publicó mediante el PR #126.
 
 ✅ **Completado / usable:**
 - Auth + sesiones HMAC revocables, link Telegram y webhooks modulares
