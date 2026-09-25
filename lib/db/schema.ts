@@ -148,6 +148,31 @@ export const trainingPlans = sqliteTable(
   }),
 );
 
+/**
+ * Guided plan save idempotency keys, committed atomically with their plan.
+ */
+export const guidedTrainingPlanSaves = sqliteTable(
+  'guided_training_plan_saves',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id),
+    clientMutationId: text('client_mutation_id').notNull(),
+    payloadHash: text('payload_hash').notNull(),
+    trainingPlanId: integer('training_plan_id').references(() => trainingPlans.id),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (table) => ({
+    uniqueUserMutation: uniqueIndex('guided_training_plan_saves_user_mutation_unique').on(
+      table.userId,
+      table.clientMutationId,
+    ),
+  }),
+);
+
 export const scheduledRoutines = sqliteTable(
   'scheduled_routines',
   {
