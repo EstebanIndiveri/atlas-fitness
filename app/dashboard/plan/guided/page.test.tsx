@@ -54,7 +54,7 @@ describe('GuidedPlanPage', () => {
     expect((await screen.findByRole('alert')).textContent).toContain('No se pudieron cargar ejercicios.');
   });
 
-  it('reviews the proposed days and saves through the existing endpoints', async () => {
+  it('reviews the proposed days and saves them through one guided-save endpoint', async () => {
     const fetchMock = jest
       .fn<typeof fetch>()
       .mockResolvedValueOnce(jsonResponse(catalog))
@@ -83,9 +83,6 @@ describe('GuidedPlanPage', () => {
           },
         ],
       }))
-      .mockResolvedValueOnce(jsonResponse({ id: 10 }))
-      .mockResolvedValueOnce(jsonResponse({ id: 20 }))
-      .mockResolvedValueOnce(jsonResponse({ id: 30 }))
       .mockResolvedValueOnce(jsonResponse({ plan: { id: 77 }, schedule: [] }));
     global.fetch = fetchMock;
     const { default: GuidedPlanPage } = await import('./page');
@@ -99,9 +96,11 @@ describe('GuidedPlanPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Guardar plan' }));
 
     await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/dashboard/today'));
-    expect(fetchMock).toHaveBeenLastCalledWith('/api/training-plan', expect.objectContaining({
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/training-plan/guided', expect.objectContaining({
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
     }));
+    expect(fetchMock.mock.calls.some(([url]) => String(url).startsWith('/api/routines'))).toBe(false);
   });
 });
