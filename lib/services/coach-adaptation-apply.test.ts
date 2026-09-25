@@ -17,11 +17,13 @@ import {
   workouts,
 } from '@/lib/db/schema';
 import { getWorkoutById } from '@/lib/services/workouts';
+import { createWorkoutSet } from '@/lib/services/workout-sets';
+import { getRoutineById } from '@/lib/services/routines';
 import type { CoachAdaptationResult } from '@/types/coach';
 
 import { startAdaptedWorkout } from './coach-adaptation-apply';
 
-async function seedRoutineWithThreeExercises(userId: number): Promise<{
+async function seedRoutineWithThreeExercises(userId: number, firstTargetSets = 3): Promise<{
   routineId: number;
   exerciseIds: [number, number, number];
 }> {
@@ -41,7 +43,7 @@ async function seedRoutineWithThreeExercises(userId: number): Promise<{
     .returning();
 
   await db.insert(routineExercises).values([
-    { routineId: routine.id, exerciseId: exerciseIds[0], sortOrder: 0, targetSets: 3, targetReps: 10 },
+    { routineId: routine.id, exerciseId: exerciseIds[0], sortOrder: 0, targetSets: firstTargetSets, targetReps: 10 },
     { routineId: routine.id, exerciseId: exerciseIds[1], sortOrder: 1, targetSets: 3, targetReps: 10 },
     { routineId: routine.id, exerciseId: exerciseIds[2], sortOrder: 2, targetSets: 3, targetReps: 10 },
   ]);
@@ -145,6 +147,45 @@ describe('startAdaptedWorkout', () => {
     const loaded = await getWorkoutById(workout.id, userId);
     expect(loaded.queue.skippedExerciseIds).toEqual([]);
     expect(loaded.queue.pendingExerciseIds).toEqual(exerciseIds);
+  });
+
+  it('persists a reduced set target on the workout without changing the routine', async () => {
+    const { routineId, exerciseIds } = await seedRoutineWithThreeExercises(userId, 4);
+    const result: CoachAdaptationResult = {
+      original: { exerciseCount: 3, setCount: 10, estMinutes: 45 },
+      adapted: { exerciseCount: 3, setCount: 9, estMinutes: 40 },
+      exerciseDeltas: [
+        { exerciseId: exerciseIds[0], name: 'Press Banca', action: 'reduced', fromSets: 4, toSets: 3 },
+        { exerciseId: exerciseIds[1], name: 'Sentadilla', action: 'kept', fromSets: 3, toSets: 3 },
+        { exerciseId: exerciseIds[2], name: 'Remo', action: 'kept', fromSets: 3, toSets: 3 },
+      ],
+      reason: 'Menos series hoy',
+      source: 'deterministic',
+    };
+
+    const { workout } = await startAdaptedWorkout({ userId, routineId, result });
+    const loaded = await getWorkoutById(workout.id, userId);
+
+    expect(loaded.queue).toEqual(expect.objectContaining({
+      targetSetsOverrides: { [exerciseIds[0]]: 3 },
+    }));
+    const originalRoutine = await getRoutineById(routineId, userId);
+    expect(originalRoutine.exercises[0].targetSets).toBe(4);
+
+    for (const setIndex of [1, 2, 3]) {
+      await createWorkoutSet({
+        workoutId: workout.id,
+        userId,
+        exerciseId: exerciseIds[0],
+        setIndex,
+        reps: 10,
+        weightKg: '40',
+      });
+    }
+    const resumed = await getWorkoutById(workout.id, userId);
+    expect(resumed.queue.pendingExerciseIds).not.toContain(exerciseIds[0]);
+    expect(resumed.queue.targetSetsOverrides).toEqual({ [exerciseIds[0]]: 3 });
+    expect((await getRoutineById(routineId, userId)).exercises[0].targetSets).toBe(4);
   });
 
   it('rejects an unknown routine with VALIDATION and creates no workout', async () => {

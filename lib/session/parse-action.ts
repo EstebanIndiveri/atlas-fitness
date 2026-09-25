@@ -1,4 +1,5 @@
 import { SESSION_COPY } from '@/lib/copy/session';
+import { parseStoredQueue } from '@/lib/session/queue';
 import { parseApiErrorBody } from '@/lib/routines/parse-error';
 import type { ApiError } from '@/types/errors';
 import type { NextExerciseSuggestion, SuggestionSource } from '@/types/routine';
@@ -27,21 +28,7 @@ const ACTIONS: readonly SessionQueueAction[] = ['skip', 'hold'];
 const SOURCES: readonly SuggestionSource[] = ['gemini', 'fallback'];
 
 export function parseWorkoutQueueState(value: unknown): WorkoutQueueState | null {
-  if (typeof value !== 'object' || value === null) {
-    return null;
-  }
-  const record = value as Record<string, unknown>;
-  const pending = asIntArray(record.pendingExerciseIds);
-  const skipped = asIntArray(record.skippedExerciseIds);
-  const held = asIntArray(record.heldExerciseIds);
-  if (!pending || !skipped || !held) {
-    return null;
-  }
-  return {
-    pendingExerciseIds: pending,
-    skippedExerciseIds: skipped,
-    heldExerciseIds: held,
-  };
+  return parseStoredQueue(value);
 }
 
 export function parseWorkoutQueueActionResponse(value: unknown): WorkoutQueueActionResponse | null {
@@ -157,16 +144,6 @@ function parseSetSnapshots(value: unknown): WorkoutQueueSetSnapshot[] | null {
     });
   }
   return sets;
-}
-
-function asIntArray(value: unknown): number[] | null {
-  if (!Array.isArray(value)) {
-    return null;
-  }
-  if (!value.every((item) => typeof item === 'number' && Number.isInteger(item))) {
-    return null;
-  }
-  return value;
 }
 
 function isAction(value: unknown): value is SessionQueueAction {

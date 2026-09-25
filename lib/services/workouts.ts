@@ -60,26 +60,44 @@ export interface CreateWorkoutOptions {
    * adaptation). Requires a routineId; ignored for free workouts.
    */
   skippedExerciseIds?: readonly number[];
+  /** Target set counts to apply only to this workout's queue. */
+  targetSetsOverrides?: Readonly<Record<number, number>>;
 }
 
 async function buildInitialQueueJson(
   userId: number,
   routineId: number,
   skippedExerciseIds: readonly number[],
+  targetSetsOverrides: Readonly<Record<number, number>>,
 ): Promise<string | null> {
   const uniqueSkipped = Array.from(new Set(skippedExerciseIds.filter((id) => Number.isInteger(id) && id > 0)));
-  if (uniqueSkipped.length === 0) {
+  if (uniqueSkipped.length === 0 && Object.keys(targetSetsOverrides).length === 0) {
     return null;
   }
 
   const routine = await getRoutineById(routineId, userId);
   const orderedExerciseIds = routine.exercises.map((item) => item.exerciseId);
+  const validTargetSetsOverrides: Record<number, number> = {};
+  for (const [rawExerciseId, targetSets] of Object.entries(targetSetsOverrides)) {
+    const exerciseId = Number(rawExerciseId);
+    if (
+      orderedExerciseIds.includes(exerciseId) &&
+      Number.isInteger(targetSets) &&
+      targetSets > 0
+    ) {
+      validTargetSetsOverrides[exerciseId] = targetSets;
+    }
+  }
   const queue = buildWorkoutQueue({
     orderedExerciseIds,
     completedExerciseIds: [],
     skippedExerciseIds: uniqueSkipped.filter((id) => orderedExerciseIds.includes(id)),
+    targetSetsOverrides: validTargetSetsOverrides,
   });
-  if (queue.skippedExerciseIds.length === 0) {
+  if (
+    queue.skippedExerciseIds.length === 0 &&
+    Object.keys(queue.targetSetsOverrides ?? {}).length === 0
+  ) {
     return null;
   }
 
@@ -103,8 +121,15 @@ export async function createWorkout(
 ): Promise<Workout> {
   const resolvedRoutineId = await resolveRoutineId(userId, routineId);
   const queueJson =
-    resolvedRoutineId !== null && options?.skippedExerciseIds && options.skippedExerciseIds.length > 0
-      ? await buildInitialQueueJson(userId, resolvedRoutineId, options.skippedExerciseIds)
+    resolvedRoutineId !== null &&
+    ((options?.skippedExerciseIds?.length ?? 0) > 0 ||
+      Object.keys(options?.targetSetsOverrides ?? {}).length > 0)
+      ? await buildInitialQueueJson(
+          userId,
+          resolvedRoutineId,
+          options?.skippedExerciseIds ?? [],
+          options?.targetSetsOverrides ?? {},
+        )
       : null;
 
   for (let attempt = 0; attempt < 3; attempt += 1) {

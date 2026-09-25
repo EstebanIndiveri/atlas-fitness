@@ -1,7 +1,12 @@
 import { AppError } from '@/types/errors';
 import type { WorkoutQueueState } from '@/types/session-queue';
 import { completedExerciseIdsForRoutine } from '@/lib/session/progress';
-import { emptyWorkoutQueue, parseStoredQueueJson, reconcileWorkoutQueue } from '@/lib/session/queue';
+import {
+  applyTargetSetsOverrides,
+  emptyWorkoutQueue,
+  parseStoredQueueJson,
+  reconcileWorkoutQueue,
+} from '@/lib/session/queue';
 import { getRoutineById } from '@/lib/services/routines';
 
 export async function resolveWorkoutQueueState(args: {
@@ -18,7 +23,11 @@ export async function resolveWorkoutQueueState(args: {
   try {
     const routine = await getRoutineById(args.routineId, args.userId);
     const orderedExerciseIds = routine.exercises.map((item) => item.exerciseId);
-    const completedExerciseIds = completedExerciseIdsForRoutine(routine, args.sets);
+    const adaptedRoutine = {
+      ...routine,
+      exercises: applyTargetSetsOverrides(routine.exercises, stored?.targetSetsOverrides),
+    };
+    const completedExerciseIds = completedExerciseIdsForRoutine(adaptedRoutine, args.sets);
     return reconcileWorkoutQueue({
       orderedExerciseIds,
       completedExerciseIds,

@@ -38,11 +38,11 @@ let POST: typeof import('./route')['POST'];
 const workout = { id: 55, userId: 7, routineId: 12 } as unknown as Workout;
 
 const result: CoachAdaptationResult = {
-  original: { exerciseCount: 3, setCount: 9, estMinutes: 45 },
-  adapted: { exerciseCount: 2, setCount: 6, estMinutes: 30 },
+  original: { exerciseCount: 2, setCount: 7, estMinutes: 45 },
+  adapted: { exerciseCount: 1, setCount: 3, estMinutes: 30 },
   exerciseDeltas: [
     { exerciseId: 10, name: 'Sentadilla', action: 'removed', fromSets: 3, toSets: 0 },
-    { exerciseId: 11, name: 'Press', action: 'kept', fromSets: 3, toSets: 3 },
+    { exerciseId: 11, name: 'Press', action: 'reduced', fromSets: 4, toSets: 3 },
   ],
   reason: 'Menos tiempo disponible hoy',
   source: 'deterministic',

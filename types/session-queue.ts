@@ -6,6 +6,7 @@ export interface WorkoutQueueState {
   pendingExerciseIds: number[];
   skippedExerciseIds: number[];
   heldExerciseIds: number[];
+  targetSetsOverrides?: Record<number, number>;
 }
 
 export interface WorkoutQueueActionRequest {
