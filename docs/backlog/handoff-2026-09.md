@@ -1,6 +1,6 @@
 # Handoff — Atlas Fitness · Coach Context v0.7.0 post-release (Septiembre 2026)
 
-> **Documento de checkpoint operativo.** Es la fuente de verdad para que un agente o persona entienda el estado actual del proyecto, qué está hecho/released, qué quedó diferido en backlog y cómo continuar. Última actualización: 2026-09-25. v0.7.0 se publicó mediante el PR #126; el tag `v0.7.0` y las ramas `main` y `develop` apuntan al commit `dae2bc949538f9cb9fa02faf8db0712d04b9d9f9`. El back-merge PR #127 sincronizó `develop`. El deployment de producción en [`atlas-fitness-655yg94r0-eindi-acme.vercel.app`](https://atlas-fitness-655yg94r0-eindi-acme.vercel.app) terminó correctamente: la raíz respondió HTTP 200 y el workflow de migración de producción pasó.
+> **Documento de checkpoint operativo.** Es la fuente de verdad para que un agente o persona entienda el estado actual del proyecto, qué está hecho/released, qué quedó diferido en backlog y cómo continuar. Última actualización: 2026-09-25. v0.7.0 se publicó mediante el PR #126 y el tag `v0.7.0` apunta al commit `dae2bc949538f9cb9fa02faf8db0712d04b9d9f9`. Al cierre del release, PR #127 fast-forwarded `develop` a ese SHA, sincronizándola con `main` en ese momento. El deployment de producción en [`atlas-fitness-655yg94r0-eindi-acme.vercel.app`](https://atlas-fitness-655yg94r0-eindi-acme.vercel.app) terminó correctamente: la raíz respondió HTTP 200 y el workflow de migración de producción pasó.
 
 ## 1. Recap producto / visión
 
@@ -64,7 +64,7 @@ Ver [`../../CHANGELOG.md`](../../CHANGELOG.md) para detalle agrupado Added/Chang
 
 ## 6. Estado del release y snapshot de base
 
-**Release v0.7.0 (2026-09-25):** el PR #126 se fusionó en `main`; el tag `v0.7.0` apunta a `dae2bc949538f9cb9fa02faf8db0712d04b9d9f9`. El back-merge PR #127 fast-forwarded `develop` al mismo SHA, por lo que `main` y `develop` quedaron sincronizadas. El deployment de producción en [`https://atlas-fitness-655yg94r0-eindi-acme.vercel.app`](https://atlas-fitness-655yg94r0-eindi-acme.vercel.app) sobre ese commit tuvo éxito; la raíz respondió HTTP 200 y el workflow de migración de producción pasó.
+**Release v0.7.0 (2026-09-25):** el PR #126 se fusionó en `main`; el tag `v0.7.0` apunta a `dae2bc949538f9cb9fa02faf8db0712d04b9d9f9`. Como parte del back-merge, PR #127 fast-forwarded `develop` a ese SHA; al completar esos pasos, `main` y `develop` quedaron sincronizadas en el commit del release. El deployment de producción en [`https://atlas-fitness-655yg94r0-eindi-acme.vercel.app`](https://atlas-fitness-655yg94r0-eindi-acme.vercel.app) sobre ese commit tuvo éxito; la raíz respondió HTTP 200 y el workflow de migración de producción pasó.
 
 **Snapshot histórico previo al release:** el `HEAD` de trabajo y `origin/develop` estaban en `6552667a37329799bb1d644534072c4f58f50fe0`, con PR #118–#124 integrados. Ese SHA documenta la base anterior al release, no el estado actual de `main` o `develop`; en ese snapshot v0.6.2 era la última versión publicada y Coach Context aún no estaba publicado.
 
@@ -90,7 +90,7 @@ Ver [`../../CHANGELOG.md`](../../CHANGELOG.md) para detalle agrupado Added/Chang
 
 - [x] PR #118–#124 integrados como trabajo de Coach Context.
 - [x] PR #126 fusionado en `main`; tag `v0.7.0` apunta a `dae2bc949538f9cb9fa02faf8db0712d04b9d9f9`.
-- [x] PR #127 completó el back-merge por fast-forward; `develop` quedó en el mismo SHA que `main`.
+- [x] PR #127 completó el back-merge por fast-forward; al cierre del release, `develop` quedó en el SHA del tag `v0.7.0`.
 - [x] Deployment de producción sobre ese commit exitoso; la raíz respondió HTTP 200 y el workflow de migración de producción pasó.
 
 ## 7. Backlog restante
@@ -135,7 +135,7 @@ Ver [`AGENTS.md`](../../AGENTS.md) antes de tocar código. Resumen operativo:
 
 ## 9. Recomendaciones senior: próximos pasos y riesgos
 
-1. **Estado de la wave**: v0.7.0 es la última release publicada. El tag y `main`/`develop` apuntan a `dae2bc949538f9cb9fa02faf8db0712d04b9d9f9`; PR #126 publicó el release y PR #127 sincronizó `develop`. Los resultados E2E de PR #114 son evidencia histórica, no una validación de la wave v0.7.0.
+1. **Estado de la wave**: v0.7.0 es la última release publicada y el tag apunta a `dae2bc949538f9cb9fa02faf8db0712d04b9d9f9`. Al cierre del release, PR #126 fusionó esa versión en `main` y PR #127 sincronizó `develop` con el commit del tag. Los resultados E2E de PR #114 son evidencia histórica, no una validación de la wave v0.7.0.
 2. **Tratar IA como enhancer, no dependencia**: el wizard debe ser útil con catálogo real aunque Gemini no responda; Gemini solo puede mejorar selección/texto validado.
 3. **Agregar tests de contrato para weekly-plan AI**: catálogo vacío, IDs inválidos de Gemini, respuesta malformada, timeout, no key, días 1–6, foco/equipment raros.
 4. **Auditar copy de honestidad**: cualquier “Atlas sabe/aprende/recuperación” debe mapear a datos reales o cambiarse a “Atlas usa tu plan/check-in/historial”. No describir las preferencias guardadas como aprendizaje, ni atribuir la propuesta a datos que el brief no incluye.

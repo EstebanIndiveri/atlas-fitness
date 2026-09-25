@@ -2,7 +2,7 @@
 
 Asistente de fitness personal para registrar entrenamientos, pesos, consejos, media de ejercicios y motivación — vía **web app** y **bot de Telegram** (misma lógica de producto que Hermes Finance: un dominio, dos canales).
 
-> Última versión publicada: **v0.7.0** (2026-09-25). El release PR #126 y el back-merge PR #127 dejaron `main` y `develop` sincronizadas en `dae2bc949538f9cb9fa02faf8db0712d04b9d9f9`. El estado operativo y la evidencia están en [`docs/backlog/handoff-2026-09.md`](./docs/backlog/handoff-2026-09.md).
+> Última versión publicada: **v0.7.0** (2026-09-25). Al cierre del release, el PR #126 fusionó v0.7.0 en `main` y el PR #127 sincronizó `develop` con el commit `dae2bc949538f9cb9fa02faf8db0712d04b9d9f9`, al que apunta el tag `v0.7.0`. El estado operativo y la evidencia están en [`docs/backlog/handoff-2026-09.md`](./docs/backlog/handoff-2026-09.md).
 
 ## Visión (borrador)
 
