@@ -284,8 +284,56 @@ describe('generateWeeklyPlanDraft', () => {
   it('clamps large plans to six days', async () => {
     const draft = await generateWeeklyPlanDraft(input(9));
 
-    expect(draft.days).toHaveLength(6);
-    expect(draft.days.map((day) => day.dayOfWeek)).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(draft.days).toHaveLength(7);
+    expect(draft.days.map((day) => day.dayOfWeek)).toEqual([1, 2, 3, 4, 5, 6, 0]);
+  });
+
+  it('includes the full current-plan snapshot in the Gemini improvement prompt', async () => {
+    const currentPlan = {
+      name: 'Semana base',
+      goal: 'fuerza',
+      days: [
+        {
+          dayOfWeek: 2 as const,
+          kind: 'routine' as const,
+          routineName: 'Rutina de torso',
+          focus: 'Técnica',
+          exercises: [{ exerciseId: 1, exerciseName: 'Press banca', targetSets: 4, targetReps: 6 }],
+        },
+      ],
+    };
+    const fetchImpl = jest.fn<typeof fetch>(async (_input, _init) =>
+      geminiResponse({
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify({
+                name: 'Semana mejorada',
+                goal: 'ganar fuerza sin perder movilidad',
+                days: [{
+                  dayOfWeek: 2,
+                  title: 'Día de torso',
+                  focus: 'Fuerza técnica',
+                  exercises: [{ exerciseId: 1, targetSets: 3, targetReps: 8 }],
+                }],
+              }),
+            }],
+          },
+        }],
+      }),
+    );
+
+    const draft = await generateWeeklyPlanDraft(input(1, { currentPlan }), {
+      env: { GEMINI_API_KEY: 'test-key' },
+      fetchImpl,
+    });
+
+    expect(draft.source).toBe('gemini');
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    const requestBody = fetchImpl.mock.calls[0]?.[1]?.body;
+    expect(requestBody).toContain('Estás proponiendo una mejora para un plan semanal existente.');
+    expect(requestBody).toContain('Semana base');
+    expect(requestBody).toContain('Rutina de torso');
   });
 
   it('uses an honest fallback goal when the user goal is blank', async () => {

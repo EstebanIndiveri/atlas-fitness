@@ -20,7 +20,7 @@ export function isWeeklyPlanDraft(value: unknown): value is WeeklyPlanDraft {
     || typeof value.goal !== 'string'
     || !Array.isArray(value.days)
     || value.days.length < 1
-    || value.days.length > 6
+    || value.days.length > 7
   ) {
     return false;
   }

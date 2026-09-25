@@ -15,6 +15,24 @@ export interface WeeklyPlanDraft { source: WeeklyPlanDraftSource; name: string; 
 export interface WeeklyPlanDraftInput {
   goal: string; daysPerWeek: number; experience: RoutineDraftLevel; availableEquipment: readonly string[];
   sessionLengthMinutes: number; focusAreas: readonly string[]; catalog: readonly ExerciseCatalogItem[];
+  currentPlan?: WeeklyPlanCurrentContext;
+}
+
+export interface WeeklyPlanCurrentContext {
+  name: string;
+  goal: string | null;
+  days: readonly {
+    dayOfWeek: WeeklyPlanDayOfWeek;
+    kind: 'rest' | 'unavailable' | 'routine';
+    routineName?: string;
+    focus?: string | null;
+    exercises?: readonly {
+      exerciseId: number;
+      exerciseName: string;
+      targetSets: number;
+      targetReps: number;
+    }[];
+  }[];
 }
 
 type GeminiFetch = typeof fetch;
@@ -35,9 +53,10 @@ const DAY_PATTERNS: Record<number, readonly string[]> = {
   4: ['Torso fuerza', 'Piernas fuerza', 'Empuje accesorio', 'Tirón y core'],
   5: ['Empuje', 'Tirón', 'Piernas', 'Torso volumen', 'Core y movilidad'],
   6: ['Empuje', 'Tirón', 'Piernas', 'Hombros y core', 'Cadena posterior', 'Full body liviano'],
+  7: ['Empuje', 'Tirón', 'Piernas', 'Torso fuerza', 'Cadena posterior', 'Full body liviano', 'Movilidad y técnica'],
 };
 const WEEKDAY_PATTERNS: Record<number, readonly WeeklyPlanDayOfWeek[]> = {
-  1: [1], 2: [1, 4], 3: [1, 3, 5], 4: [1, 2, 4, 5], 5: [1, 2, 3, 4, 5], 6: [1, 2, 3, 4, 5, 6],
+  1: [1], 2: [1, 4], 3: [1, 3, 5], 4: [1, 2, 4, 5], 5: [1, 2, 3, 4, 5], 6: [1, 2, 3, 4, 5, 6], 7: [1, 2, 3, 4, 5, 6, 0],
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -77,7 +96,7 @@ function cleanText(value: unknown, fallback: string, maxLength: number, minLengt
 
 function clampDays(daysPerWeek: number): number {
   if (!Number.isFinite(daysPerWeek)) return 3;
-  return Math.min(6, Math.max(1, Math.trunc(daysPerWeek)));
+  return Math.min(7, Math.max(1, Math.trunc(daysPerWeek)));
 }
 
 function normalizeGoal(goal: string): string {
@@ -118,7 +137,13 @@ async function buildFallbackDraft(input: WeeklyPlanDraftInput): Promise<WeeklyPl
   const days = clampDays(input.daysPerWeek);
   const goal = normalizeGoal(input.goal);
   const focuses = buildFocuses(days, input.focusAreas);
-  const weekdays = WEEKDAY_PATTERNS[days] ?? WEEKDAY_PATTERNS[3];
+  const currentTrainingDays = input.currentPlan?.days
+    .filter((day) => day.kind !== 'rest')
+    .map((day) => day.dayOfWeek);
+  const weekdays =
+    currentTrainingDays?.length === days
+      ? currentTrainingDays
+      : WEEKDAY_PATTERNS[days] ?? WEEKDAY_PATTERNS[3];
   const location = inferLocation(input.availableEquipment);
 
   const draftDays = await Promise.all(

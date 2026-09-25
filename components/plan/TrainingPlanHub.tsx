@@ -99,16 +99,18 @@ function TrainingPlanHubContent({ hub }: { hub: TrainingPlanHubDto }) {
             >
               Editar plan semanal
             </Link>
-            <Link
-              href={`/dashboard/plan/${hub.plan.id}/improve`}
-              className={buttonClassName({
-                variant: 'secondary',
-                size: 'lg',
-                className: 'min-h-11 w-full sm:w-auto',
-              })}
-            >
-              Mejorar plan con Coach Atlas
-            </Link>
+            {hub.plan.isActive ? (
+              <Link
+                href={`/dashboard/plan/${hub.plan.id}/improve`}
+                className={buttonClassName({
+                  variant: 'secondary',
+                  size: 'lg',
+                  className: 'min-h-11 w-full sm:w-auto',
+                })}
+              >
+                Mejorar plan con Coach Atlas
+              </Link>
+            ) : null}
           </nav>
         </header>
 
