@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { ONBOARDING_COPY } from '@/lib/copy/onboarding';
 import { PROFILE_PREFERENCES_COPY } from '@/lib/copy/profile';
 import { PROFILE_PREFERENCE_FIELDS } from '@/lib/profile/preferences';
+import { profilePreferenceLabel } from '@/components/profile/preference-label';
 import type { UserPreferences } from '@/types/user-preferences';
 
 interface ProfilePreferencesFormProps {
@@ -28,12 +29,12 @@ export function ProfilePreferencesForm({
   onSubmit,
 }: ProfilePreferencesFormProps) {
   return (
-    <form className="space-y-4 p-4" onSubmit={onSubmit}>
+    <form className="space-y-4" onSubmit={onSubmit}>
       <div className="space-y-4">
         {PROFILE_PREFERENCE_FIELDS.map((field) => (
           <div key={field.id} className="space-y-1">
             <label htmlFor={`profile-preference-${field.id}`} className="text-sm font-medium text-ink">
-              {field.label}
+              {profilePreferenceLabel(field.id)}
             </label>
             <select
               id={`profile-preference-${field.id}`}
@@ -53,11 +54,17 @@ export function ProfilePreferencesForm({
         ))}
       </div>
       <div className="flex flex-wrap gap-2">
-        <Button type="submit" disabled={isSaving} data-testid="profile-preferences-save">
+        <Button
+          type="submit"
+          className="min-h-11"
+          disabled={isSaving}
+          data-testid="profile-preferences-save"
+        >
           {isSaving ? PROFILE_PREFERENCES_COPY.saving : PROFILE_PREFERENCES_COPY.save}
         </Button>
         <Button
           variant="secondary"
+          className="min-h-11"
           onClick={onCancel}
           disabled={isSaving}
           data-testid="profile-preferences-cancel"

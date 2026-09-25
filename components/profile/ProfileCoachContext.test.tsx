@@ -70,13 +70,34 @@ describe('ProfileCoachContext', () => {
     expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/profile/preferences');
   });
 
+  it('opens the persisted preference editor from personal goal and equipment controls', async () => {
+    setFetchResponses(jsonResponse(preferencesResponse(true, {
+      goal: 'strength',
+      pace: 'days-3',
+      equipment: 'gym',
+    })));
+
+    render(<ProfileCoachContext />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Editar objetivo personal' }));
+    expect(screen.getByLabelText('Objetivo personal')).toHaveProperty('value', 'strength');
+    expect(screen.getByLabelText('Ritmo')).toHaveProperty('value', 'days-3');
+    expect(screen.getByLabelText('Equipo disponible')).toHaveProperty('value', 'gym');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancelar edición' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Editar equipo disponible' }));
+    expect(screen.getByLabelText('Objetivo personal')).toHaveProperty('value', 'strength');
+    expect(screen.getByLabelText('Equipo disponible')).toHaveProperty('value', 'gym');
+  });
+
   it('treats an all-null saved row as saved and does not offer legacy import', async () => {
     saveOnboardingAnswers({ goal: 'muscle', pace: 'days-3', equipment: 'dumbbells' });
     setFetchResponses(jsonResponse(preferencesResponse(true)));
 
     render(<ProfileCoachContext />);
 
-    expect(await screen.findByText('Todavía no elegiste preferencias.')).toBeTruthy();
+    expect(await screen.findByText('Guardadas en tu perfil')).toBeTruthy();
+    expect(screen.getAllByText('Sin elegir')).toHaveLength(3);
     expect(screen.getByRole('button', { name: 'Editar preferencias' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Revisar respuestas anteriores' })).toBeNull();
   });
@@ -208,9 +229,9 @@ describe('ProfileCoachContext', () => {
     render(<ProfileCoachContext />);
     await screen.findByText('Ganar músculo');
     fireEvent.click(screen.getByRole('button', { name: 'Editar preferencias' }));
-    fireEvent.change(screen.getByLabelText('Objetivo'), { target: { value: 'strength' } });
+    fireEvent.change(screen.getByLabelText('Objetivo personal'), { target: { value: 'strength' } });
     fireEvent.change(screen.getByLabelText('Ritmo'), { target: { value: 'days-4' } });
-    fireEvent.change(screen.getByLabelText('Equipo'), { target: { value: 'bands' } });
+    fireEvent.change(screen.getByLabelText('Equipo disponible'), { target: { value: 'bands' } });
     fireEvent.click(screen.getByRole('button', { name: 'Guardar preferencias' }));
 
     expect(await screen.findByText('Ganar fuerza')).toBeTruthy();
@@ -238,10 +259,13 @@ describe('ProfileCoachContext', () => {
 
     render(<ProfileCoachContext />);
     await screen.findByText('Todavía no guardaste preferencias de Coach.');
+    fireEvent.click(screen.getByRole('button', { name: 'Editar objetivo personal' }));
+    expect(screen.getByLabelText('Objetivo personal')).toHaveProperty('value', '');
+    fireEvent.click(screen.getByRole('button', { name: 'Cancelar edición' }));
     fireEvent.click(screen.getByRole('button', { name: 'Definir preferencias' }));
-    fireEvent.change(screen.getByLabelText('Objetivo'), { target: { value: 'fitness' } });
+    fireEvent.change(screen.getByLabelText('Objetivo personal'), { target: { value: 'fitness' } });
     fireEvent.change(screen.getByLabelText('Ritmo'), { target: { value: 'days-2' } });
-    fireEvent.change(screen.getByLabelText('Equipo'), { target: { value: 'bodyweight' } });
+    fireEvent.change(screen.getByLabelText('Equipo disponible'), { target: { value: 'bodyweight' } });
     fireEvent.click(screen.getByRole('button', { name: 'Guardar preferencias' }));
 
     expect(await screen.findByText('Mejorar condición física')).toBeTruthy();
@@ -315,7 +339,7 @@ describe('ProfileCoachContext', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Guardar preferencias' }));
 
     expect(await screen.findByText('Tu sesión venció. Iniciá sesión de nuevo para guardar tus preferencias.')).toBeTruthy();
-    expect(screen.getByLabelText('Objetivo')).toBeTruthy();
+    expect(screen.getByLabelText('Objetivo personal')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Guardar preferencias' }));
 
     expect(await screen.findByText('Preferencias guardadas.')).toBeTruthy();

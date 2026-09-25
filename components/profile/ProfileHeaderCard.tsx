@@ -11,6 +11,8 @@ interface ProfileHeaderCardProps {
 interface ProfileHeaderStat {
   label: string;
   value: string;
+  description?: string;
+  error?: string | null;
 }
 
 function initialsForName(name: string): string {
@@ -61,6 +63,12 @@ export function ProfileHeaderCard({ user, statusLabel, stats }: ProfileHeaderCar
               {stat.label}
             </p>
             <p className="mt-1 text-sm font-semibold text-ink">{stat.value}</p>
+            {stat.description ? (
+              <p className="mt-1 text-xs leading-5 text-ink-muted">{stat.description}</p>
+            ) : null}
+            {stat.error ? (
+              <p role="alert" className="mt-1 text-xs leading-5 text-danger">{stat.error}</p>
+            ) : null}
           </div>
         ))}
       </div>
