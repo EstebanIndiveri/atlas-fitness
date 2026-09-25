@@ -177,6 +177,19 @@ async function findActiveTrainingPlan(userId: number): Promise<TrainingPlan | nu
   return plan ?? null;
 }
 
+/**
+ * Returns the id of the authenticated user's active, non-deleted training plan.
+ *
+ * @param userId - Authenticated owner whose plan should be resolved.
+ * @returns The active training plan id, or `null` when no plan is active.
+ * @throws Database errors when the active plan cannot be read.
+ * @example await getActiveTrainingPlanId(42);
+ */
+export async function getActiveTrainingPlanId(userId: number): Promise<number | null> {
+  const plan = await findActiveTrainingPlan(userId);
+  return plan?.id ?? null;
+}
+
 async function findOwnedTrainingPlan(userId: number, planId: number): Promise<TrainingPlan> {
   const plan = await db.query.trainingPlans.findFirst({
     where: and(

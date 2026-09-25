@@ -5,8 +5,12 @@ import { ProfileHeaderCard } from './ProfileHeaderCard';
 
 describe('ProfileHeaderCard', () => {
   const honestStats = [
-    { label: 'ANTIGÜEDAD', value: 'No disponible' },
-    { label: 'CONSISTENCIA', value: 'Sin datos' },
+    { label: 'EN ATLAS', value: 'Desde septiembre de 2024' },
+    {
+      label: 'DÍAS ACTIVOS ESTA SEMANA',
+      value: '0 de 7 días',
+      description: 'Entreno finalizado o check-in',
+    },
   ] as const;
 
   it('renders the user identity with accessible initials', () => {
@@ -22,10 +26,11 @@ describe('ProfileHeaderCard', () => {
     expect(screen.getByText('Esteban Indiveri')).toBeTruthy();
     expect(screen.getByText('esteban@example.com')).toBeTruthy();
     expect(screen.getByText('Plan no configurado')).toBeTruthy();
-    expect(screen.getByText('ANTIGÜEDAD')).toBeTruthy();
-    expect(screen.getByText('No disponible')).toBeTruthy();
-    expect(screen.getByText('CONSISTENCIA')).toBeTruthy();
-    expect(screen.getByText('Sin datos')).toBeTruthy();
+    expect(screen.getByText('EN ATLAS')).toBeTruthy();
+    expect(screen.getByText('Desde septiembre de 2024')).toBeTruthy();
+    expect(screen.getByText('DÍAS ACTIVOS ESTA SEMANA')).toBeTruthy();
+    expect(screen.getByText('0 de 7 días')).toBeTruthy();
+    expect(screen.getByText('Entreno finalizado o check-in')).toBeTruthy();
   });
 
   it('does not render fabricated Figma sample metrics or verification badges', () => {

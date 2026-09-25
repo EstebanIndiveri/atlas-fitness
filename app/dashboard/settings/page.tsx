@@ -14,71 +14,122 @@ import { fetchToday } from '@/lib/api/today';
 import { useLinkCode } from '@/hooks/useLinkCode';
 import { useInstallPrompt } from '@/hooks/useInstallPrompt';
 import { APP_VERSION } from '@/lib/app/version';
-import { ONBOARDING_COPY } from '@/lib/copy/onboarding';
 import { UI_COPY } from '@/lib/copy/ui';
-import { readOnboardingAnswers } from '@/lib/onboarding/state';
 import { PWA_COPY } from '@/lib/pwa/copy';
 import { TELEGRAM_FE_COPY } from '@/lib/telegram/copy';
-import type { AuthUser } from '@/types/auth';
+import type { AuthProfile } from '@/types/auth';
 import type { TodayResponse } from '@/lib/api/today';
-import type { OnboardingAnswers } from '@/lib/onboarding/state';
 
-const EMPTY_VALUE = 'No configurado';
+type WeeklyActivity =
+  | { status: 'loading' }
+  | { status: 'loaded'; activeCount: number }
+  | { status: 'error' };
 
-function planGoalFromToday(today: TodayResponse | null): string | null {
-  if (!today || today.kind === 'no_plan') {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isPositiveInteger(value: unknown): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value > 0;
+}
+
+function parseAuthProfile(value: unknown): AuthProfile | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const {
+    id,
+    name,
+    email,
+    telegramUserId,
+    createdAt,
+    activeTrainingPlanId,
+  } = value;
+  if (
+    !isPositiveInteger(id) ||
+    typeof name !== 'string' ||
+    typeof email !== 'string' ||
+    (telegramUserId !== null && typeof telegramUserId !== 'string') ||
+    typeof createdAt !== 'string' ||
+    Number.isNaN(Date.parse(createdAt)) ||
+    (activeTrainingPlanId !== null && !isPositiveInteger(activeTrainingPlanId))
+  ) {
+    return null;
+  }
+
+  return { id, name, email, telegramUserId, createdAt, activeTrainingPlanId };
+}
+
+async function fetchWeeklyActiveCount(): Promise<number> {
+  const response = await fetch('/api/stats/week');
+  if (!response.ok) {
+    throw new Error('Weekly activity request failed');
+  }
+  const body: unknown = await response.json();
+  if (
+    !isRecord(body) ||
+    typeof body.activeCount !== 'number' ||
+    !Number.isInteger(body.activeCount) ||
+    body.activeCount < 0 ||
+    body.activeCount > 7
+  ) {
+    throw new Error('Weekly activity response is invalid');
+  }
+  return body.activeCount;
+}
+
+function formatMembershipDate(createdAt: string): string {
+  const date = new Date(createdAt);
+  if (Number.isNaN(date.getTime())) {
+    return 'No disponible';
+  }
+  const monthAndYear = new Intl.DateTimeFormat('es-AR', {
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'America/Argentina/Cordoba',
+  }).format(date);
+  return `Desde ${monthAndYear}`;
+}
+
+function planGoalFromToday(today: TodayResponse | null, activePlanId: number): string | null {
+  if (!today || today.kind === 'no_plan' || today.trainingPlanId !== activePlanId) {
     return null;
   }
   return today.planGoal;
 }
 
-function planRoutineFromToday(today: TodayResponse | null): string | null {
-  if (!today) {
-    return null;
+function profileStatusLabel(today: TodayResponse | null, activePlanId: number | null): string {
+  if (activePlanId === null) {
+    return 'Sin plan activo';
   }
-  if (today.kind === 'workout') {
-    return today.routineName;
+  if (!today || today.kind === 'no_plan' || today.trainingPlanId !== activePlanId) {
+    return 'Plan activo';
   }
-  if (today.kind === 'rest_day') {
-    return 'Día de descanso';
-  }
-  if (today.kind === 'routine_missing') {
-    return 'Rutina no disponible';
-  }
-  return null;
-}
 
-function profileStatusLabel(today: TodayResponse | null): string {
-  const goal = planGoalFromToday(today);
-  const routine = planRoutineFromToday(today);
+  const goal = planGoalFromToday(today, activePlanId);
+  const routine = today.kind === 'workout' ? today.routineName : null;
   if (goal && routine) {
-    return `Plan ${goal} · ${routine}`;
+    return `Plan activo · ${goal} · ${routine}`;
   }
   if (goal) {
-    return `Plan ${goal}`;
+    return `Plan activo · ${goal}`;
   }
   if (routine) {
     return routine;
   }
-  return 'Plan no configurado';
+  return 'Plan activo';
 }
 
-function trainingPlanDescription(today: TodayResponse | null): string {
-  if (!today || today.kind === 'no_plan') {
+function trainingPlanDescription(
+  today: TodayResponse | null,
+  activePlanId: number | null,
+): string {
+  if (activePlanId === null) {
     return 'Sin plan activo';
   }
-  return planRoutineFromToday(today) ?? EMPTY_VALUE;
-}
-
-function equipmentLabelFromOnboarding(answers: OnboardingAnswers | null): string | null {
-  const equipmentId = answers?.equipment;
-  if (!equipmentId) {
-    return null;
-  }
-
-  const equipmentStep = ONBOARDING_COPY.steps.find((step) => step.id === 'equipment');
-  const selectedOption = equipmentStep?.options.find((option) => option.id === equipmentId);
-  return selectedOption?.title ?? null;
+  const goal = planGoalFromToday(today, activePlanId);
+  return goal ? `Objetivo del plan: ${goal}` : 'Plan activo';
 }
 
 function pwaStateLabel(isStandalone: boolean, canInstall: boolean): string {
@@ -89,55 +140,66 @@ function pwaStateLabel(isStandalone: boolean, canInstall: boolean): string {
 }
 
 export default function SettingsPage() {
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const [user, setUser] = useState<AuthProfile | null>(null);
   const [today, setToday] = useState<TodayResponse | null>(null);
+  const [weeklyActivity, setWeeklyActivity] = useState<WeeklyActivity>({ status: 'loading' });
   const [loadingUser, setLoadingUser] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [onboardingAnswers, setOnboardingAnswers] = useState<OnboardingAnswers | null>(null);
   const { code, loading, error, requestCode } = useLinkCode();
   const { canInstall, isStandalone } = useInstallPrompt();
 
   useEffect(() => {
     let active = true;
-    void Promise.resolve().then(() => {
-      if (active) {
-        setOnboardingAnswers(readOnboardingAnswers());
-      }
-    });
+    void fetchWeeklyActiveCount()
+      .then((activeCount) => {
+        if (active) {
+          setWeeklyActivity({ status: 'loaded', activeCount });
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setWeeklyActivity({ status: 'error' });
+        }
+      });
 
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  useEffect(() => {
     const load = async () => {
       try {
-        const [response, todayResult] = await Promise.allSettled([
+        const [profileResult, todayResult] = await Promise.allSettled([
           fetch('/api/auth/me'),
           fetchToday(),
         ]);
-        if (todayResult.status === 'fulfilled') {
+        if (active && todayResult.status === 'fulfilled') {
           setToday(todayResult.value);
         }
-        if (response.status === 'rejected') {
+        if (!active) {
+          return;
+        }
+        if (profileResult.status === 'rejected' || !profileResult.value.ok) {
           setLoadError(TELEGRAM_FE_COPY.loadError);
           return;
         }
-        if (!response.value.ok) {
+        const profile = parseAuthProfile(await profileResult.value.json());
+        if (!profile) {
           setLoadError(TELEGRAM_FE_COPY.loadError);
           return;
         }
-        const data = (await response.value.json()) as AuthUser;
-        setUser(data);
+        setUser(profile);
       } catch {
-        setLoadError(TELEGRAM_FE_COPY.loadError);
+        if (active) {
+          setLoadError(TELEGRAM_FE_COPY.loadError);
+        }
       } finally {
-        setLoadingUser(false);
+        if (active) {
+          setLoadingUser(false);
+        }
       }
     };
 
     void load();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   if (loadingUser) {
@@ -152,14 +214,25 @@ export default function SettingsPage() {
     );
   }
 
-  const linked = Boolean(user.telegramUserId);
   const profileStats = [
-    { label: 'ANTIGÜEDAD', value: 'No disponible' },
-    { label: 'CONSISTENCIA', value: 'Sin datos' },
+    { label: 'EN ATLAS', value: formatMembershipDate(user.createdAt) },
+    {
+      label: 'DÍAS ACTIVOS ESTA SEMANA',
+      value: weeklyActivity.status === 'loaded'
+        ? `${weeklyActivity.activeCount} de 7 días`
+        : weeklyActivity.status === 'loading'
+          ? 'Cargando…'
+          : 'No disponible',
+      description: 'Entreno finalizado o check-in',
+      error: weeklyActivity.status === 'error'
+        ? 'No pudimos cargar tu actividad semanal.'
+        : null,
+    },
   ] as const;
-  const planGoal = planGoalFromToday(today) ?? EMPTY_VALUE;
-  const equipmentLabel = equipmentLabelFromOnboarding(onboardingAnswers) ?? EMPTY_VALUE;
   const pwaStatus = pwaStateLabel(isStandalone, canInstall);
+  const planHref = user.activeTrainingPlanId === null
+    ? '/dashboard/plan/new'
+    : `/dashboard/plan/${user.activeTrainingPlanId}`;
 
   return (
     <div className="mx-auto w-full max-w-lg space-y-6 px-4 py-4 sm:px-6 sm:py-6">
@@ -178,41 +251,39 @@ export default function SettingsPage() {
         </button>
       </header>
 
-      <ProfileHeaderCard user={user} statusLabel={profileStatusLabel(today)} stats={profileStats} />
+      <ProfileHeaderCard
+        user={user}
+        statusLabel={profileStatusLabel(today, user.activeTrainingPlanId)}
+        stats={profileStats}
+      />
 
       <SettingsSection title={UI_COPY.profileMiAtlasTitle} eyebrow="ENTRENAMIENTO & HÁBITOS">
-        <SettingsRow
-          icon="◎"
-          title="Objetivos"
-          description={planGoal}
-          href="/dashboard/plan/new"
-        />
+        <ProfileCoachContext />
         <SettingsRow
           icon="▤"
           title="Plan de entrenamiento"
-          description={trainingPlanDescription(today)}
+          description={trainingPlanDescription(today, user.activeTrainingPlanId)}
+          href={planHref}
+          testId="training-plan-settings"
+        />
+        <SettingsRow
+          icon="▣"
+          title="Rutinas"
+          description="Explorá y organizá tus rutinas"
           href="/dashboard/routines"
           testId="routines-settings"
         />
         <SettingsRow
-          icon="⌁"
-          title="Equipamiento disponible"
-          description={equipmentLabel}
-          href="/dashboard/plan/new"
-          testId="equipment-settings"
-        />
-        <SettingsRow
           icon="♧"
           title={UI_COPY.profileHabitsTitle}
-          description={EMPTY_VALUE}
-          href="/dashboard/today"
+          description="Ver actividad y hábitos"
+          href="/dashboard/habits"
+          testId="habits-settings"
         />
       </SettingsSection>
 
-      <ProfileCoachContext />
-
       <ProfileTelegramCard
-        linked={linked}
+        linked={Boolean(user.telegramUserId)}
         telegramUserId={user.telegramUserId}
         code={code}
         loading={loading}

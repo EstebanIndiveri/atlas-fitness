@@ -2,8 +2,15 @@ import { eq } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 import { db } from '@/lib/db/client';
 import { users, telegramLinkCodes } from '@/lib/db/schema';
+import { getActiveTrainingPlanId } from '@/lib/services/training-plan';
 import { AppError } from '@/types/errors';
-import type { RegisterInput, LoginInput, AuthUser, TelegramLinkCodeResponse } from '@/types/auth';
+import type {
+  RegisterInput,
+  LoginInput,
+  AuthProfile,
+  AuthUser,
+  TelegramLinkCodeResponse,
+} from '@/types/auth';
 
 const SALT_ROUNDS = 10;
 const LINK_CODE_LENGTH = 8;
@@ -119,6 +126,30 @@ export async function getUserById(userId: number): Promise<AuthUser | null> {
   }
 
   return toAuthUser(user);
+}
+
+/**
+ * Loads the authenticated profile fields used by `/api/auth/me`.
+ *
+ * @param userId - Authenticated user whose profile should be loaded.
+ * @returns The user identity, creation date, and active plan id, or `null` when the user is missing.
+ * @throws Database errors when the user or active plan cannot be read.
+ * @example await getAuthProfileById(42);
+ */
+export async function getAuthProfileById(userId: number): Promise<AuthProfile | null> {
+  const user = await db.query.users.findFirst({
+    where: eq(users.id, userId),
+  });
+
+  if (!user) {
+    return null;
+  }
+
+  return {
+    ...toAuthUser(user),
+    createdAt: user.createdAt.toISOString(),
+    activeTrainingPlanId: await getActiveTrainingPlanId(userId),
+  };
 }
 
 /**
