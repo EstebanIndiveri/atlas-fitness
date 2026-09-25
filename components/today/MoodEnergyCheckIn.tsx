@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, type JSX, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type JSX, type KeyboardEvent } from 'react';
 
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -8,7 +8,18 @@ import { MoodFace } from '@/components/today/MoodFace';
 import { ErrorState, LoadingState } from '@/components/ui/states';
 import { useDailyCheckin } from '@/hooks/useDailyCheckin';
 import { cn } from '@/lib/ui/cn';
-import type { CheckInEnergy, DailyCheckInResponse } from '@/lib/api/checkin';
+import type { CheckInEnergy, DailyCheckInInput, DailyCheckInResponse } from '@/lib/api/checkin';
+
+export type MoodEnergyCheckInState = {
+  checkin: DailyCheckInResponse | null;
+  loading: boolean;
+  saving: boolean;
+  error: string | null;
+};
+
+type MoodEnergyCheckInProps = {
+  onStateChange?: (state: MoodEnergyCheckInState) => void;
+};
 
 const CHECKIN_COPY = {
   title: '¿Cómo te sentís hoy?',
@@ -28,6 +39,7 @@ const MOOD_OPTIONS = [
   { value: 5, label: 'Excelente' },
   { value: 4, label: 'Con energía' },
   { value: 3, label: 'Normal' },
+  { value: 2, label: 'Bajoneado' },
   { value: 1, label: 'Agotado' },
 ] as const;
 const MOOD_VALUES: number[] = MOOD_OPTIONS.map(({ value }) => value);
@@ -65,11 +77,12 @@ function moodValueForKey(currentMood: number, key: string): number | null {
 /**
  * Renders the wired daily mood and energy check-in card for the Hoy screen.
  *
+ * @param props Optional callback that shares persisted and pending check-in state with Today.
  * @returns A mobile-first card that auto-saves user mood and energy selections.
  * @example
  * <MoodEnergyCheckIn />
  */
-export function MoodEnergyCheckIn(): JSX.Element {
+export function MoodEnergyCheckIn({ onStateChange }: MoodEnergyCheckInProps): JSX.Element {
   const { checkin, loading, saving, error, submit } = useDailyCheckin();
   const moodButtonRefs = useRef<Record<number, HTMLButtonElement | null>>({});
   const [selectedMood, setSelectedMood] = useState<number | null>(checkin?.mood ?? null);
@@ -83,13 +96,22 @@ export function MoodEnergyCheckIn(): JSX.Element {
     setSelectedEnergy(toCheckInEnergy(checkin?.energy));
   }
 
+  useEffect(() => {
+    onStateChange?.({ checkin, loading, saving, error });
+  }, [checkin, loading, saving, error, onStateChange]);
+
+  const submitCheckIn = (input: DailyCheckInInput): void => {
+    onStateChange?.({ checkin, loading, saving: true, error: null });
+    void submit(input);
+  };
+
   const handleMoodSelect = (mood: number): void => {
     if (saving) return;
 
     const energy = selectedEnergy ?? toCheckInEnergy(checkin?.energy);
     setSelectedMood(mood);
     setMoodFirstHint(false);
-    void submit({ mood, energy });
+    submitCheckIn({ mood, energy });
   };
 
   const handleMoodKeyDown = (mood: number, event: KeyboardEvent<HTMLButtonElement>): void => {
@@ -112,7 +134,7 @@ export function MoodEnergyCheckIn(): JSX.Element {
 
     setSelectedEnergy(energy);
     setMoodFirstHint(false);
-    void submit({ mood, energy });
+    submitCheckIn({ mood, energy });
   };
 
   return (

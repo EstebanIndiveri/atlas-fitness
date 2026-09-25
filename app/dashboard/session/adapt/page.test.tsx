@@ -43,7 +43,8 @@ describe('Adaptar entrenamiento page', () => {
       error: null,
       previewing: false,
       starting: false,
-      previewWithContext: jest.fn<(freeText: string) => Promise<void>>(),
+      startStatus: 'idle',
+      previewWithContext: jest.fn<UseCoachAdaptResult['previewWithContext']>(),
       startWorkout: jest.fn<() => Promise<void>>(),
       adjustAgain: jest.fn<() => void>(),
     });

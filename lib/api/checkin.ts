@@ -3,11 +3,41 @@ import type { DailyCheckin } from '@/lib/db/schema';
 import type { ApiError } from '@/types/errors';
 
 export type CheckInEnergy = 'low' | 'medium' | 'high';
+export type CheckInMood = 1 | 2 | 3 | 4 | 5;
 export type DailyCheckInInput = {
   mood: number;
   energy?: CheckInEnergy | null;
   note?: string | null;
 };
+
+/**
+ * Checks whether a persisted energy value is one of the user-selectable check-in options.
+ *
+ * @param value Unknown value returned from an API or stored check-in.
+ * @returns True only for a supported energy level.
+ * @example
+ * if (isCheckInEnergy(checkin.energy)) {
+ *   useEnergy(checkin.energy);
+ * }
+ */
+export function isCheckInEnergy(value: unknown): value is CheckInEnergy {
+  return value === 'low' || value === 'medium' || value === 'high';
+}
+
+/**
+ * Checks whether a persisted mood value is one of the supported user choices.
+ *
+ * @param value Unknown value returned from an API or stored check-in.
+ * @returns True only for a supported mood value.
+ * @example
+ * if (isCheckInMood(checkin.mood)) {
+ *   useMood(checkin.mood);
+ * }
+ */
+export function isCheckInMood(value: unknown): value is CheckInMood {
+  return value === 1 || value === 2 || value === 3 || value === 4 || value === 5;
+}
+
 export type DailyCheckInResponse = Omit<DailyCheckin, 'createdAt' | 'updatedAt'> & {
   createdAt: string;
   updatedAt: string;
@@ -134,7 +164,7 @@ function parseCheckInResponse(value: unknown): DailyCheckInResponse | null {
     !isInteger(value.id) ||
     !isInteger(value.userId) ||
     typeof value.localDate !== 'string' ||
-    !isInteger(value.mood) ||
+    !isCheckInMood(value.mood) ||
     !isEnergyOrNull(value.energy) ||
     !isStringOrNull(value.note) ||
     typeof value.createdAt !== 'string' ||
@@ -156,7 +186,7 @@ function parseCheckInResponse(value: unknown): DailyCheckInResponse | null {
 }
 
 function isEnergyOrNull(value: unknown): value is CheckInEnergy | null {
-  return value === null || value === 'low' || value === 'medium' || value === 'high';
+  return value === null || isCheckInEnergy(value);
 }
 
 function isStringOrNull(value: unknown): value is string | null {

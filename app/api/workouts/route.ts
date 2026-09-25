@@ -6,6 +6,19 @@ import * as workoutsService from '@/lib/services/workouts';
 import { startAdaptedWorkout } from '@/lib/services/coach-adaptation-apply';
 import { AppError } from '@/types/errors';
 
+const coachCheckInContextSchema = z
+  .object({
+    mood: z.union([
+      z.literal(1),
+      z.literal(2),
+      z.literal(3),
+      z.literal(4),
+      z.literal(5),
+    ]),
+    energy: z.enum(['low', 'medium', 'high']),
+  })
+  .strict();
+
 const createWorkoutSchema = z.object({
   routineId: z.number().int().positive().optional(),
   adaptation: z
@@ -13,7 +26,13 @@ const createWorkoutSchema = z.object({
       result: coachAdaptationResultSchema,
       freeText: z.string().max(500).optional(),
       dailyCheckInId: z.number().int().positive().optional(),
+      checkInContext: coachCheckInContextSchema.optional(),
     })
+    .refine(
+      (adaptation) =>
+        adaptation.checkInContext === undefined || adaptation.dailyCheckInId !== undefined,
+      { message: 'El contexto de adaptación requiere un check-in' },
+    )
     .optional(),
 });
 
@@ -41,12 +60,17 @@ export async function POST(request: NextRequest) {
       if (parsed.data.routineId === undefined) {
         throw new AppError('VALIDATION', 'La adaptación requiere una rutina');
       }
-      const { result, freeText, dailyCheckInId } = parsed.data.adaptation;
+      const { result, freeText, dailyCheckInId, checkInContext } = parsed.data.adaptation;
+      const contextSnapshot = checkInContext !== undefined
+        ? { ...checkInContext, ...(freeText !== undefined ? { freeText } : {}) }
+        : freeText !== undefined
+          ? { freeText }
+          : undefined;
       const { workout } = await startAdaptedWorkout({
         userId: session.userId,
         routineId: parsed.data.routineId,
         result,
-        ...(freeText !== undefined ? { contextSnapshot: { freeText } } : {}),
+        ...(contextSnapshot !== undefined ? { contextSnapshot } : {}),
         ...(dailyCheckInId !== undefined ? { dailyCheckInId } : {}),
       });
       return NextResponse.json(workout, { status: 201 });

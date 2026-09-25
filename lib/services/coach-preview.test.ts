@@ -125,18 +125,41 @@ describe('previewCoachAdaptation service', () => {
     expect(result.reason).toContain('energía baja');
   });
 
-  it('uses neutral defaults for free-text presets when there is no check-in or explicit energy and mood', async () => {
-    const result = await previewCoachAdaptation(
-      { routineId: 10, userId: 1, freeText: 'Tengo 15 minutos' },
-      { generateContent: async () => null },
-    );
+  it('rejects free-text-only previews instead of inventing neutral energy and mood', async () => {
+    await expect(
+      previewCoachAdaptation(
+        { routineId: 10, userId: 1, freeText: 'Tengo 15 minutos' },
+        { generateContent: async () => null },
+      ),
+    ).rejects.toMatchObject({
+      code: 'VALIDATION',
+      message: 'Necesitás registrar tu check-in de hoy o indicar energía y ánimo para adaptar.',
+    });
 
     expect(mockGetTodayCheckIn).toHaveBeenCalledWith(1);
-    expect(result.source).toBe('deterministic');
-    expect(result.original).toEqual({ exerciseCount: 3, setCount: 10, estMinutes: 30 });
-    expect(result.adapted.estMinutes).toBeLessThanOrEqual(15);
-    expect(result.adapted.setCount).toBeLessThan(result.original.setCount);
-    expect(result.reason).toMatch(/15 min/i);
+  });
+
+  it('rejects free-text previews when the check-in is missing energy', async () => {
+    mockGetTodayCheckIn.mockResolvedValue({
+      id: 5,
+      userId: 1,
+      localDate: '2026-09-19',
+      mood: 3,
+      energy: null,
+      note: null,
+      createdAt: new Date('2026-09-19T10:00:00.000Z'),
+      updatedAt: new Date('2026-09-19T10:00:00.000Z'),
+    });
+
+    await expect(
+      previewCoachAdaptation(
+        { routineId: 10, userId: 1, freeText: 'Tengo 15 minutos' },
+        { generateContent: async () => null },
+      ),
+    ).rejects.toMatchObject({
+      code: 'VALIDATION',
+      message: 'Necesitás registrar tu check-in de hoy o indicar energía y ánimo para adaptar.',
+    });
   });
 
   it('throws VALIDATION when no real energy or mood source is available', async () => {

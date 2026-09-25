@@ -82,6 +82,32 @@ describe('POST /api/workouts', () => {
     mockStartAdaptedWorkout.mockResolvedValue({ workout, recommendation: null });
 
     const response = await POST(
+      request({
+        routineId: 12,
+        adaptation: {
+          result,
+          freeText: 'Tengo 30 minutos',
+          dailyCheckInId: 17,
+          checkInContext: { mood: 4, energy: 'low' },
+        },
+      }),
+    );
+
+    expect(response.status).toBe(201);
+    expect(mockStartAdaptedWorkout).toHaveBeenCalledWith({
+      userId: 7,
+      routineId: 12,
+      result,
+      contextSnapshot: { mood: 4, energy: 'low', freeText: 'Tengo 30 minutos' },
+      dailyCheckInId: 17,
+    });
+    expect(mockCreateWorkout).not.toHaveBeenCalled();
+  });
+
+  it('keeps legacy adaptation callers without check-in context compatible', async () => {
+    mockStartAdaptedWorkout.mockResolvedValue({ workout, recommendation: null });
+
+    const response = await POST(
       request({ routineId: 12, adaptation: { result, freeText: 'Tengo 30 minutos' } }),
     );
 
@@ -92,7 +118,34 @@ describe('POST /api/workouts', () => {
       result,
       contextSnapshot: { freeText: 'Tengo 30 minutos' },
     });
-    expect(mockCreateWorkout).not.toHaveBeenCalled();
+  });
+
+  it('rejects an invalid check-in context', async () => {
+    const response = await POST(
+      request({
+        routineId: 12,
+        adaptation: {
+          result,
+          dailyCheckInId: 17,
+          checkInContext: { mood: 6, energy: 'low' },
+        },
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(mockStartAdaptedWorkout).not.toHaveBeenCalled();
+  });
+
+  it('rejects a check-in context without its persisted check-in id', async () => {
+    const response = await POST(
+      request({
+        routineId: 12,
+        adaptation: { result, checkInContext: { mood: 4, energy: 'low' } },
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(mockStartAdaptedWorkout).not.toHaveBeenCalled();
   });
 
   it('rejects an adaptation without a routineId', async () => {

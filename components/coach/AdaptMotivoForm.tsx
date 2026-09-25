@@ -50,7 +50,7 @@ export function AdaptMotivoForm({ loading, error, onSubmit }: AdaptMotivoFormPro
       <div className="space-y-1">
         <h2 className="text-lg font-bold text-ink">¿Qué necesitás ajustar?</h2>
         <p className="text-sm leading-6 text-ink-muted">
-          Atlas usa tu check-in real de hoy o el contexto que escribas. No inventamos energía ni ánimo.
+          Atlas combina tu check-in de hoy con el ajuste que escribas. El texto no reemplaza tu ánimo ni energía.
         </p>
       </div>
 

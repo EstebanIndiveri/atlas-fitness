@@ -3,7 +3,7 @@
  */
 import { afterEach, describe, expect, it, jest } from '@jest/globals';
 
-import { fetchTodayCheckIn, recordCheckIn } from './checkin';
+import { fetchTodayCheckIn, isCheckInEnergy, isCheckInMood, recordCheckIn } from './checkin';
 
 function jsonResponse(body: unknown, status = 200): Response {
   return {
@@ -18,6 +18,17 @@ describe('check-in client', () => {
 
   afterEach(() => {
     global.fetch = originalFetch;
+  });
+
+  it('recognizes only supported check-in energy values', () => {
+    expect(isCheckInEnergy('low')).toBe(true);
+    expect(isCheckInEnergy('medium')).toBe(true);
+    expect(isCheckInEnergy('high')).toBe(true);
+    expect(isCheckInEnergy(null)).toBe(false);
+    expect(isCheckInEnergy('unknown')).toBe(false);
+    expect(isCheckInMood(4)).toBe(true);
+    expect(isCheckInMood(0)).toBe(false);
+    expect(isCheckInMood('4')).toBe(false);
   });
 
   it('records a check-in and returns the API payload without changing fields', async () => {

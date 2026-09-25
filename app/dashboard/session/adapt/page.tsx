@@ -10,9 +10,11 @@ import { AdaptStepIndicator } from '@/components/coach/AdaptStepIndicator';
 import { PageContainer } from '@/components/shell/PageContainer';
 import { Button, buttonClassName } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { EmptyState, LoadingState } from '@/components/ui/states';
+import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
 import { UI_COPY } from '@/lib/copy/ui';
 import { useCoachAdapt } from '@/hooks/useCoachAdapt';
+import { useDailyCheckin } from '@/hooks/useDailyCheckin';
+import { isCheckInEnergy, isCheckInMood } from '@/lib/api/checkin';
 
 const FALLBACK_ROUTINE_NAME = 'Rutina de hoy';
 
@@ -67,7 +69,25 @@ function AdaptWorkoutContent({
   routineName: string;
   planGoal: string | null;
 }) {
-  const adapt = useCoachAdapt({ routineId });
+  const checkIn = useDailyCheckin();
+  const checkInData = checkIn.checkin;
+  const currentCheckInContext = checkInData !== null
+    && Number.isInteger(checkInData.id)
+    && checkInData.id > 0
+    && isCheckInEnergy(checkInData.energy)
+    && isCheckInMood(checkInData.mood)
+    ? {
+        dailyCheckInId: checkInData.id,
+        mood: checkInData.mood,
+        energy: checkInData.energy,
+      }
+    : null;
+  const hasCompleteCheckIn = !checkIn.loading
+    && !checkIn.saving
+    && checkIn.error === null
+    && currentCheckInContext !== null;
+  const checkInContext = hasCompleteCheckIn ? currentCheckInContext : null;
+  const adapt = useCoachAdapt({ routineId, checkInContext });
 
   return (
     <PageContainer className="space-y-5 pb-24">
@@ -96,7 +116,21 @@ function AdaptWorkoutContent({
         </div>
       </Card>
 
-      {adapt.step === 'motivo' ? (
+      {checkIn.loading ? <LoadingState label="Cargando tu check-in de hoy…" compact /> : null}
+      {checkIn.saving ? <LoadingState label="Guardando tu check-in…" compact /> : null}
+      {checkIn.error ? <ErrorState message={checkIn.error} /> : null}
+      {!checkIn.loading && !checkIn.error && !hasCompleteCheckIn ? (
+        <Card className="space-y-3 rounded-xl">
+          <p className="text-sm leading-6 text-ink-muted">
+            Registrá tu ánimo y energía en Hoy antes de pedir una vista previa. El texto por sí solo no aporta esos datos.
+          </p>
+          <Link href="/dashboard/today" className={buttonClassName()}>
+            Registrar mi check-in
+          </Link>
+        </Card>
+      ) : null}
+
+      {hasCompleteCheckIn && adapt.step === 'motivo' ? (
         <AdaptMotivoForm
           loading={adapt.previewing}
           error={adapt.error}

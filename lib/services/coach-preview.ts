@@ -47,7 +47,7 @@ type PreviewCoachAdaptationInput = z.infer<typeof previewCoachAdaptationSchema>;
  * @param input Unknown boundary payload containing routine id, user id, and optional energy, mood, and note.
  * @param deps Optional Gemini dependencies forwarded for deterministic tests or custom generation.
  * @returns An explainable original-vs-adapted routine preview without persisting anything.
- * @throws {AppError} VALIDATION when input is invalid, or neither free text, explicit energy/mood, nor check-in can provide context.
+ * @throws {AppError} VALIDATION when input is invalid or explicit/check-in data cannot provide both energy and mood.
  * @throws {AppError} NOT_FOUND when the routine is absent or inaccessible to the user.
  * @example
  * await previewCoachAdaptation({ routineId: 10, userId: 1, energy: 'low', mood: 2 });
@@ -100,11 +100,6 @@ async function resolveEnergyAndMood(
     if (mood === undefined && isCoachMood(checkIn?.mood)) {
       mood = checkIn.mood;
     }
-  }
-
-  if (input.freeText !== undefined) {
-    energy ??= 'medium';
-    mood ??= 3;
   }
 
   if (energy === undefined || mood === undefined) {
