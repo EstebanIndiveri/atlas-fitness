@@ -92,6 +92,7 @@ describe('TrainingPlanHub', () => {
     });
     rerender(<TrainingPlanHub planId={77} />);
     expect(screen.getByText('Plan inactivo')).toBeTruthy();
+    expect(screen.queryByRole('link', { name: 'Mejorar plan con Coach Atlas' })).toBeNull();
   });
 
   it('uses a narrow-screen-first day grid and semantic landmark labels', async () => {

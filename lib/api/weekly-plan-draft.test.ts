@@ -26,6 +26,18 @@ describe('isWeeklyPlanDraft', () => {
     expect(isWeeklyPlanDraft(validDraft)).toBe(true);
   });
 
+  it('accepts all seven scheduled days when an existing plan has a daily routine', () => {
+    const sevenDayDraft = {
+      ...validDraft,
+      days: [1, 2, 3, 4, 5, 6, 0].map((dayOfWeek) => ({
+        ...validDraft.days[0],
+        dayOfWeek,
+      })),
+    };
+
+    expect(isWeeklyPlanDraft(sevenDayDraft)).toBe(true);
+  });
+
   it('rejects duplicate weekdays so they cannot reach review or save', () => {
     const duplicateWeekdays = {
       ...validDraft,

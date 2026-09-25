@@ -22,7 +22,7 @@ export function buildWeeklyPlanPrompt(
     name: item.name,
     muscleGroup: item.muscleGroup,
   }));
-  return [
+  const prompt = [
     'Sos Coach Atlas. Respondé SOLO JSON válido con esta forma:',
     '{"name":"string","goal":"string","days":[{"dayOfWeek":0,"title":"string","focus":"string","exercises":[{"exerciseId":number,"targetSets":number,"targetReps":number}]}]}',
     'dayOfWeek usa 0=domingo, 1=lunes, 2=martes, 3=miércoles, 4=jueves, 5=viernes, 6=sábado.',
@@ -36,5 +36,13 @@ export function buildWeeklyPlanPrompt(
     `Duración por sesión: ${input.sessionLengthMinutes} minutos`,
     `Áreas foco: ${input.focusAreas.join(', ') || 'equilibrado'}`,
     `Catálogo: ${JSON.stringify(catalogPayload)}`,
-  ].join('\n');
+  ];
+  if (input.currentPlan) {
+    prompt.push(
+      'Estás proponiendo una mejora para un plan semanal existente. Usá solo los datos actuales provistos y atendé explícitamente el objetivo pedido.',
+      'No afirmes que modificaste rutinas existentes. La propuesta se revisará y solo se guardará si la persona confirma.',
+      `Plan semanal actual: ${JSON.stringify(input.currentPlan)}`,
+    );
+  }
+  return prompt.join('\n');
 }

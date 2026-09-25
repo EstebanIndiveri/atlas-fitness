@@ -18,10 +18,13 @@ const routineSchema = z.object({
   exercises: z.array(exerciseSchema).min(1).max(30),
 });
 
-const guidedTrainingPlanSchema = z.object({
+export const guidedTrainingPlanSchema = z.object({
   mutationId: z.string().uuid(),
   name: z.string().trim().min(1).max(120),
   goal: z.string().trim().min(1).max(60).optional(),
+  replacePlanId: z.number().int().positive().optional(),
+  replacePlanUpdatedAt: z.string().datetime().optional(),
+  replacePlanStateHash: z.string().regex(/^[0-9a-f]{64}$/).optional(),
   days: z
     .array(
       z.object({
@@ -40,7 +43,18 @@ const guidedTrainingPlanSchema = z.object({
     )
     .min(1)
     .max(7),
-});
+}).refine(
+  (value) => {
+    const replacementFields = [
+      value.replacePlanId,
+      value.replacePlanUpdatedAt,
+      value.replacePlanStateHash,
+    ];
+    const providedFields = replacementFields.filter((field) => field !== undefined).length;
+    return providedFields === 0 || providedFields === replacementFields.length;
+  },
+  { message: 'La versión del plan a reemplazar es inválida' },
+);
 
 export type ValidGuidedTrainingPlan = z.infer<typeof guidedTrainingPlanSchema>;
 
@@ -87,6 +101,13 @@ export function hashGuidedPlanPayload(input: ValidGuidedTrainingPlan): string {
     name: input.name,
     goal: input.goal ?? null,
     days: input.days,
+    ...(input.replacePlanId === undefined
+      ? {}
+      : {
+          replacePlanId: input.replacePlanId,
+          replacePlanUpdatedAt: input.replacePlanUpdatedAt,
+          replacePlanStateHash: input.replacePlanStateHash,
+        }),
   };
 
   return createHash('sha256').update(JSON.stringify(canonicalPayload)).digest('hex');
