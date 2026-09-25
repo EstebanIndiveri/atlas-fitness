@@ -133,7 +133,7 @@ function UpcomingHeader({ planId }: { planId: number | null }) {
         Próximos días
       </h2>
       {planId !== null ? (
-        <Link href={`/dashboard/plan/${planId}/edit`} className="text-sm font-semibold text-brand">
+        <Link href={`/dashboard/plan/${planId}`} className="text-sm font-semibold text-brand">
           Ver plan completo →
         </Link>
       ) : null}

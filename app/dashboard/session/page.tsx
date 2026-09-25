@@ -11,6 +11,7 @@ import { ErrorState, LoadingState } from '@/components/ui/states';
 import { ROUTINE_TEST_IDS } from '@/lib/copy/routines';
 import { UI_COPY } from '@/lib/copy/ui';
 import { useTrainingLanding } from '@/hooks/useTrainingLanding';
+import type { TodayResponse } from '@/lib/api/today';
 
 /**
  * Entrenar landing screen for today's plan and guided routine starts.
@@ -22,6 +23,7 @@ import { useTrainingLanding } from '@/hooks/useTrainingLanding';
  */
 export default function GuidedSessionPickerPage() {
   const { today, routines, activeWorkout, loading, error, starting, start } = useTrainingLanding();
+  const planManagementHref = getPlanManagementHref(today);
 
   return (
     <PageContainer className="space-y-6">
@@ -31,14 +33,16 @@ export default function GuidedSessionPickerPage() {
             {UI_COPY.training.title}
           </h1>
         </div>
-        <Link
-          href="/dashboard/routines"
-          className="rounded-full bg-surface px-3 py-2 text-xs font-medium text-ink shadow-card ring-1 ring-line hover:bg-canvas"
-          data-testid={ROUTINE_TEST_IDS.manageCta}
-        >
-          <span aria-hidden="true">⚏ </span>
-          {UI_COPY.training.managePlan}
-        </Link>
+        {planManagementHref ? (
+          <Link
+            href={planManagementHref}
+            className="rounded-full bg-surface px-3 py-2 text-xs font-medium text-ink shadow-card ring-1 ring-line hover:bg-canvas"
+            data-testid={ROUTINE_TEST_IDS.manageCta}
+          >
+            <span aria-hidden="true">⚏ </span>
+            {UI_COPY.training.managePlan}
+          </Link>
+        ) : null}
       </header>
 
       {loading ? <LoadingState /> : null}
@@ -66,4 +70,14 @@ export default function GuidedSessionPickerPage() {
       ) : null}
     </PageContainer>
   );
+}
+
+function getPlanManagementHref(today: TodayResponse | null): string | null {
+  if (today === null) {
+    return null;
+  }
+  if (today.kind === 'no_plan') {
+    return '/dashboard/plan/new';
+  }
+  return `/dashboard/plan/${today.trainingPlanId}`;
 }

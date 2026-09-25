@@ -118,8 +118,8 @@ export const UI_COPY = {
     missingRoutineBody: 'Revisá tus rutinas o ajustá el plan antes de empezar.',
     newRoutineTitle: 'Nueva rutina',
     newRoutineBody: 'Elegí si Atlas te guía con IA o si preferís armarla manualmente.',
-    createWithCoach: 'Crear con Coach Atlas',
-    createManually: 'Crear manualmente',
+    createWithCoach: 'Crear rutina con Coach Atlas',
+    createManually: 'Crear rutina manual',
     coachRoutine: {
       backToRoutines: 'Volver a rutinas',
       eyebrow: 'Coach Atlas',
