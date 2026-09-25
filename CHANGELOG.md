@@ -4,7 +4,18 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Este
 
 ## [Unreleased]
 
-Los cambios posteriores a v0.7.0 se registrarán en esta sección.
+Los cambios siguientes componen el candidato v0.7.1, preparado el 2026-09-25 desde el merge QA #136 (`6996dd8463d2c4b2cf08c40f900639c9ea504eca`); todavía no está publicado ni etiquetado.
+
+### Added
+- Pantalla dedicada de Hábitos y hub del plan semanal activo con una vista real de sus siete días.
+- Mejora del plan semanal activo con propuesta, comparación y confirmación explícita antes del reemplazo transaccional.
+
+### Changed
+- Mi Atlas usa las preferencias guardadas y datos reales de cuenta/actividad; iniciar un entrenamiento adaptado desde Hoy conserva el contexto exacto del check-in.
+- Las adaptaciones aceptadas persisten los ejercicios omitidos y objetivos reducidos al reanudar la sesión.
+
+### Fixed
+- Los controles de ánimo de Hoy ya no desbordan el viewport móvil de 390 px.
 
 ## [0.7.0] - 2026-09-25
 

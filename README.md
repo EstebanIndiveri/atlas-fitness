@@ -2,7 +2,7 @@
 
 Asistente de fitness personal para registrar entrenamientos, pesos, consejos, media de ejercicios y motivación — vía **web app** y **bot de Telegram** (misma lógica de producto que Hermes Finance: un dominio, dos canales).
 
-> Última versión publicada: **v0.7.0** (2026-09-25). Al cierre del release, el PR #126 fusionó v0.7.0 en `main` y el PR #127 sincronizó `develop` con el commit `dae2bc949538f9cb9fa02faf8db0712d04b9d9f9`, al que apunta el tag `v0.7.0`. El estado operativo y la evidencia están en [`docs/backlog/handoff-2026-09.md`](./docs/backlog/handoff-2026-09.md).
+> Última versión publicada: **v0.7.0** (2026-09-25). El candidato v0.7.1 parte del merge QA #136 en `develop` (`6996dd8463d2c4b2cf08c40f900639c9ea504eca`); su CI post-merge (run 36201073118) pasó. v0.7.1 todavía no está publicado. El estado operativo y la evidencia están en [`docs/backlog/handoff-2026-09.md`](./docs/backlog/handoff-2026-09.md).
 
 ## Visión (borrador)
 
@@ -180,7 +180,7 @@ Ver [`AGENTS.md`](./AGENTS.md) §3–5 para el branching model completo.
 
 ## Estado Actual (última versión publicada: v0.7.0)
 
-v0.7.0 es la última versión publicada. Incluye el trabajo de Coach Context integrado en los PR #118–#124; el release se publicó mediante el PR #126.
+v0.7.0 es la última versión publicada e incluye Coach Context de los PR #118–#124. El candidato v0.7.1 desde `develop` agrega la pantalla dedicada de Hábitos, el hub y la mejora confirmada del plan semanal activo, persistencia de sesiones adaptadas y datos reales de Perfil; aún no se publicó.
 
 ✅ **Completado / usable:**
 - Auth + sesiones HMAC revocables, link Telegram y webhooks modulares
@@ -190,6 +190,8 @@ v0.7.0 es la última versión publicada. Incluye el trabajo de Coach Context int
 - Coach Context en Perfil: preferencias persistidas y editables; valores explícitos no modifican el plan activo. Respuestas antiguas del navegador solo se importan tras vista previa y confirmación, y nunca sobre una fila existente.
 - Hoy con check-in ánimo/energía, hero de entrenamiento, motivo honesto y acciones Empezar/Adaptar (convergencia Figma released en v0.6.0, regresiones de dispositivo corregidas en v0.6.1)
 - Plan semanal manual + edición (`/dashboard/plan/[id]/edit`)
+- Hub del plan semanal activo, mejora con propuesta y confirmación explícita, y persistencia al reanudar entrenamientos adaptados (candidato v0.7.1)
+- Pantalla dedicada de Hábitos y Perfil basado en datos guardados del servidor (candidato v0.7.1)
 - Plan guiado “Crear con Coach Atlas” sobre catálogo real; guardar crea el plan y sus rutinas de forma explícita, atómica e idempotente
 - Coach AI weekly-plan: el brief del plan guiado precarga las preferencias guardadas como campos editables; generar solo devuelve un borrador. La revisión identifica Gemini o fallback y muestra el objetivo, los focos y ejercicios/series/repeticiones propuestos; guardar es explícito, atómico e idempotente.
 - Entrenar hub, rutinas, detalle de rutina y sesión guiada responsive (player pulido en v0.6.1: CTA verde+check, timer de descanso siempre visible, "Añadir serie")

@@ -1,7 +1,7 @@
 # Backlog — Atlas Fitness
 
 Fuente de verdad de alcance junto a los ADRs en [`docs/architecture/`](../architecture/) y el harness de trabajo en [`AGENTS.md`](../../AGENTS.md).  
-Este backlog refleja `develop` tras los PR #118–#124. La última versión publicada sigue siendo v0.6.2; Coach Context está integrado y en preparación documental para v0.7.0, todavía sin publicar. Convive con la visión estratégica de [`handoff-atlas-adaptive-core.md`](./handoff-atlas-adaptive-core.md): ese documento marca el norte de **Atlas Adaptive Core V1**; este README traduce el estado operativo y lo que queda. Para el checkpoint paso-a-paso y evidencia de pruebas ver [`handoff-2026-09.md`](./handoff-2026-09.md).
+Este backlog refleja `develop` tras los PR #130–#137. La última versión publicada es v0.7.0 (tag sobre `dae2bc949538f9cb9fa02faf8db0712d04b9d9f9`); el candidato v0.7.1 parte del merge QA #136 (`6996dd8463d2c4b2cf08c40f900639c9ea504eca`) y su CI post-merge pasó en el run 36201073118. El candidato aún no está publicado. Convive con la visión estratégica de [`handoff-atlas-adaptive-core.md`](./handoff-atlas-adaptive-core.md): ese documento marca el norte de **Atlas Adaptive Core V1**; este README traduce el estado operativo y lo que queda. Para el checkpoint paso-a-paso y evidencia de pruebas ver [`handoff-2026-09.md`](./handoff-2026-09.md).
 
 ## Estado actual del producto
 
@@ -13,6 +13,7 @@ Atlas ya dejó atrás el scaffold: existe un loop usable de **onboarding → Hoy
 - ✅ **`dayReason` honesto**: `lib/services/day-reason.ts` reemplaza leaks de notas libres por copy determinístico basado en check-in, descanso previo y objetivo del plan.
 - ✅ **Plan semanal — crear y editar**: creación manual, `GET/PATCH /api/training-plan/[id]`, pantalla `/dashboard/plan/[id]/edit` y modo edit de `usePlanBuilder`.
 - ✅ **Plan guiado**: wizard `/dashboard/plan/guided` genera un borrador sobre catálogo real; solo al confirmar crea el plan y sus rutinas por día, de forma atómica e idempotente.
+- ✅ **v0.7.1 candidato (PR #130–#137)**: pantalla dedicada de Hábitos; hub del plan semanal activo y mejora con comparación/confirmación explícita; Perfil con datos guardados del servidor; inicio desde Hoy y reanudación de sesiones adaptadas con el check-in, ejercicios omitidos y objetivos reducidos persistidos; controles de ánimo sin overflow móvil.
 - ✅ **Mejora del plan semanal activo**: `/dashboard/plan/[id]/improve` parte del plan activo autenticado y de una intención explícita; presenta una comparación ANTES/PROPUESTA sin escrituras y solo reemplaza el plan tras confirmación explícita, de forma atómica e idempotente. Las rutinas previas no se mutan.
 - ✅ **Coach Context (PR #118–#124, candidato v0.7.0)**: persistencia autenticada de `goal/pace/equipment` con distinción entre fila ausente y fila explícita con todos los valores `null`; Finish de onboarding sincroniza, Skip no sincroniza; importación legacy exige vista previa/confirmación y alta condicional. Perfil permite editar/guardar sin alterar el plan activo. El brief guiado lee contexto guardado como valores iniciales editables (`days-5` → `5`), sin generar ni guardar automáticamente. La generación autenticada muestra si el resultado vino de Gemini o del fallback, y solo persiste tras Guardar explícito con escritura atómica/idempotente.
 - ✅ **Convergencia Figma**:
@@ -61,7 +62,6 @@ Atlas ya dejó atrás el scaffold: existe un loop usable de **onboarding → Hoy
 ### Deferred / follow-up (perfil)
 
 - **Notificaciones y recordatorios**: continúan diferidos; no hay pantalla ni acción real implementada.
-- **Pantalla de Hábitos de bienestar** dedicada (hoy la fila enlaza a Hoy, donde viven los hábitos).
 
 Coach Context no implica aprendizaje automático ni modifica el plan activo al editar preferencias. Las preferencias solo se usan como valores iniciales del brief editable del plan guiado; generación, revisión y guardado siguen siendo pasos separados bajo control del usuario.
 
@@ -100,7 +100,7 @@ Coach Context no implica aprendizaje automático ni modifica el plan activo al e
 
 1. Si QA lo requiere, validar progreso de fuerza con historial QA real; no convertir la falta de esa evidencia en bug confirmado.
 2. Si PO prioriza, ampliar la explicación diaria del borrador sin atribuir señales o aprendizaje que el código no usa ni muestra.
-3. Pantalla de Hábitos si PO prioriza; las notificaciones siguen diferidas hasta contar con una acción real.
+3. Las notificaciones siguen diferidas hasta contar con una acción real.
 4. Cada entrega: TDD → auditoría pre-PR con `code-review` → suite full limpia → PR a `develop` → release candidate desde `develop` → `main` + tag + back-merge.
 
 ## Handoffs
