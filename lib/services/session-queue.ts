@@ -3,7 +3,7 @@ import { db } from '@/lib/db/client';
 import { workoutQueueMutations, workouts } from '@/lib/db/schema';
 import { isSqliteBusyError, isUniqueConstraintError } from '@/lib/db/unique-error';
 import { completedExerciseIdsForRoutine } from '@/lib/session/progress';
-import { applyHold, applySkip } from '@/lib/session/queue';
+import { applyHold, applySkip, applyTargetSetsOverrides } from '@/lib/session/queue';
 import { suggestNextExerciseFromRemaining } from '@/lib/services/guided-session';
 import { getRoutineById } from '@/lib/services/routines';
 import { parseStoredActionResponse } from '@/lib/services/session-queue-response';
@@ -128,8 +128,15 @@ async function buildActionResponse(
     const item = routine.exercises.find((exercise) => exercise.exerciseId === exerciseId);
     return item ? [{ id: exerciseId, name: item.exerciseName }] : [];
   });
-  const completedIds = completedExerciseIdsForRoutine(routine, workout.sets);
-  const lastCompleted = [...routine.exercises]
+  const adaptedRoutine = {
+    ...routine,
+    exercises: applyTargetSetsOverrides(
+      routine.exercises,
+      workout.queue.targetSetsOverrides,
+    ),
+  };
+  const completedIds = completedExerciseIdsForRoutine(adaptedRoutine, workout.sets);
+  const lastCompleted = [...adaptedRoutine.exercises]
     .reverse()
     .find((item) => completedIds.includes(item.exerciseId));
   const suggestion = await suggestNextExerciseFromRemaining(

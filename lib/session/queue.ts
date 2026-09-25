@@ -13,6 +13,7 @@ export function buildWorkoutQueue(args: {
   completedExerciseIds: Iterable<number>;
   skippedExerciseIds?: Iterable<number>;
   heldExerciseIds?: Iterable<number>;
+  targetSetsOverrides?: Record<number, number>;
 }): WorkoutQueueState {
   const completed = new Set(args.completedExerciseIds);
   const skipped = uniqueNumbers(args.skippedExerciseIds ?? []).filter((id) => !completed.has(id));
@@ -23,6 +24,9 @@ export function buildWorkoutQueue(args: {
     pendingExerciseIds: applyHeldOrder(pending, held),
     skippedExerciseIds: skipped,
     heldExerciseIds: held,
+    ...(args.targetSetsOverrides
+      ? { targetSetsOverrides: { ...args.targetSetsOverrides } }
+      : {}),
   };
 }
 
@@ -56,6 +60,9 @@ export function reconcileWorkoutQueue(args: {
     pendingExerciseIds: pending,
     skippedExerciseIds: skipped,
     heldExerciseIds: held,
+    ...(base?.targetSetsOverrides
+      ? { targetSetsOverrides: { ...base.targetSetsOverrides } }
+      : {}),
   };
 }
 
@@ -68,6 +75,7 @@ export function applySkip(queue: WorkoutQueueState, exerciseId: number): Workout
     pendingExerciseIds: queue.pendingExerciseIds.filter((id) => id !== exerciseId),
     skippedExerciseIds: uniqueNumbers([...queue.skippedExerciseIds, exerciseId]),
     heldExerciseIds: queue.heldExerciseIds.filter((id) => id !== exerciseId),
+    ...copyTargetSetsOverrides(queue),
   };
 }
 
@@ -81,6 +89,7 @@ export function applyHold(queue: WorkoutQueueState, exerciseId: number): Workout
     pendingExerciseIds: [...without, exerciseId],
     skippedExerciseIds: [...queue.skippedExerciseIds],
     heldExerciseIds: uniqueNumbers([...queue.heldExerciseIds, exerciseId]),
+    ...copyTargetSetsOverrides(queue),
   };
 }
 
@@ -89,7 +98,22 @@ export function applyComplete(queue: WorkoutQueueState, exerciseId: number): Wor
     pendingExerciseIds: queue.pendingExerciseIds.filter((id) => id !== exerciseId),
     skippedExerciseIds: [...queue.skippedExerciseIds],
     heldExerciseIds: queue.heldExerciseIds.filter((id) => id !== exerciseId),
+    ...copyTargetSetsOverrides(queue),
   };
+}
+
+export function applyTargetSetsOverrides<T extends { exerciseId: number; targetSets: number }>(
+  exercises: readonly T[],
+  overrides?: Readonly<Record<number, number>>,
+): T[] {
+  if (!overrides) {
+    return [...exercises];
+  }
+
+  return exercises.map((exercise) => {
+    const targetSets = overrides[exercise.exerciseId];
+    return targetSets === undefined ? exercise : { ...exercise, targetSets };
+  });
 }
 
 export function queueItemsFromRoutine(
@@ -166,10 +190,17 @@ export function parseStoredQueue(value: unknown): WorkoutQueueState | null {
   if (!pending || !skipped || !held) {
     return null;
   }
+  const targetSetsOverrides = hasTargetSetsOverrides(record)
+    ? parseTargetSetsOverrides(record.targetSetsOverrides)
+    : undefined;
+  if (hasTargetSetsOverrides(record) && !targetSetsOverrides) {
+    return null;
+  }
   return {
     pendingExerciseIds: pending,
     skippedExerciseIds: skipped,
     heldExerciseIds: held,
+    ...(targetSetsOverrides ? { targetSetsOverrides } : {}),
   };
 }
 
@@ -177,11 +208,30 @@ export function parseStoredQueueJson(raw: string | null | undefined): WorkoutQue
   if (!raw) {
     return null;
   }
+
+  let value: unknown;
   try {
-    return parseStoredQueue(JSON.parse(raw) as unknown);
+    value = JSON.parse(raw) as unknown;
   } catch {
     return null;
   }
+
+  const parsed = parseStoredQueue(value);
+  if (parsed) {
+    return parsed;
+  }
+
+  if (
+    isRecord(value) &&
+    hasTargetSetsOverrides(value) &&
+    asIntArray(value.pendingExerciseIds) &&
+    asIntArray(value.skippedExerciseIds) &&
+    asIntArray(value.heldExerciseIds) &&
+    !parseTargetSetsOverrides(value.targetSetsOverrides)
+  ) {
+    throw new Error('Invalid target set overrides in persisted workout queue');
+  }
+  return null;
 }
 
 function applyHeldOrder(pending: number[], held: number[]): number[] {
@@ -211,7 +261,46 @@ function cloneQueue(queue: WorkoutQueueState): WorkoutQueueState {
     pendingExerciseIds: [...queue.pendingExerciseIds],
     skippedExerciseIds: [...queue.skippedExerciseIds],
     heldExerciseIds: [...queue.heldExerciseIds],
+    ...copyTargetSetsOverrides(queue),
   };
+}
+
+function copyTargetSetsOverrides(
+  queue: WorkoutQueueState,
+): { targetSetsOverrides?: Record<number, number> } {
+  return queue.targetSetsOverrides
+    ? { targetSetsOverrides: { ...queue.targetSetsOverrides } }
+    : {};
+}
+
+function hasTargetSetsOverrides(record: Record<string, unknown>): boolean {
+  return Object.prototype.hasOwnProperty.call(record, 'targetSetsOverrides');
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function parseTargetSetsOverrides(value: unknown): Record<number, number> | null {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return null;
+  }
+
+  const overrides: Record<number, number> = {};
+  for (const [rawExerciseId, targetSets] of Object.entries(value)) {
+    const exerciseId = Number(rawExerciseId);
+    if (
+      !Number.isSafeInteger(exerciseId) ||
+      exerciseId <= 0 ||
+      typeof targetSets !== 'number' ||
+      !Number.isInteger(targetSets) ||
+      targetSets <= 0
+    ) {
+      return null;
+    }
+    overrides[exerciseId] = targetSets;
+  }
+  return overrides;
 }
 
 function asIntArray(value: unknown): number[] | null {

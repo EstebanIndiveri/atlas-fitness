@@ -340,4 +340,41 @@ describe('useGuidedSession skip/hold', () => {
     expect(result.current.current?.targetSets).toBe(4);
     expect(result.current.routine?.exercises.find((item) => item.exerciseId === 20)?.targetSets).toBe(3);
   });
+
+  it('restores adapted target sets and removed exercises from the workout queue on resume', async () => {
+    const resumedWorkout = {
+      ...workout,
+      sets: [],
+      queue: {
+        pendingExerciseIds: [10, 30],
+        skippedExerciseIds: [20],
+        heldExerciseIds: [],
+        targetSetsOverrides: { 10: 3 },
+      },
+    };
+    const originalRoutine = {
+      ...routine,
+      exercises: routine.exercises.map((item) => ({ ...item, targetSets: 4 })),
+    };
+
+    global.fetch = jest.fn(async (input: string) => {
+      const url = String(input);
+      if (url === '/api/workouts/8') {
+        return jsonResponse(resumedWorkout);
+      }
+      if (url === '/api/routines/1') {
+        return jsonResponse(originalRoutine);
+      }
+      return jsonResponse({ code: 'NOT_FOUND', message: url }, 404);
+    }) as unknown as typeof fetch;
+
+    const { result } = renderHook(() => useGuidedSession('8'));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.current?.exerciseId).toBe(10);
+    expect(result.current.current?.targetSets).toBe(3);
+    expect(result.current.queue.pendingExerciseIds).toEqual([10, 30]);
+    expect(result.current.queue.skippedExerciseIds).toEqual([20]);
+    expect(result.current.routine?.exercises.find((item) => item.exerciseId === 20)?.targetSets).toBe(4);
+  });
 });

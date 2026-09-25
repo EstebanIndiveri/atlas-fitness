@@ -4,6 +4,7 @@ import {
   applySessionQueueAction,
   applySkip,
   buildWorkoutQueue,
+  parseStoredQueueJson,
   reconcileWorkoutQueue,
   selectQueuedExercise,
 } from './queue';
@@ -43,6 +44,20 @@ describe('applySkip', () => {
         skipped,
       )?.exerciseId,
     ).toBe(20);
+  });
+
+  it('preserves adapted set targets when persisting a queue action', () => {
+    const queue = {
+      ...buildWorkoutQueue({ orderedExerciseIds: ORDERED, completedExerciseIds: [] }),
+      targetSetsOverrides: { 10: 3 },
+    };
+
+    expect(applySkip(queue, 20)).toEqual({
+      pendingExerciseIds: [10, 30],
+      skippedExerciseIds: [20],
+      heldExerciseIds: [],
+      targetSetsOverrides: { 10: 3 },
+    });
   });
 });
 
@@ -134,5 +149,20 @@ describe('reconcileWorkoutQueue', () => {
     });
     expect(reconciled.pendingExerciseIds).toEqual([20, 30]);
     expect(reconciled.skippedExerciseIds).toEqual([10]);
+  });
+});
+
+describe('parseStoredQueueJson', () => {
+  it('fails explicitly on malformed adaptation state instead of discarding skip state', () => {
+    const storedQueue = JSON.stringify({
+      pendingExerciseIds: [20],
+      skippedExerciseIds: [10],
+      heldExerciseIds: [],
+      targetSetsOverrides: { 20: 0 },
+    });
+
+    expect(() => parseStoredQueueJson(storedQueue)).toThrow(
+      'Invalid target set overrides in persisted workout queue',
+    );
   });
 });

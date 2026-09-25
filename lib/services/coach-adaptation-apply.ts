@@ -30,6 +30,17 @@ function removedExerciseIds(result: CoachAdaptationResult): number[] {
     .map((delta) => delta.exerciseId);
 }
 
+function reducedTargetSetsOverrides(
+  result: CoachAdaptationResult,
+): Record<number, number> {
+  return result.exerciseDeltas.reduce<Record<number, number>>((overrides, delta) => {
+    if (delta.action === 'reduced' && delta.toSets > 0 && delta.toSets < delta.fromSets) {
+      overrides[delta.exerciseId] = delta.toSets;
+    }
+    return overrides;
+  }, {});
+}
+
 /**
  * Starts a guided workout from an accepted Coach Atlas adaptation: creates the
  * workout with removed exercises pre-skipped in the queue, then records the
@@ -52,6 +63,7 @@ export async function startAdaptedWorkout(
 
   const workout = await createWorkout(userId, routineId, {
     skippedExerciseIds: removedExerciseIds(result),
+    targetSetsOverrides: reducedTargetSetsOverrides(result),
   });
 
   try {
