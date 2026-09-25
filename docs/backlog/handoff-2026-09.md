@@ -1,10 +1,12 @@
-# Handoff — Atlas Fitness · Checkpoint post PR #114 (Septiembre 2026)
+# Handoff — Atlas Fitness · Coach Context v0.7.0 release prep (Septiembre 2026)
 
-> **Documento de checkpoint operativo.** Es la fuente de verdad para que un agente o persona entienda el estado actual del proyecto, qué está hecho/released, qué quedó diferido en backlog y cómo continuar paso a paso. Última actualización: 2026-09-24. La última versión publicada es v0.6.2, una release de estabilidad de testing/documentación sin nuevas funcionalidades de producto; este checkpoint conserva el contexto de `develop` tras PR #114.
+> **Documento de checkpoint operativo.** Es la fuente de verdad para que un agente o persona entienda el estado del proyecto en el snapshot indicado abajo, qué está hecho/released, qué quedó diferido en backlog y cómo continuar. Última actualización: 2026-09-25. La última versión publicada es v0.6.2, una release de estabilidad de testing/documentación sin nuevas funcionalidades de producto. Los PR #118–#124 de Coach Context están integrados en `develop`; el trabajo se prepara como v0.7.0 y todavía no está publicado.
 
 ## 1. Recap producto / visión
 
-Atlas Fitness es un coach de entrenamiento mobile-first: no busca ser un CRUD de rutinas sino un loop de hábito donde el usuario registra cómo está, ve qué toca hoy, puede adaptar la sesión con Coach Atlas, entrena guiado, deja feedback y vuelve a Progreso con datos reales. La visión de [`handoff-atlas-adaptive-core.md`](./handoff-atlas-adaptive-core.md) sigue vigente: **contexto → interpretación → recomendación → acción → aprendizaje**, con una regla central: Coach Atlas propone y explica, nunca inventa ni modifica silenciosamente.
+Atlas Fitness es un coach de entrenamiento mobile-first: no busca ser un CRUD de rutinas sino un loop de hábito donde el usuario registra cómo está, ve qué toca hoy, puede adaptar la sesión con Coach Atlas, entrena guiado, deja feedback y vuelve a Progreso con datos reales. La visión de [`handoff-atlas-adaptive-core.md`](./handoff-atlas-adaptive-core.md) sigue vigente como norte: **contexto → interpretación → recomendación → acción → aprendizaje**, con una regla central: Coach Atlas propone y explica, nunca inventa ni modifica silenciosamente.
+
+**Límite de lo implementado:** Coach Context no aprende ni infiere preferencias a partir del comportamiento. `goal`, `pace` y `equipment` son valores ingresados explícitamente y guardados por usuario; solo precargan campos editables del brief guiado. No leen historial, check-ins ni biometría, y editarlos no cambia el plan activo.
 
 ## 2. Snapshot de arquitectura
 
@@ -15,7 +17,8 @@ Stack y límites están documentados en [`ADR-001`](../architecture/ADR-001-syst
 - **Dominio/servicios**: `lib/services/**` concentra casos de uso: planes, Today, workouts, sesión guiada, progreso, Coach adaptation, feedback, hábitos.
 - **IA/adapters**: `lib/ai/**` contiene Gemini/fallbacks. Gemini debe ser server-side; sin key o con error no bloquea el flujo.
 - **Componentes**: `components/**` está organizado por dominio (`today`, `session`, `plan`, `progress`, `training`, `profile`, `onboarding`, `shell`, `ui`). Hooks compartidos viven en `hooks/**`.
-- **DB**: `lib/db/**` usa Drizzle + Turso/libSQL. `lib/db/schema.ts` define auth sessions, catálogo, rutinas, workouts, planes, feedback, hábitos, Telegram, etc.
+- **DB**: `lib/db/**` usa Drizzle + Turso/libSQL. `lib/db/schema.ts` define auth sessions, catálogo, rutinas, workouts, planes, preferencias de usuario (`goal`, `pace`, `equipment`), guardados idempotentes de planes guiados, feedback, hábitos, Telegram, etc.
+- **Coach Context**: `GET/PUT /api/profile/preferences` operan sobre la sesión autenticada. `hasSavedPreferences` indica si existe una fila, no si algún campo tiene valor: fila ausente devuelve `false` y tres `null`; una fila guardada con los tres `null` devuelve `true`.
 - **Tipos compartidos**: `types/**`, incluyendo contratos de métricas (`types/metric.ts`) y errores tipados.
 - **Canales**: PWA como cliente Must; Telegram bot/webhook modular como segundo canal. Expo queda post-PMF según ADR-002.
 
@@ -34,18 +37,20 @@ Aplicación práctica:
 
 Estado del recorrido **onboarding → today → start/adapt → guided session → post-workout → progress**:
 
-1. **Onboarding**: completo visualmente con wizard de 4 pasos, opciones accesibles y CTA sticky en [`components/onboarding/OnboardingWizard.tsx`](../../components/onboarding/OnboardingWizard.tsx).
-2. **Today**: **convergido a Figma y released (v0.6.0/v0.6.1)**. [`app/dashboard/today/page.tsx`](../../app/dashboard/today/page.tsx) compone header, check-in ánimo/energía, hero, Coach, hábitos, semana e install toast. En v0.6.1 se corrigieron regresiones de dispositivo real: contraste del ánimo seleccionado, overflow de hábitos y hero/progress bar.
-3. **Start/adapt**: Hoy y Entrenar pueden iniciar rutina programada; Adaptar navega a `/dashboard/session/adapt` con rutina/objetivo. Coach adaptation existe con preview/apply y fallback.
-4. **Guided session**: completo y responsive: header, ejercicio activo, Técnica/media, Notas, set table, rest/skip/hold y CTA de completar serie (`components/session/**`, `app/dashboard/session/[workoutId]/page.tsx`). En v0.6.1: CTA verde con check, timer de descanso como barra fija siempre visible, "Añadir serie" funcional (`addSet()` cap 12) y estados de serie con círculos; sin inventar historial previo.
-5. **Post-workout**: feedback post-workout y close summary existen en services/routes/componentes de sesión.
-6. **Progress**: pantalla Progreso Figma-aligned con interpretación, resumen, consistencia semanal, fuerza, bienestar, hábitos y sesiones recientes en [`app/dashboard/progress/page.tsx`](../../app/dashboard/progress/page.tsx).
+1. **Onboarding**: wizard de 4 pasos, opciones accesibles y CTA sticky en [`components/onboarding/OnboardingWizard.tsx`](../../components/onboarding/OnboardingWizard.tsx). Finish guarda respuestas localmente y sincroniza con el perfil autenticado; si la llamada devuelve 401, conserva el uso local y continúa. Skip solo marca onboarding completo y navega a Hoy, sin sincronizar preferencias.
+2. **Coach Context / perfil**: la sección Preferencias de Coach permite revisar, editar y guardar explícitamente `goal/pace/equipment`; editar no muta el plan activo. Respuestas legacy del navegador solo se importan luego de vista previa y confirmación si no existe fila de servidor. La importación usa alta condicional, por lo que una fila concurrente o una fila explícita con tres `null` no se reemplaza.
+3. **Today**: **convergido a Figma y released (v0.6.0/v0.6.1)**. [`app/dashboard/today/page.tsx`](../../app/dashboard/today/page.tsx) compone header, check-in ánimo/energía, hero, Coach, hábitos, semana e install toast. En v0.6.1 se corrigieron regresiones de dispositivo real: contraste del ánimo seleccionado, overflow de hábitos y hero/progress bar.
+4. **Start/adapt**: Hoy y Entrenar pueden iniciar rutina programada; Adaptar navega a `/dashboard/session/adapt` con rutina/objetivo. Coach adaptation existe con preview/apply y fallback.
+5. **Guided plan / generación**: al abrir el brief se leen preferencias guardadas y se precargan solo los campos no nulos; `days-5` se muestra como `5` editable. La lectura no genera ni guarda. El endpoint de generación exige autenticación, valida el brief y carga el catálogo visible del usuario en el servidor. La revisión muestra la fuente Gemini/fallback, el objetivo y el contenido real del borrador (días, focos, ejercicios, series/repeticiones); no muestra una razón personalizada por día ni afirma señales de historial, check-in, equipo garantizado o aprendizaje. Guardar es explícito y la creación de plan/rutinas/horario se realiza en una transacción con clave idempotente.
+6. **Guided session**: completo y responsive: header, ejercicio activo, Técnica/media, Notas, set table, rest/skip/hold y CTA de completar serie (`components/session/**`, `app/dashboard/session/[workoutId]/page.tsx`). En v0.6.1: CTA verde con check, timer de descanso como barra fija siempre visible, "Añadir serie" funcional (`addSet()` cap 12) y estados de serie con círculos; sin inventar historial previo.
+7. **Post-workout**: feedback post-workout y close summary existen en services/routes/componentes de sesión.
+8. **Progress**: pantalla Progreso Figma-aligned con interpretación, resumen, consistencia semanal, fuerza, bienestar, hábitos y sesiones recientes en [`app/dashboard/progress/page.tsx`](../../app/dashboard/progress/page.tsx).
 
-DoD funcional: el loop está implementado y released end-to-end hasta v0.6.1. DoD de release por wave sigue exigiendo revalidación end-to-end, auditoría pre-PR y suite full limpia.
+DoD funcional: el loop principal está implementado y released end-to-end hasta v0.6.1. Coach Context se integró después en `develop` como trabajo candidato a v0.7.0, aún no publicado. DoD de release por wave sigue exigiendo revalidación end-to-end, auditoría pre-PR y suite full limpia.
 
-**E2E en `develop` tras PR #114:** las carreras de observación de respuesta/acción fueron corregidas y el golden path quedó estabilizado según la evidencia de la wave. Resultado registrado: 40 E2E aprobados y 1 omitido intencionalmente; los specs críticos de auth/workouts/session/routines-editor pasaron 51/51 en `repeat-each=3`. RoutineEditor cubre `90 → vacío → 30`. Esto documenta estado de pruebas, no un cambio de producto adicional.
+**E2E de PR #114 (evidencia histórica):** las carreras de observación de respuesta/acción fueron corregidas y el golden path quedó estabilizado según la evidencia de esa wave. Resultado registrado entonces: 40 E2E aprobados y 1 omitido intencionalmente; los specs críticos de auth/workouts/session/routines-editor pasaron 51/51 en `repeat-each=3`. RoutineEditor cubre `90 → vacío → 30`. PR #124 agrega `e2e/coach-context.spec.ts`; las cifras de PR #114 no representan una corrida de la suite sobre el estado posterior a #124.
 
-## 5. Entregado v0.3.1 → v0.6.1
+## 5. Entregado v0.3.1 → v0.6.1 y candidato v0.7.0
 
 - **v0.3.1**: Coach adaptation interpreta freeText (tiempo/fatiga/sin máquinas), motivos trazables, Today completed-state + Adaptar, sesión guiada mobile con set table/notas/CTA fija y fixes de inputs de descanso/sets.
 - **v0.3.2**: `dayReason` honesto y determinístico, Progress fixes (chart desde 1 punto, labels/overflow), CTA “Crear con Coach Atlas” en rutinas/plan.
@@ -53,42 +58,53 @@ DoD funcional: el loop está implementado y released end-to-end hasta v0.6.1. Do
 - **v0.5.0**: convergencia Figma de Onboarding, Entrenar hub, Perfil/Settings y bottom nav con iconos + active states.
 - **v0.6.0**: convergencia Figma de Hoy home; generación de plan semanal Coach AI (Gemini + fallback determinístico verificable); CHANGELOG + handoff. Fix del contrato `streak-chip` (golden-path E2E).
 - **v0.6.1**: fixes UX/UI de dispositivo real + Figma (`12:1830` player, `8-1413` hero): CTA verde+check, descanso siempre visible, "Añadir serie", contraste de ánimo (raíz `cn()` sin tailwind-merge), overflow de hábitos, hero+progress bar, equipamiento real en Perfil y limpieza de filas backlog.
+- **Candidato v0.7.0 (PR #118–#124, integrado en `develop`, no publicado)**: preferencias `goal/pace/equipment` persistidas por usuario; Finish de onboarding sincroniza y Skip no; importación legacy con preview, confirmación y protección condicional de filas existentes; edición explícita en Perfil sin cambiar el plan activo; precarga editable del brief guiado; generación semanal autenticada con atribución Gemini/fallback; guardado explícito e idempotente. Ver límites y checklist en §6–§7.
 
 Ver [`../../CHANGELOG.md`](../../CHANGELOG.md) para detalle agrupado Added/Changed/Fixed.
 
-## 6. Checkpoint actual (develop post PR #114; última release v0.6.2)
+## 6. Snapshot de base (pre-PR documental; última release v0.6.2)
 
-**Base verificada**: `develop` está en el merge de PR #114 (`d53c1dfa4904d1f4dc44ebc600ec5510e65148f7`), posterior a la última release `v0.6.1`. No afirmar que `develop` está alineada con `main`.
+**Base verificada antes de este PR documental**: el `HEAD` de trabajo y `origin/develop` estaban en `6552667a37329799bb1d644534072c4f58f50fe0`, con PR #118–#124 integrados. Este SHA documenta el punto de partida, no el estado de `develop` después de integrar estos documentos. La última versión publicada continúa siendo v0.6.2; Coach Context aún no está publicado. No afirmar que `develop` está alineada con `main`.
 
-**Salud del repo (evidencia registrada en PR #114)**: typecheck y build aprobados; Jest 198 suites / 1126 tests aprobados; E2E 40 aprobados / 1 omitido intencionalmente; specs críticos auth/workouts/session/routines-editor 51/51 en `repeat-each=3`; lint 0 errores y 1 warning preexistente (`lib/api/habits.test.ts:48`). La cifra Jest y los checks describen la wave, no un claim de release o de nuevas funciones.
+**Salud del repo:** los resultados de typecheck/build, Jest 198 suites / 1126 tests, E2E 40 aprobados / 1 omitido intencionalmente y specs críticos 51/51 en `repeat-each=3` son evidencia histórica de PR #114.
 
-**Qué está cerrado**: el golden path de producto (onboarding → Hoy → start/adapt → sesión guiada → post-workout → progreso) está implementado y released hasta v0.6.1. PR #114 cierra la inestabilidad E2E de carreras wait/action; la evidencia de la wave está arriba. Coach AI weekly-plan quedó completo con Gemini + fallback determinístico y tests de contrato.
+**Validación de PR #124:** los checks de GitHub `Lint, Typecheck, and Test` y `Playwright E2E Tests` pasaron. La validación local de F registró Playwright E2E con 43 aprobados y 1 omitido esperado, typecheck aprobado y lint con 0 errores y un warning conocido. No se consigna una cifra de Jest separada ni un resultado de build para esta validación.
+
+**Qué está cerrado en código (todavía no released como v0.7.0)**: preferencias de Coach autenticadas y persistidas; onboarding Finish/Skip con sincronización diferenciada; importación legacy confirmada y no destructiva; edición en Perfil; prefill editable del brief guiado; generación autenticada con Gemini opcional/fallback visible; guardado de plan explícito, atómico e idempotente. El loop principal sigue released hasta v0.6.1 y PR #114 conserva su evidencia histórica.
 
 **Paso a paso para retomar (nuevo agente o persona)**:
 
 1. Leé este handoff + [`AGENTS.md`](../../AGENTS.md) + los ADRs relevantes antes de tocar código.
 2. Node 20 (CI usa 20). En este entorno: `export PATH=$HOME/.nvm/versions/node/v20.15.0/bin:$PATH`. Instalá con `npm install` y, para datos locales, `npm run setup:local` (usuario `qa@atlas.test`).
 3. Verificá el baseline con binarios de repo-root (no `npx`, que reinstala): `node_modules/.bin/tsc --noEmit`, `node_modules/.bin/jest --silent`, `node_modules/.bin/eslint <archivos>`.
-4. Elegí un item del backlog (§7). Creá rama con prefijo correcto (`feat/`, `fix/`, `chore/`, `docs/`) desde `develop` actualizado.
+4. Elegí un item del backlog (§7). Creá rama con prefijo correcto (`feature/`, `fix/`, `chore/`, `docs/`) desde `develop` actualizado.
 5. TDD: escribí el test que falla, implementá lo mínimo, mantené verde. Sin `any`; JSDoc + tipos de retorno en funciones públicas; archivos ~200–250 líneas.
 6. Si el trabajo es grande y paralelizable, despachá subagentes con **ownership de archivos disjuntos** (un archivo = un agente); vos orquestás todo el git/PR. Verificá con `git status` que no se pisaron paths.
 7. Convergencia Figma: los tools MCP `figma-*` están deferidos — buscá con el tool de búsqueda de tools y llamá `figma-get_screenshot` con el `nodeId` (frames pulidos = serie `12:*`; hero Hoy = `8-1413`). Los subagentes no pueden llamar Figma; el orquestador baja el screenshot y embebe el spec.
 8. Auditoría pre-PR obligatoria: full suite verde → agente `code-review` sobre el diff completo → aplicar **todas** las observaciones → re-correr suite → commits Conventional Commits → PR a `develop`.
 9. Release: cortar `release/x.y.z` desde `develop`, bump `package.json`, PR a `main` (`--merge`, no squash), tag `vX.Y.Z`, back-merge `main→develop` (fast-forward), verificar prod con `curl` (`/`, `/login`, `/onboarding` = 200; `/dashboard/today` = 307).
 
+### Preparación de release v0.7.0 (pendiente; no ejecutar desde este trabajo)
+
+- [x] PR #118–#124 integrados en `develop` en el snapshot de base citado arriba.
+- [x] Redactar y verificar esta sincronización documental en la rama de trabajo; todavía no está integrada.
+- [ ] Integrar primero esta documentación en `develop`; después cortar `release/0.7.0` según el flujo aprobado.
+- [ ] Ejecutar y registrar CI/regresión sobre el candidato; actualizar `package.json` y lockfile en el trabajo de release, no en esta documentación.
+- [ ] Al publicar, mover estas entradas a `[0.7.0]` con fecha real, crear tag tras aprobación y completar el back-merge. Hasta entonces no declarar v0.7.0 como publicada ni crear branch/tag desde esta tarea.
+
 ## 7. Backlog restante
 
 ### Alto impacto / próximo
 
 - La estabilidad E2E del golden path quedó verificada por PR #114; no queda como tarea Playwright Must. Si PO/QA requiere una validación manual adicional con datos QA reales (`qa@atlas.test`) y empty states, mantenerla separada de los resultados E2E registrados.
-- **Explicabilidad del plan semanal**: mostrar al usuario por qué cada día/rutina fue propuesta y si vino de IA (`source: 'gemini'`) o de fallback determinístico.
-- **Tour de onboarding que alimente a Coach**: el onboarding ya persiste `goal/pace/equipment` (localStorage `atlas:onboarding:answers`), pero esa info debería quedar disponible/visible para que Coach Atlas arme o sugiera rutinas y el usuario la pueda contrastar/editar. Hoy la pantalla "cómo vas a entrenar" no lo deja claro.
+- **Explicación más detallada por día (opcional)**: la revisión ya atribuye Gemini/fallback y muestra el objetivo y el borrador (día, foco, ejercicios, series/repeticiones). Si se amplía, limitar razones a los campos del brief y al contenido generado; hoy no presenta un razonamiento personalizado basado en historial/check-ins.
 
-### Deferred / follow-up (Perfil — rows quitadas o sin editor propio)
+### Deferred / follow-up (Perfil)
 
-- **Preferencias de Coach** y **Notificaciones y recordatorios**: filas removidas de "Mi Atlas" en v0.6.1; reintroducir solo cuando existan pantallas/acciones reales.
-- **Editor dedicado de Equipamiento/Objetivos** desde Perfil: hoy "Equipamiento" muestra el valor real del onboarding y enlaza al plan builder; falta un editor puntual que no obligue a rehacer el flujo guiado.
+- **Notificaciones y recordatorios**: siguen diferidos; no hay pantalla ni acción real implementada.
 - **Pantalla de Hábitos de bienestar**: la fila enlaza a Hoy (donde viven los hábitos); si PO prioriza, crear una vista dedicada.
+
+Coach Context no aprende de las preferencias ni modifica el plan activo al editarlas. Los campos son entradas explícitas del usuario y, en el plan guiado, solo inicializan controles editables; generación, revisión y guardado requieren acciones separadas del usuario.
 
 ### UX gaps conocidos / validaciones pendientes
 
@@ -118,9 +134,9 @@ Ver [`AGENTS.md`](../../AGENTS.md) antes de tocar código. Resumen operativo:
 
 ## 9. Recomendaciones senior: próximos pasos y riesgos
 
-1. **Estado de la wave**: Hoy y coach-weekly-plan AI están released hasta v0.6.1; PR #114 estabilizó los E2E. No presentar esa validación como feature nueva.
+1. **Estado de la wave**: Hoy está released hasta v0.6.1; v0.6.2 es la última release publicada. Coach Context de PR #118–#124 está integrado en `develop` pero sigue unreleased como candidato v0.7.0. Los resultados E2E de PR #114 son evidencia histórica, no validación de la wave nueva.
 2. **Tratar IA como enhancer, no dependencia**: el wizard debe ser útil con catálogo real aunque Gemini no responda; Gemini solo puede mejorar selección/texto validado.
 3. **Agregar tests de contrato para weekly-plan AI**: catálogo vacío, IDs inválidos de Gemini, respuesta malformada, timeout, no key, días 1–6, foco/equipment raros.
-4. **Auditar copy de honestidad**: cualquier “Atlas sabe/aprende/recuperación” debe mapear a datos reales o cambiarse a “Atlas usa tu plan/check-in/historial”.
+4. **Auditar copy de honestidad**: cualquier “Atlas sabe/aprende/recuperación” debe mapear a datos reales o cambiarse a “Atlas usa tu plan/check-in/historial”. No describir las preferencias guardadas como aprendizaje, ni atribuir la propuesta a datos que el brief no incluye.
 5. **Branch protection sigue siendo riesgo organizacional**: documentar como bloqueado hasta que el owner del repo active reglas y CI requerida.
 6. **Mantener docs vivas**: actualizar este handoff y changelog en cada release menor; si cambia un contrato público, actualizar ADR/engineering docs relacionados.

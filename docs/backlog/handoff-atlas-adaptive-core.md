@@ -3,7 +3,7 @@ Fecha: 2026-09-19
 Fuentes consolidadas: visión de producto (ChatGPT GPT-5.6) + auditoría de repo (Copilot/Claude Opus 4.8) + mockup de Stitch.
 Estado: documento de dirección original para agentes; los porcentajes, prerequisitos y estados de implementación que aparecen debajo pertenecen a la planificación del 2026-09-19, no al estado actual del producto.
 
-> **Reconciliación actual (2026-09-24):** parte del slice aquí descrito ya está implementada y released hasta v0.6.1 (check-in, Hoy, adaptación con Coach, sesión guiada, feedback y progreso). PR #114 estabilizó además los E2E de ese recorrido en `develop`. Este documento conserva su visión y decisiones originales; para distinguir lo implementado de lo que sigue abierto, usar [`handoff-2026-09.md`](./handoff-2026-09.md) y [`README.md`](./README.md). No tratar los prerequisitos del Track A como backlog operativo vigente sin contrastarlos allí.
+> **Reconciliación actual (2026-09-25):** parte del slice aquí descrito ya está implementada y released hasta v0.6.1 (check-in, Hoy, adaptación con Coach, sesión guiada, feedback y progreso). PR #114 estabilizó además los E2E de ese recorrido en `develop`. Coach Context se integró después en los PR #118–#124 y se prepara como v0.7.0, todavía sin publicar; guarda preferencias ingresadas por el usuario y las usa como valores iniciales editables del brief guiado. **No aprende de esas preferencias, no infiere comportamiento ni modifica el plan activo al guardarlas.** Este documento conserva su visión y decisiones originales; para distinguir lo implementado de lo que sigue abierto, usar [`handoff-2026-09.md`](./handoff-2026-09.md) y [`README.md`](./README.md). No tratar los prerequisitos del Track A como backlog operativo vigente sin contrastarlos allí.
 
 ---
 
