@@ -4,7 +4,7 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Este
 
 ## [Unreleased]
 
-Los cambios siguientes componen el candidato v0.7.1, preparado el 2026-09-25 desde el merge QA #136 (`6996dd8463d2c4b2cf08c40f900639c9ea504eca`); todavía no está publicado ni etiquetado.
+## [0.7.1] - 2026-09-25
 
 ### Added
 - Pantalla dedicada de Hábitos y hub del plan semanal activo con una vista real de sus siete días.

@@ -1,6 +1,6 @@
-# Handoff — Atlas Fitness · v0.7.1 release candidate (Septiembre 2026)
+# Handoff — Atlas Fitness · finalización de publicación v0.7.1 (Septiembre 2026)
 
-> **Documento de checkpoint operativo.** Es la fuente de verdad para que un agente o persona entienda el estado actual del proyecto, qué está hecho/released, qué quedó diferido en backlog y cómo continuar. Última actualización: 2026-09-25. v0.7.0 se publicó mediante el PR #126 y el tag `v0.7.0` apunta al commit `dae2bc949538f9cb9fa02faf8db0712d04b9d9f9`. El candidato v0.7.1 parte del merge QA #136 en `develop` (`6996dd8463d2c4b2cf08c40f900639c9ea504eca`); su CI post-merge (run 36201073118) pasó. `main` es la base prevista para la release PR y actualmente apunta a `fb232dc9a3065939b16b6d52bcc1f565c6968d2b`. v0.7.1 todavía no está publicado ni etiquetado. No hubo cambios de migraciones desde el tag v0.7.0.
+> **Documento de checkpoint operativo.** Es la fuente de verdad para que un agente o persona entienda el estado del proyecto, qué está hecho/released, qué quedó diferido en backlog y cómo continuar. Snapshot: 2026-09-25. v0.7.0 se publicó mediante el PR #126 y el tag `v0.7.0` apunta al commit `dae2bc949538f9cb9fa02faf8db0712d04b9d9f9`. Los cambios de producto v0.7.1 se integraron mediante el PR de release #138, fusionado en `main` como `ba0857c5c42f730263e2d735ff57e69f6b0d42ea`; `package.json` y `package-lock.json` están en 0.7.1. Esta PR finaliza la metadata documental. Al snapshot indicado, `v0.7.1` aún no tiene tag ni GitHub Release. Después de mergear esta PR, el tag debe apuntar al commit final de `main` resultante de este merge (no al commit de #138). El CI post-merge del candidato desde `develop` (run 36201073118) pasó. No hubo cambios de migraciones desde el tag v0.7.0.
 
 ## 1. Recap producto / visión
 
@@ -50,7 +50,7 @@ DoD funcional: el loop principal y Coach Context están incluidos en la release 
 
 **E2E de PR #114 (evidencia histórica):** las carreras de observación de respuesta/acción fueron corregidas y el golden path quedó estabilizado según la evidencia de esa wave. Resultado registrado entonces: 40 E2E aprobados y 1 omitido intencionalmente; los specs críticos de auth/workouts/session/routines-editor pasaron 51/51 en `repeat-each=3`. RoutineEditor cubre `90 → vacío → 30`. PR #124 agrega `e2e/coach-context.spec.ts`; las cifras de PR #114 no representan una corrida de la suite sobre el estado posterior a #124.
 
-## 5. Entregado v0.3.1 → v0.7.0; candidato v0.7.1
+## 5. Entregado v0.3.1 → v0.7.1
 
 - **v0.3.1**: Coach adaptation interpreta freeText (tiempo/fatiga/sin máquinas), motivos trazables, Today completed-state + Adaptar, sesión guiada mobile con set table/notas/CTA fija y fixes de inputs de descanso/sets.
 - **v0.3.2**: `dayReason` honesto y determinístico, Progress fixes (chart desde 1 punto, labels/overflow), CTA “Crear con Coach Atlas” en rutinas/plan.
@@ -59,7 +59,7 @@ DoD funcional: el loop principal y Coach Context están incluidos en la release 
 - **v0.6.0**: convergencia Figma de Hoy home; generación de plan semanal Coach AI (Gemini + fallback determinístico verificable); CHANGELOG + handoff. Fix del contrato `streak-chip` (golden-path E2E).
 - **v0.6.1**: fixes UX/UI de dispositivo real + Figma (`12:1830` player, `8-1413` hero): CTA verde+check, descanso siempre visible, "Añadir serie", contraste de ánimo (raíz `cn()` sin tailwind-merge), overflow de hábitos, hero+progress bar, equipamiento real en Perfil y limpieza de filas backlog.
 - **v0.7.0 (publicado 2026-09-25, release PR #126)**: incluye el trabajo de Coach Context de los PR #118–#124: preferencias `goal/pace/equipment` persistidas por usuario; Finish de onboarding sincroniza y Skip no; importación legacy con preview, confirmación y protección condicional de filas existentes; edición explícita en Perfil sin cambiar el plan activo; precarga editable del brief guiado; generación semanal autenticada con atribución Gemini/fallback; guardado explícito e idempotente. Ver límites en §6–§7.
-- **Candidato v0.7.1 (PR #130–#137 integrados en `develop`)**: pantalla dedicada de Hábitos; hub del plan semanal activo y mejora con comparación/confirmación explícita; Mi Atlas basado en preferencias guardadas y actividad real; inicio de entrenamientos adaptados desde Hoy y persistencia del check-in, ejercicios omitidos y objetivos reducidos al reanudar; corrección de overflow móvil de los controles de ánimo. Todavía no publicado.
+- **v0.7.1 (PR #130–#137 integrados por el release PR #138)**: pantalla dedicada de Hábitos; hub del plan semanal activo y mejora con comparación/confirmación explícita; Mi Atlas basado en preferencias guardadas y actividad real; inicio de entrenamientos adaptados desde Hoy y persistencia del check-in, ejercicios omitidos y objetivos reducidos al reanudar; corrección de overflow móvil de los controles de ánimo. Los metadatos de publicación se finalizan en esta PR; al snapshot de arriba el tag todavía no existe.
 
 Ver [`../../CHANGELOG.md`](../../CHANGELOG.md) para detalle agrupado Added/Changed/Fixed.
 
@@ -67,7 +67,9 @@ Ver [`../../CHANGELOG.md`](../../CHANGELOG.md) para detalle agrupado Added/Chang
 
 **Release v0.7.0 (2026-09-25):** el PR #126 se fusionó en `main`; el tag `v0.7.0` apunta a `dae2bc949538f9cb9fa02faf8db0712d04b9d9f9`. Como parte del back-merge, PR #127 fast-forwarded `develop` a ese SHA; al completar esos pasos, `main` y `develop` quedaron sincronizadas en el commit del release. El deployment de producción en [`https://atlas-fitness-655yg94r0-eindi-acme.vercel.app`](https://atlas-fitness-655yg94r0-eindi-acme.vercel.app) sobre ese commit tuvo éxito; la raíz respondió HTTP 200 y el workflow de migración de producción pasó.
 
-**Candidato v0.7.1:** el SHA de entrada de `develop` y base de esta preparación es `6996dd8463d2c4b2cf08c40f900639c9ea504eca`; el CI post-merge run 36201073118 pasó Playwright, ESLint, typecheck, Jest y build. La base prevista de la PR de release es `main` (`fb232dc9a3065939b16b6d52bcc1f565c6968d2b`). No hay cambios de migraciones desde `v0.7.0` y esta preparación no requiere una migración nueva. El candidato no está publicado y aún no tiene tag.
+**Release v0.7.1 / metadata finalization (snapshot 2026-09-25):** el SHA de entrada de `develop` fue `6996dd8463d2c4b2cf08c40f900639c9ea504eca`; el CI post-merge run 36201073118 pasó Playwright, ESLint, typecheck, Jest y build. El PR de release #138 se fusionó en `main` como `ba0857c5c42f730263e2d735ff57e69f6b0d42ea`, con `package.json` y `package-lock.json` en 0.7.1. Esta PR de documentación coloca las notas bajo `0.7.1` y prepara los metadatos finales. Después de mergear esta PR, crear el tag `v0.7.1` apuntando al commit final de `main` resultante de este merge, no a `ba0857c`. Al snapshot, no existe el tag ni un GitHub Release; por lo tanto, todavía no se declara publicada v0.7.1. No hay cambios de migraciones desde `v0.7.0` y esta preparación no requiere una migración nueva.
+
+**Deploy y smoke de producción:** el deployment Vercel de `ba0857c5c42f730263e2d735ff57e69f6b0d42ea` está confirmado como `SUCCESS` en [`https://atlas-fitness-655yg94r0-eindi-acme.vercel.app`](https://atlas-fitness-655yg94r0-eindi-acme.vercel.app). Smoke confirmado: `/`, `/login` y `/onboarding` respondieron HTTP 200; `/dashboard/today` respondió 307 a `/login`, como se espera sin sesión. Esto valida el deploy, no la existencia del tag ni de un GitHub Release.
 
 **Validación local de la preparación:** con Node 22.22.1, Jest pasó 221 suites / 1.320 tests, typecheck y build pasaron; lint terminó con 0 errores y 1 warning preexistente en `lib/api/habits.test.ts:48`. El build conserva el warning preexistente `MODULE_TYPELESS_PACKAGE_JSON` para `tailwind.config.ts`.
 
@@ -139,7 +141,7 @@ Ver [`AGENTS.md`](../../AGENTS.md) antes de tocar código. Resumen operativo:
 
 ## 9. Recomendaciones senior: próximos pasos y riesgos
 
-1. **Estado de la wave**: v0.7.0 es la última release publicada y el tag apunta a `dae2bc949538f9cb9fa02faf8db0712d04b9d9f9`. Al cierre del release, PR #126 fusionó esa versión en `main` y PR #127 sincronizó `develop` con el commit del tag. Los resultados E2E de PR #114 son evidencia histórica, no una validación de la wave v0.7.0.
+1. **Estado de la wave (snapshot 2026-09-25)**: v0.7.0 fue la última release etiquetada antes de la integración v0.7.1; PR #126 la fusionó en `main` y PR #127 sincronizó `develop` con el SHA del tag. El release PR #138 ya integró v0.7.1 en `main`; la metadata se finaliza en esta PR y el tag se debe crear sobre el commit final que produzca su merge. No hay tag v0.7.1 al snapshot. Los resultados E2E de PR #114 son evidencia histórica, no una validación de la wave v0.7.1.
 2. **Tratar IA como enhancer, no dependencia**: el wizard debe ser útil con catálogo real aunque Gemini no responda; Gemini solo puede mejorar selección/texto validado.
 3. **Agregar tests de contrato para weekly-plan AI**: catálogo vacío, IDs inválidos de Gemini, respuesta malformada, timeout, no key, días 1–6, foco/equipment raros.
 4. **Auditar copy de honestidad**: cualquier “Atlas sabe/aprende/recuperación” debe mapear a datos reales o cambiarse a “Atlas usa tu plan/check-in/historial”. No describir las preferencias guardadas como aprendizaje, ni atribuir la propuesta a datos que el brief no incluye.
