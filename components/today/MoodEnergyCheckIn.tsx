@@ -171,7 +171,7 @@ export function MoodEnergyCheckIn({ onStateChange }: MoodEnergyCheckInProps): JS
                   onClick={() => handleMoodSelect(value)}
                   onKeyDown={(event) => handleMoodKeyDown(value, event)}
                   className={cn(
-                    'relative flex min-h-20 flex-1 flex-col items-center justify-center gap-1 rounded-2xl border px-2 py-3 text-center transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
+                    'relative flex min-h-20 min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-2xl border px-2 py-3 text-center transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
                     active
                       ? 'border-brand bg-brand text-white ring-2 ring-brand/30'
                       : 'border-line bg-canvas hover:border-brand hover:bg-surface',
@@ -180,7 +180,7 @@ export function MoodEnergyCheckIn({ onStateChange }: MoodEnergyCheckInProps): JS
                   data-testid={`mood-${value}`}
                 >
                   <MoodFace value={value} className={active ? 'text-white' : 'text-ink-muted'} />
-                  <span className={cn('text-[0.68rem] font-medium leading-tight', active ? 'text-white' : 'text-ink')}>
+                  <span className={cn('min-w-0 break-words text-[0.68rem] font-medium leading-tight', active ? 'text-white' : 'text-ink')}>
                     {label}
                   </span>
                   {active ? (
