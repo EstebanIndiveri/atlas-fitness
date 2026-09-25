@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { expectNoHorizontalOverflow } from './helpers/viewport';
 
 const PASSWORD = 'Test1234!';
 
@@ -11,6 +12,13 @@ interface RoutineSummary {
     exerciseName: string;
     targetSets: number;
   }>;
+}
+
+interface AdaptedWorkoutState {
+  queue: {
+    skippedExerciseIds: number[];
+    targetSetsOverrides: Record<number, number>;
+  };
 }
 
 async function registerFreshUser(page: Page): Promise<void> {
@@ -34,13 +42,6 @@ async function registerFreshUser(page: Page): Promise<void> {
     page.waitForURL('/dashboard/today', { timeout: 15000 }),
     page.getByRole('button', { name: 'Crear cuenta' }).click(),
   ]);
-}
-
-async function expectNoHorizontalOverflow(page: Page): Promise<void> {
-  const overflows = await page.evaluate(
-    () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
-  );
-  expect(overflows).toBe(false);
 }
 
 test.describe('Today Coach adapted session', () => {
@@ -230,12 +231,7 @@ test.describe('Today Coach adapted session', () => {
       `/api/workouts/${createdWorkout.id}`,
     );
     expect(persistedWorkoutResponse.status()).toBe(200);
-    const persistedWorkout = (await persistedWorkoutResponse.json()) as {
-      queue: {
-        skippedExerciseIds: number[];
-        targetSetsOverrides: Record<number, number>;
-      };
-    };
+    const persistedWorkout = (await persistedWorkoutResponse.json()) as AdaptedWorkoutState;
     expect(persistedWorkout.queue).toMatchObject({
       skippedExerciseIds: [removedExercise.exerciseId],
       targetSetsOverrides: { [reducedExercise.exerciseId]: 2 },
@@ -247,5 +243,15 @@ test.describe('Today Coach adapted session', () => {
     );
     await expect(page.getByTestId('set-pending')).toHaveCount(1);
     await expectNoHorizontalOverflow(page);
+
+    const resumedWorkoutResponse = await page.request.get(
+      `/api/workouts/${createdWorkout.id}`,
+    );
+    expect(resumedWorkoutResponse.status()).toBe(200);
+    const resumedWorkout = (await resumedWorkoutResponse.json()) as AdaptedWorkoutState;
+    expect(resumedWorkout.queue).toMatchObject({
+      skippedExerciseIds: [removedExercise.exerciseId],
+      targetSetsOverrides: { [reducedExercise.exerciseId]: 2 },
+    });
   });
 });
