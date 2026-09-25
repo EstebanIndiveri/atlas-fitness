@@ -1,5 +1,15 @@
 # Arquitectura actual
 
+> **Alcance temporal:** el diagnóstico y las deudas de este documento describen la auditoría del commit `53bc87b` (18-09-2026), no necesariamente el estado de `develop` posterior a PR #114. Se conserva el análisis histórico.
+
+## Estado actual — develop post PR #114 (2026-09-24)
+
+- Sesiones de autenticación: ADR-004 está implementado; payload expirable y revocación server-side se verifican en `lib/auth/session-store.ts` y sus tests.
+- Ownership: ADR-005 está implementado; `lib/auth/ownership.ts` centraliza la política y los services de catálogo/workouts la aplican.
+- Invariantes de workout: los services rechazan rutinas inaccesibles, limitan a un workout activo y rechazan mutaciones de sets finalizados (`lib/services/workouts.ts`, `lib/services/workout-sets.ts`).
+- Aislamiento de tests: Jest bloquea `local.db` y URLs remotas y asigna DB temporal (`lib/db/database-url.ts`, `lib/db/test-database.ts`).
+- Rate limiting: durable sólo para login/register; no inferir cobertura de otras integraciones.
+
 ## Diagnóstico
 
 Atlas Fitness es un monolito modular serverless-first. Es una arquitectura
@@ -116,7 +126,7 @@ Server Components para la carga inicial, manteniendo clientes para interacción.
 6. Añadir observabilidad y ejecución confiable de jobs.
 7. Evaluar servicios separados solo cuando la carga lo justifique.
 
-## Evidence
+## Evidence de la auditoría histórica
 
 - `proxy.ts`
 - `app/api/`

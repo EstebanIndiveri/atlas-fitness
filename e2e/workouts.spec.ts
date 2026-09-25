@@ -31,10 +31,13 @@ test.describe('Workout Flow', () => {
     const passwordInputs = await page.locator('input[type="password"]').all();
     await passwordInputs[0].fill(testUser.password);
     await passwordInputs[1].fill(testUser.password);
-    await page.click('button[type="submit"]');
-    await page.waitForResponse((resp) => resp.url().includes('/api/auth/register') && resp.status() === 201);
-    await page.waitForURL('/dashboard/today', { timeout: 15000 });
-    await page.waitForResponse((resp) => resp.url().includes('/api/auth/me'));
+    await Promise.all([
+      page.waitForResponse(
+        (resp) => resp.url().includes('/api/auth/register') && resp.status() === 201,
+      ),
+      page.waitForURL('/dashboard/today', { timeout: 15000 }),
+      page.locator('button[type="submit"]').click(),
+    ]);
   });
 
   test('GET /api/workouts/active returns 200 with null when none is active', async ({ page }) => {
@@ -77,8 +80,10 @@ test.describe('Workout Flow', () => {
     await page.fill('[data-testid="reps-input"]', '10');
     await page.fill('[data-testid="weight-input"]', '100');
     
-    await page.click('[data-testid="save-set-button"]');
-    await page.waitForResponse((resp) => resp.url().includes('/sets') && resp.status() === 201);
+    await Promise.all([
+      page.waitForResponse((resp) => resp.url().includes('/sets') && resp.status() === 201),
+      page.getByTestId('save-set-button').click(),
+    ]);
 
     // Verify set is displayed
     await expect(page.locator('[data-testid="workout-set"]')).toBeVisible({ timeout: 5000 });
@@ -89,8 +94,10 @@ test.describe('Workout Flow', () => {
     await page.click('[data-testid="workout-set"] button:has-text("Editar")');
     await page.waitForSelector('[data-testid="weight-input"]');
     await page.fill('[data-testid="weight-input"]', '105');
-    await page.click('[data-testid="save-set-button"]');
-    await page.waitForResponse((resp) => resp.url().includes('/sets/') && resp.status() === 200);
+    await Promise.all([
+      page.waitForResponse((resp) => resp.url().includes('/sets/') && resp.status() === 200),
+      page.getByTestId('save-set-button').click(),
+    ]);
 
     // Verify edit
     await expect(page.locator('[data-testid="workout-set"]')).toContainText('105');
@@ -100,8 +107,10 @@ test.describe('Workout Flow', () => {
     await page.selectOption('[data-testid="exercise-select"]', { index: 1 });
     await page.fill('[data-testid="reps-input"]', '8');
     await page.fill('[data-testid="weight-input"]', '110');
-    await page.click('[data-testid="save-set-button"]');
-    await page.waitForResponse((resp) => resp.url().includes('/sets') && resp.status() === 201);
+    await Promise.all([
+      page.waitForResponse((resp) => resp.url().includes('/sets') && resp.status() === 201),
+      page.getByTestId('save-set-button').click(),
+    ]);
 
     // Verify PR badge appears (should be PR since it's the first workout)
     await expect(page.locator('[data-testid="pr-badge"]').first()).toBeVisible({ timeout: 5000 });
@@ -110,8 +119,13 @@ test.describe('Workout Flow', () => {
     // Set up dialog handler BEFORE clicking
     page.once('dialog', dialog => dialog.accept());
     const firstSetDeleteButton = await page.locator('[data-testid="workout-set"] button:has-text("Eliminar")').first();
-    await firstSetDeleteButton.click();
-    await page.waitForResponse((resp) => resp.url().includes('/sets/') && (resp.status() === 200 || resp.status() === 204));
+    await Promise.all([
+      page.waitForResponse(
+        (resp) =>
+          resp.url().includes('/sets/') && (resp.status() === 200 || resp.status() === 204),
+      ),
+      firstSetDeleteButton.click(),
+    ]);
 
     // Should only have one set now
     await expect(page.locator('[data-testid="workout-set"]')).toHaveCount(1);
@@ -124,11 +138,13 @@ test.describe('Workout Flow', () => {
     await page.fill('textarea', 'Buen entrenamiento inicial');
     await page.click('button:has-text("😊")'); // Mood 4
     
-    await page.click('[data-testid="confirm-end-workout"]');
-    await page.waitForResponse((resp) => resp.url().includes('/api/workouts/') && resp.status() === 200);
-
-    // Should redirect to the Today home
-    await page.waitForURL('/dashboard/today', { timeout: 10000 });
+    await Promise.all([
+      page.waitForResponse(
+        (resp) => resp.url().includes('/api/workouts/') && resp.status() === 200,
+      ),
+      page.waitForURL('/dashboard/today', { timeout: 10000 }),
+      page.getByTestId('confirm-end-workout').click(),
+    ]);
 
     // The note and mood persisted (surfaced via the API; HOY does not list history).
     const list = await page.request.get('/api/workouts');
@@ -148,15 +164,21 @@ test.describe('Workout Flow', () => {
     await page.selectOption('[data-testid="exercise-select"]', { index: 1 });
     await page.fill('[data-testid="reps-input"]', '10');
     await page.fill('[data-testid="weight-input"]', '100');
-    await page.click('[data-testid="save-set-button"]');
-    await page.waitForResponse((resp) => resp.url().includes('/sets') && resp.status() === 201);
+    await Promise.all([
+      page.waitForResponse((resp) => resp.url().includes('/sets') && resp.status() === 201),
+      page.getByTestId('save-set-button').click(),
+    ]);
 
     // Close first workout
     await page.click('button:has-text("Finalizar")');
     await page.waitForSelector('h2:has-text("Finalizar Entrenamiento")');
-    await page.click('[data-testid="confirm-end-workout"]');
-    await page.waitForResponse((resp) => resp.url().includes('/api/workouts/') && resp.status() === 200);
-    await page.waitForURL('/dashboard/today', { timeout: 10000 });
+    await Promise.all([
+      page.waitForResponse(
+        (resp) => resp.url().includes('/api/workouts/') && resp.status() === 200,
+      ),
+      page.waitForURL('/dashboard/today', { timeout: 10000 }),
+      page.getByTestId('confirm-end-workout').click(),
+    ]);
 
     // Create second workout
     await startManualWorkout(page);
@@ -166,8 +188,10 @@ test.describe('Workout Flow', () => {
     await page.selectOption('[data-testid="exercise-select"]', { index: 1 });
     await page.fill('[data-testid="reps-input"]', '10');
     await page.fill('[data-testid="weight-input"]', '95');
-    await page.click('[data-testid="save-set-button"]');
-    await page.waitForResponse((resp) => resp.url().includes('/sets') && resp.status() === 201);
+    await Promise.all([
+      page.waitForResponse((resp) => resp.url().includes('/sets') && resp.status() === 201),
+      page.getByTestId('save-set-button').click(),
+    ]);
 
     // Should NOT have PR badge
     await expect(page.locator('[data-testid="pr-badge"]')).toHaveCount(0);
@@ -177,8 +201,10 @@ test.describe('Workout Flow', () => {
     await page.selectOption('[data-testid="exercise-select"]', { index: 1 });
     await page.fill('[data-testid="reps-input"]', '8');
     await page.fill('[data-testid="weight-input"]', '105');
-    await page.click('[data-testid="save-set-button"]');
-    await page.waitForResponse((resp) => resp.url().includes('/sets') && resp.status() === 201);
+    await Promise.all([
+      page.waitForResponse((resp) => resp.url().includes('/sets') && resp.status() === 201),
+      page.getByTestId('save-set-button').click(),
+    ]);
 
     // Should have PR badge on the second set
     await expect(page.locator('[data-testid="pr-badge"]')).toHaveCount(1);
@@ -192,15 +218,21 @@ test.describe('Workout Flow', () => {
     await page.selectOption('[data-testid="exercise-select"]', { index: 1 });
     await page.fill('[data-testid="reps-input"]', '10');
     await page.fill('[data-testid="weight-input"]', '100');
-    await page.click('[data-testid="save-set-button"]');
-    await page.waitForResponse((resp) => resp.url().includes('/sets') && resp.status() === 201);
+    await Promise.all([
+      page.waitForResponse((resp) => resp.url().includes('/sets') && resp.status() === 201),
+      page.getByTestId('save-set-button').click(),
+    ]);
 
     await page.click('button:has-text("Finalizar")');
     await page.waitForSelector('h2:has-text("Finalizar Entrenamiento")');
     await page.fill('textarea', 'Test workout');
-    await page.click('[data-testid="confirm-end-workout"]');
-    await page.waitForResponse((resp) => resp.url().includes('/api/workouts/') && resp.status() === 200);
-    await page.waitForURL('/dashboard/today', { timeout: 10000 });
+    await Promise.all([
+      page.waitForResponse(
+        (resp) => resp.url().includes('/api/workouts/') && resp.status() === 200,
+      ),
+      page.waitForURL('/dashboard/today', { timeout: 10000 }),
+      page.getByTestId('confirm-end-workout').click(),
+    ]);
 
     // Go to the Progreso tab, which lists recent sessions.
     await page.goto('/dashboard/progress');
@@ -217,8 +249,10 @@ test.describe('Workout Flow', () => {
     const workoutId = await startManualWorkout(page);
 
     // Go back to the Today home without finishing.
-    await page.click('a:has-text("Volver")');
-    await page.waitForURL('/dashboard/today', { timeout: 5000 });
+    await Promise.all([
+      page.waitForURL('/dashboard/today', { timeout: 5000 }),
+      page.locator('a:has-text("Volver")').click(),
+    ]);
 
     // The unfinished workout is still resumable through the API.
     const active = await page.request.get('/api/workouts/active');
@@ -236,14 +270,20 @@ test.describe('Workout Flow', () => {
     await page.selectOption('[data-testid="exercise-select"]', { index: 1 });
     await page.fill('[data-testid="reps-input"]', '10');
     await page.fill('[data-testid="weight-input"]', '100');
-    await page.click('[data-testid="save-set-button"]');
-    await page.waitForResponse((resp) => resp.url().includes('/sets') && resp.status() === 201);
+    await Promise.all([
+      page.waitForResponse((resp) => resp.url().includes('/sets') && resp.status() === 201),
+      page.getByTestId('save-set-button').click(),
+    ]);
 
     await page.click('button:has-text("Finalizar")');
     await page.waitForSelector('h2:has-text("Finalizar Entrenamiento")');
-    await page.click('[data-testid="confirm-end-workout"]');
-    await page.waitForResponse((resp) => resp.url().includes('/api/workouts/') && resp.status() === 200);
-    await page.waitForURL('/dashboard/today', { timeout: 10000 });
+    await Promise.all([
+      page.waitForResponse(
+        (resp) => resp.url().includes('/api/workouts/') && resp.status() === 200,
+      ),
+      page.waitForURL('/dashboard/today', { timeout: 10000 }),
+      page.getByTestId('confirm-end-workout').click(),
+    ]);
 
     // Reopen the finished workout directly.
     await page.goto(`/dashboard/workout/${workoutId}`);

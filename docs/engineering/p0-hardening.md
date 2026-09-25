@@ -2,7 +2,9 @@
 
 Must items from [`docs/codebase/CONCERNS.md`](../codebase/CONCERNS.md) P0.1–P0.4.
 
-Status: implemented on `feature/p0-hardening` (PR draft until CI green).
+**Hallazgo histórico / estado en el workstream original:** implementado en `feature/p0-hardening`; PR señalado como draft hasta CI verde.
+
+**Estado actual:** P0.1–P0.4 están implementados en la base `develop` posterior a PR #114. Evidencia: `lib/auth/session.ts`, `lib/telegram/webhook-secret.ts`, `lib/db/database-url.ts`, `lib/db/test-database.ts`, `lib/services/workouts.ts`, `lib/services/workout-sets.ts` y los tests relacionados. PR #114 aporta además verificación E2E, no cambia estos fixes.
 
 ## Checklist
 
@@ -11,7 +13,7 @@ Status: implemented on `feature/p0-hardening` (PR draft until CI green).
 - [x] **P0.3** Jest never uses `local.db` or shared Turso; isolated temp DB + migrate
 - [x] **P0.4** Workout invariants: one active workout; no set mutations after `endedAt`; invalid `routineId` → 400 VALIDATION
 
-## Verify
+## Verify — ejecución histórica del workstream P0
 
 ```bash
 npm run lint

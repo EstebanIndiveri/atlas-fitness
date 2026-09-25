@@ -20,17 +20,16 @@ test.describe('Authentication Flow', () => {
     await passwordInputs[0].fill(TEST_USER.password);
     await passwordInputs[1].fill(TEST_USER.password);
 
-    // Submit registration and wait for navigation
-    await page.click('button[type="submit"]');
+    // Observe registration before submitting so a fast response cannot be missed.
+    await Promise.all([
+      page.waitForResponse(
+        (resp) => resp.url().includes('/api/auth/register') && resp.status() === 201,
+      ),
+      page.waitForURL('/dashboard/today', { timeout: 15000 }),
+      page.getByRole('button', { name: 'Crear cuenta' }).click(),
+    ]);
     
-    // Wait for the API call to complete AND the redirect to happen
-    await page.waitForResponse((resp) => resp.url().includes('/api/auth/register') && resp.status() === 201);
-    
-    // Should redirect to dashboard (client-side then proxy allows)
-    await page.waitForURL('/dashboard/today', { timeout: 15000 });
-    
-    // Wait for /api/auth/me to complete and welcome message to appear
-    await page.waitForResponse((resp) => resp.url().includes('/api/auth/me'));
+    // The welcome state is the user-visible confirmation that auth hydration completed.
     await expect(page.locator('[data-testid="welcome-message"]')).toBeVisible({ timeout: 10000 });
     await expect(page.locator('[data-testid="welcome-message"]')).toContainText(TEST_USER.name);
     await expectCssColor(page.locator('main').first(), 'background-color', ATLAS_SMOKE.canvas);
@@ -40,23 +39,23 @@ test.describe('Authentication Flow', () => {
     );
 
     // Logout
-    await page.click('button:has-text("Cerrar sesión")');
-
-    // Should redirect to login
-    await page.waitForURL('/login', { timeout: 5000 });
+    await Promise.all([
+      page.waitForURL('/login', { timeout: 5000 }),
+      page.getByRole('button', { name: 'Cerrar sesión' }).click(),
+    ]);
 
     // Login with same credentials
     await page.fill('input[type="email"]', TEST_USER.email);
     await page.fill('input[type="password"]', TEST_USER.password);
     
-    await page.click('button[type="submit"]');
+    await Promise.all([
+      page.waitForResponse(
+        (resp) => resp.url().includes('/api/auth/login') && resp.status() === 200,
+      ),
+      page.waitForURL('/dashboard/today', { timeout: 15000 }),
+      page.getByRole('button', { name: 'Ingresar' }).click(),
+    ]);
     
-    // Wait for the API call to complete AND the redirect to happen
-    await page.waitForResponse((resp) => resp.url().includes('/api/auth/login') && resp.status() === 200);
-    
-    // Should redirect to dashboard again
-    await page.waitForURL('/dashboard/today', { timeout: 15000 });
-    await page.waitForResponse((resp) => resp.url().includes('/api/auth/me'));
     await expect(page.locator('[data-testid="welcome-message"]')).toBeVisible({ timeout: 10000 });
     await expect(page.locator('[data-testid="welcome-message"]')).toContainText(TEST_USER.name);
   });
@@ -98,11 +97,13 @@ test.describe('Authentication Flow', () => {
     await passwordInputs[0].fill(TEST_USER.password);
     await passwordInputs[1].fill(TEST_USER.password);
 
-    await page.click('button[type="submit"]');
-    await page.waitForResponse((resp) => resp.url().includes('/api/auth/register') && resp.status() === 201);
-    
-    await page.waitForURL('/dashboard/today', { timeout: 15000 });
-    await page.waitForResponse((resp) => resp.url().includes('/api/auth/me'));
+    await Promise.all([
+      page.waitForResponse(
+        (resp) => resp.url().includes('/api/auth/register') && resp.status() === 201,
+      ),
+      page.waitForURL('/dashboard/today', { timeout: 15000 }),
+      page.getByRole('button', { name: 'Crear cuenta' }).click(),
+    ]);
     await expect(page.locator('[data-testid="welcome-message"]')).toBeVisible({ timeout: 10000 });
 
     // Try to go to login page while logged in - middleware should redirect back to dashboard
@@ -119,18 +120,15 @@ test.describe('Authentication Flow', () => {
     await page.fill('input[type="email"]', 'qa@atlas.test');
     await page.fill('input[type="password"]', 'Test1234!');
     
-    await page.click('button[type="submit"]');
-    
-    // Wait for either success (navigation to dashboard) or error
-    await Promise.race([
+    await Promise.all([
+      page.waitForResponse(
+        (resp) => resp.url().includes('/api/auth/login') && resp.status() === 200,
+      ),
       page.waitForURL('/dashboard/today', { timeout: 15000 }),
-      page.waitForSelector('[data-testid="form-error"]', { timeout: 15000 }),
+      page.getByRole('button', { name: 'Ingresar' }).click(),
     ]);
 
-    // If we're on dashboard, check welcome message
-    if (page.url().includes('/dashboard')) {
-      await expect(page.locator('[data-testid="welcome-message"]')).toBeVisible({ timeout: 10000 });
-      await expect(page.locator('[data-testid="welcome-message"]')).toContainText('QA Test User');
-    }
+    await expect(page.locator('[data-testid="welcome-message"]')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('[data-testid="welcome-message"]')).toContainText('QA Test User');
   });
 });
