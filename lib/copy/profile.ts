@@ -1,0 +1,23 @@
+/** Product copy for profile settings (es-AR). */
+export const PROFILE_PREFERENCES_COPY = {
+  title: 'Preferencias de Coach',
+  eyebrow: 'CONTEXTO DEL COACH',
+  description: 'Estas preferencias se guardan en tu perfil y no modifican tu plan activo.',
+  empty: 'Todavía no guardaste preferencias de Coach.',
+  savedEmpty: 'Todavía no elegiste preferencias.',
+  savedLabel: 'Guardadas en tu perfil',
+  edit: 'Editar preferencias',
+  create: 'Definir preferencias',
+  cancel: 'Cancelar edición',
+  save: 'Guardar preferencias',
+  saving: 'Guardando…',
+  saveSuccess: 'Preferencias guardadas.',
+  importing: 'Importando…',
+  load: 'Cargando preferencias…',
+  loadError: 'No pudimos cargar tus preferencias. Probá de nuevo.',
+  loadUnauthorized: 'Tu sesión venció. Iniciá sesión de nuevo para ver tus preferencias.',
+  retry: 'Reintentar',
+  saveError: 'No pudimos guardar tus preferencias. Probá de nuevo.',
+  saveUnauthorized: 'Tu sesión venció. Iniciá sesión de nuevo para guardar tus preferencias.',
+  importInvalid: 'No encontramos respuestas válidas para importar en este navegador.',
+} as const;

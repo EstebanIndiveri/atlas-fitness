@@ -4,7 +4,16 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Este
 
 ## [Unreleased]
 
-_Sin cambios de producto sin publicar. La última versión publicada es `v0.6.2`._
+## [0.7.0] - 2026-09-25
+
+### Added
+- Contexto de Coach persistido por usuario (`goal`, `pace`, `equipment`) y sección explícita de edición/guardado en Perfil. `hasSavedPreferences` refleja si existe una fila guardada, incluso cuando sus tres valores son `null`.
+- Importación de respuestas antiguas del navegador con vista previa y confirmación explícita; el alta condicional no reemplaza una fila que ya exista.
+
+### Changed
+- Al terminar onboarding se sincronizan las respuestas con el perfil autenticado; omitirlo solo marca el recorrido como completo y navega a Hoy, sin sincronizar preferencias.
+- El brief del plan guiado precarga los valores no nulos guardados (incluido `days-5` como cinco días editables). Leerlos no genera ni guarda un plan.
+- La generación semanal autenticada usa el brief editable y el catálogo visible del usuario en el servidor. Gemini es opcional y la revisión atribuye la propuesta a Gemini o al respaldo determinista; muestra el objetivo y los datos del borrador, no una explicación basada en historial, check-ins o aprendizaje automático. El guardado sigue siendo una acción explícita, atómica e idempotente.
 
 ## [0.6.2] - 2026-09-24
 

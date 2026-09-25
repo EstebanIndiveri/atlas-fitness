@@ -1,16 +1,19 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { generateWeeklyPlanDraft } from '@/lib/ai/weekly-plan-draft';
+import { isWeeklyPlanDraft } from '@/lib/api/weekly-plan-draft';
 import type { WeeklyPlanDraft } from '@/lib/ai/weekly-plan-draft';
 import type { RoutineDraftLevel } from '@/lib/ai/routine-draft';
+import { ONBOARDING_COPY } from '@/lib/copy/onboarding';
 import type { RoutineKind } from '@/types/routine';
 import type { ExerciseCatalogItem } from '@/types/exercise';
+import type { UserPreferencesResponse } from '@/types/user-preferences';
 
 export type GuidedPlanStep = 'brief' | 'review' | 'saving' | 'success';
-export type GuidedPlanErrorKind = 'validation' | 'generate' | 'routine_create' | 'plan_create';
+export type GuidedPlanErrorKind = 'validation' | 'generate' | 'plan_create';
 export type GuidedPlanField = keyof GuidedPlanFormState;
+export type GuidedPlanPreferenceStatus = 'loading' | 'ready' | 'error';
 
 export interface GuidedPlanError {
   kind: GuidedPlanErrorKind;
@@ -41,6 +44,55 @@ const INITIAL_FORM: GuidedPlanFormState = {
   focusAreas: '',
 };
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function isPreferenceOptionId(
+  stepId: 'goal' | 'pace' | 'equipment',
+  value: unknown,
+): boolean {
+  const step = ONBOARDING_COPY.steps.find((candidate) => candidate.id === stepId);
+  return (
+    value === null ||
+    (typeof value === 'string' && step?.options.some((option) => option.id === value) === true)
+  );
+}
+
+function isUserPreferencesResponse(value: unknown): value is UserPreferencesResponse {
+  if (!isRecord(value) || typeof value.hasSavedPreferences !== 'boolean' || !isRecord(value.preferences)) {
+    return false;
+  }
+
+  const { goal, pace, equipment } = value.preferences;
+  return (
+    'goal' in value.preferences &&
+    'pace' in value.preferences &&
+    'equipment' in value.preferences &&
+    isPreferenceOptionId('goal', goal) &&
+    isPreferenceOptionId('pace', pace) &&
+    isPreferenceOptionId('equipment', equipment)
+  );
+}
+
+function onboardingOptionTitle(stepId: 'goal' | 'equipment', optionId: string): string | undefined {
+  const step = ONBOARDING_COPY.steps.find((candidate) => candidate.id === stepId);
+  return step?.options.find((option) => option.id === optionId)?.title;
+}
+
+function daysForPace(pace: NonNullable<UserPreferencesResponse['preferences']['pace']>): string {
+  switch (pace) {
+    case 'days-2':
+      return '2';
+    case 'days-3':
+      return '3';
+    case 'days-4':
+      return '4';
+    case 'days-5':
+      return '5';
+  }
+}
+
 async function readApiMessage(response: Response, fallback: string): Promise<string> {
   try {
     const body: unknown = await response.json();
@@ -64,16 +116,6 @@ function inferRoutineKind(availableEquipment: string): RoutineKind {
     : 'home';
 }
 
-function planDays(value: string): number {
-  const parsed = Number.parseInt(value, 10);
-  return Number.isFinite(parsed) ? parsed : 3;
-}
-
-function sessionMinutes(value: string): number {
-  const parsed = Number.parseInt(value, 10);
-  return Number.isFinite(parsed) ? parsed : 55;
-}
-
 function routinePayload(day: WeeklyPlanDraft['days'][number], kind: RoutineKind) {
   return {
     name: `Coach Atlas · ${day.title} · ${day.focus}`,
@@ -89,6 +131,18 @@ function routinePayload(day: WeeklyPlanDraft['days'][number], kind: RoutineKind)
   };
 }
 
+function isGuidedPlanError(value: unknown): value is GuidedPlanError {
+  if (typeof value !== 'object' || value === null || !('kind' in value) || !('message' in value)) {
+    return false;
+  }
+
+  return (
+    (value.kind === 'validation' || value.kind === 'generate' || value.kind === 'plan_create') &&
+    typeof value.message === 'string' &&
+    (!('status' in value) || typeof value.status === 'number')
+  );
+}
+
 /**
  * Drives the guided weekly plan wizard and persists accepted drafts through existing HTTP APIs.
  *
@@ -100,15 +154,72 @@ function routinePayload(day: WeeklyPlanDraft['days'][number], kind: RoutineKind)
 export function useGuidedPlan({ catalog, onSaved }: UseGuidedPlanOptions) {
   const [form, setForm] = useState<GuidedPlanFormState>(INITIAL_FORM);
   const formRef = useRef<GuidedPlanFormState>(INITIAL_FORM);
+  const editedFieldsRef = useRef(new Set<GuidedPlanField>());
   const draftRef = useRef<WeeklyPlanDraft | null>(null);
+  const mutationIdRef = useRef<string | null>(null);
   const stepRef = useRef<GuidedPlanStep>('brief');
   const [draft, setDraft] = useState<WeeklyPlanDraft | null>(null);
   const [step, setStep] = useState<GuidedPlanStep>('brief');
   const [busy, setBusy] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<GuidedPlanError | null>(null);
+  const [preferenceStatus, setPreferenceStatus] = useState<GuidedPlanPreferenceStatus>('loading');
+  const [preferenceError, setPreferenceError] = useState<string | null>(null);
+  const [preferenceRetryCount, setPreferenceRetryCount] = useState(0);
 
   const canGenerate = useMemo(() => catalog.length > 0 && !busy && !saving, [busy, catalog.length, saving]);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadPreferences(): Promise<void> {
+      try {
+        const response = await fetch('/api/profile/preferences');
+        if (!response.ok) {
+          throw new Error(await readApiMessage(response, 'No pudimos cargar tus preferencias. Probá de nuevo.'));
+        }
+
+        let body: unknown;
+        try {
+          body = await response.json();
+        } catch {
+          throw new Error('La respuesta de preferencias no es válida.');
+        }
+        if (!isUserPreferencesResponse(body)) {
+          throw new Error('La respuesta de preferencias no es válida.');
+        }
+
+        if (!active) return;
+        const nextForm = { ...formRef.current };
+        if (body.hasSavedPreferences) {
+          const { goal, pace, equipment } = body.preferences;
+          if (!editedFieldsRef.current.has('goal') && goal !== null) {
+            nextForm.goal = onboardingOptionTitle('goal', goal) ?? nextForm.goal;
+          }
+          if (!editedFieldsRef.current.has('daysPerWeek') && pace !== null) {
+            nextForm.daysPerWeek = daysForPace(pace);
+          }
+          if (!editedFieldsRef.current.has('availableEquipment') && equipment !== null) {
+            nextForm.availableEquipment = onboardingOptionTitle('equipment', equipment) ?? nextForm.availableEquipment;
+          }
+        }
+        formRef.current = nextForm;
+        setForm(nextForm);
+        setPreferenceStatus('ready');
+      } catch (caught) {
+        if (!active) return;
+        setPreferenceError(
+          caught instanceof Error ? caught.message : 'No pudimos cargar tus preferencias. Probá de nuevo.',
+        );
+        setPreferenceStatus('error');
+      }
+    }
+
+    void loadPreferences();
+    return () => {
+      active = false;
+    };
+  }, [preferenceRetryCount]);
 
   function setWizardStep(nextStep: GuidedPlanStep): void {
     stepRef.current = nextStep;
@@ -116,9 +227,16 @@ export function useGuidedPlan({ catalog, onSaved }: UseGuidedPlanOptions) {
   }
 
   function updateField<K extends GuidedPlanField>(field: K, value: GuidedPlanFormState[K]): void {
+    editedFieldsRef.current.add(field);
     const next = { ...formRef.current, [field]: value };
     formRef.current = next;
     setForm(next);
+  }
+
+  function retryPreferences(): void {
+    setPreferenceStatus('loading');
+    setPreferenceError(null);
+    setPreferenceRetryCount((attempt) => attempt + 1);
   }
 
   function backToBrief(): void {
@@ -131,16 +249,29 @@ export function useGuidedPlan({ catalog, onSaved }: UseGuidedPlanOptions) {
     setBusy(true);
     setError(null);
     try {
-      const nextDraft = await generateWeeklyPlanDraft({
-        goal: currentForm.goal,
-        daysPerWeek: planDays(currentForm.daysPerWeek),
-        experience: currentForm.experience,
-        availableEquipment: splitList(currentForm.availableEquipment),
-        sessionLengthMinutes: sessionMinutes(currentForm.sessionLengthMinutes),
-        focusAreas: splitList(currentForm.focusAreas),
-        catalog,
+      const requestedDays = Number(currentForm.daysPerWeek);
+      const response = await fetch('/api/training-plan/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          goal: currentForm.goal,
+          daysPerWeek: requestedDays,
+          experience: currentForm.experience,
+          availableEquipment: splitList(currentForm.availableEquipment),
+          sessionLengthMinutes: Number(currentForm.sessionLengthMinutes),
+          focusAreas: splitList(currentForm.focusAreas),
+        }),
       });
+      if (!response.ok) {
+        throw new Error(await readApiMessage(response, 'No se pudo generar el plan.'));
+      }
+      const body: unknown = await response.json();
+      if (!isWeeklyPlanDraft(body) || body.days.length !== requestedDays) {
+        throw new Error('La propuesta recibida no es válida.');
+      }
+      const nextDraft = body;
       draftRef.current = nextDraft;
+      mutationIdRef.current = null;
       setDraft(nextDraft);
       setWizardStep('review');
     } catch (caught) {
@@ -149,39 +280,6 @@ export function useGuidedPlan({ catalog, onSaved }: UseGuidedPlanOptions) {
     } finally {
       setBusy(false);
     }
-  }
-
-  async function createRoutine(day: WeeklyPlanDraft['days'][number], kind: RoutineKind): Promise<number> {
-    const response = await fetch('/api/routines', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(routinePayload(day, kind)),
-    });
-    if (!response.ok) {
-      throw {
-        kind: 'routine_create',
-        message: await readApiMessage(response, 'No se pudo crear una rutina del plan.'),
-        status: response.status,
-      } satisfies GuidedPlanError;
-    }
-    const body: unknown = await response.json();
-    const id = body && typeof body === 'object' && 'id' in body ? (body as { id?: unknown }).id : null;
-    if (typeof id !== 'number') {
-      throw { kind: 'routine_create', message: 'La API no devolvió el id de rutina.' } satisfies GuidedPlanError;
-    }
-    return id;
-  }
-
-  async function cleanupCreatedRoutines(routineIds: readonly number[]): Promise<boolean> {
-    const results = await Promise.allSettled(
-      routineIds.map(async (routineId) => {
-        const response = await fetch(`/api/routines/${routineId}`, { method: 'DELETE' });
-        if (!response.ok) {
-          throw new Error(`No se pudo eliminar la rutina ${routineId}.`);
-        }
-      }),
-    );
-    return results.some((result) => result.status === 'rejected');
   }
 
   async function confirmDraft(): Promise<void> {
@@ -196,21 +294,24 @@ export function useGuidedPlan({ catalog, onSaved }: UseGuidedPlanOptions) {
     setSaving(true);
     setWizardStep('saving');
     setError(null);
-    const routineIds: number[] = [];
     try {
       const kind = inferRoutineKind(formRef.current.availableEquipment);
-      for (const day of currentDraft.days) {
-        routineIds.push(await createRoutine(day, kind));
-      }
-      const schedule = currentDraft.days.map((day, index) => ({
+      const mutationId = mutationIdRef.current ?? globalThis.crypto.randomUUID();
+      mutationIdRef.current = mutationId;
+      const days = currentDraft.days.map((day) => ({
         dayOfWeek: day.dayOfWeek,
-        routineId: routineIds[index],
-        note: `${day.title} · ${day.focus}`,
+        note: `${day.title} · ${day.focus}`.slice(0, 140),
+        routine: routinePayload(day, kind),
       }));
-      const response = await fetch('/api/training-plan', {
+      const response = await fetch('/api/training-plan/guided', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: currentDraft.name, goal: currentDraft.goal, schedule }),
+        body: JSON.stringify({
+          mutationId,
+          name: currentDraft.name,
+          goal: currentDraft.goal,
+          days,
+        }),
       });
       if (!response.ok) {
         throw {
@@ -219,16 +320,13 @@ export function useGuidedPlan({ catalog, onSaved }: UseGuidedPlanOptions) {
           status: response.status,
         } satisfies GuidedPlanError;
       }
+      mutationIdRef.current = null;
       setWizardStep('success');
       onSaved?.('/dashboard/today');
     } catch (caught) {
-      const cleanupFailed = routineIds.length > 0 ? await cleanupCreatedRoutines(routineIds) : false;
-      const nextError = caught && typeof caught === 'object' && 'kind' in caught
-        ? caught as GuidedPlanError
+      const nextError = isGuidedPlanError(caught)
+        ? caught
         : { kind: 'plan_create', message: 'No se pudo guardar el plan semanal.' } satisfies GuidedPlanError;
-      if (cleanupFailed) {
-        nextError.message = `${nextError.message} Algunas rutinas creadas no se pudieron limpiar automáticamente.`;
-      }
       setError(nextError);
       setWizardStep('review');
     } finally {
@@ -236,5 +334,20 @@ export function useGuidedPlan({ catalog, onSaved }: UseGuidedPlanOptions) {
     }
   }
 
-  return { form, draft, step, busy, saving, error, canGenerate, updateField, backToBrief, generateDraft, confirmDraft };
+  return {
+    form,
+    draft,
+    step,
+    busy,
+    saving,
+    error,
+    canGenerate,
+    preferenceStatus,
+    preferenceError,
+    updateField,
+    retryPreferences,
+    backToBrief,
+    generateDraft,
+    confirmDraft,
+  };
 }

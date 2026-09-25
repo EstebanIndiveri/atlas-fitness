@@ -80,6 +80,12 @@ describe('SettingsPage', () => {
       equipment: 'dumbbells',
     });
     global.fetch = jest.fn(async (input: unknown) => {
+      if (String(input) === '/api/profile/preferences') {
+        return jsonResponse({
+          hasSavedPreferences: false,
+          preferences: { goal: null, pace: null, equipment: null },
+        });
+      }
       if (String(input) === '/api/today') {
         return jsonResponse({
           kind: 'workout',
@@ -115,10 +121,10 @@ describe('SettingsPage', () => {
     expect(screen.getByText('Hipertrofia')).toBeTruthy();
     expect(screen.getByText('Plan de entrenamiento')).toBeTruthy();
     expect(screen.getByText('Empuje')).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 2, name: 'Preferencias de Coach' })).toBeTruthy();
     expect(screen.getByText('Equipamiento disponible')).toBeTruthy();
     expect(await screen.findByText('Mancuernas en casa')).toBeTruthy();
     expect(screen.getByTestId('equipment-settings').getAttribute('href')).toBe('/dashboard/plan/new');
-    expect(screen.queryByText('Preferencias de Coach')).toBeNull();
     expect(screen.queryByText('Notificaciones y recordatorios')).toBeNull();
     expect(screen.getByText('No configurado')).toBeTruthy();
     expect(screen.getByTestId('telegram-settings')).toBeTruthy();
@@ -144,6 +150,12 @@ describe('SettingsPage', () => {
       if (String(input) === '/api/today') {
         return jsonResponse({ kind: 'no_plan', localDate: '2026-09-22', dayOfWeek: 2 });
       }
+      if (String(input) === '/api/profile/preferences') {
+        return jsonResponse({
+          hasSavedPreferences: false,
+          preferences: { goal: null, pace: null, equipment: null },
+        });
+      }
 
       return jsonResponse({
         id: 8,
@@ -161,5 +173,33 @@ describe('SettingsPage', () => {
     expect(screen.getByTestId('telegram-unlinked-status')).toBeTruthy();
     expect(screen.queryByText('@qatest_atlas_bot')).toBeNull();
     expect(screen.queryByText('82% adherencia')).toBeNull();
+  });
+
+  it('shows Coach preferences as a separate editable profile section', async () => {
+    const Page = (await import('./page')).default;
+    global.fetch = jest.fn(async (input: unknown) => {
+      if (String(input) === '/api/today') {
+        return jsonResponse({ kind: 'no_plan', localDate: '2026-09-22', dayOfWeek: 2 });
+      }
+      if (String(input) === '/api/profile/preferences') {
+        return jsonResponse({
+          hasSavedPreferences: false,
+          preferences: { goal: null, pace: null, equipment: null },
+        });
+      }
+
+      return jsonResponse({
+        id: 8,
+        name: 'QA Test User',
+        email: 'qa@atlas.test',
+        telegramUserId: null,
+      });
+    }) as unknown as typeof fetch;
+
+    render(<Page />);
+
+    expect(await screen.findByRole('heading', { level: 2, name: 'Preferencias de Coach' })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: 'Definir preferencias' })).toBeTruthy();
+    expect(screen.getByText('Sin plan activo')).toBeTruthy();
   });
 });

@@ -1,7 +1,7 @@
 # Backlog — Atlas Fitness
 
 Fuente de verdad de alcance junto a los ADRs en [`docs/architecture/`](../architecture/) y el harness de trabajo en [`AGENTS.md`](../../AGENTS.md).  
-Este backlog refleja el estado posterior a v0.6.1 y al merge de PR #114 en `develop`. Convive con la visión estratégica de [`handoff-atlas-adaptive-core.md`](./handoff-atlas-adaptive-core.md): ese documento marca el norte de **Atlas Adaptive Core V1**; este README traduce el estado operativo y lo que queda. Para el checkpoint paso-a-paso y evidencia de pruebas ver [`handoff-2026-09.md`](./handoff-2026-09.md).
+Este backlog refleja `develop` tras los PR #118–#124. La última versión publicada sigue siendo v0.6.2; Coach Context está integrado y en preparación documental para v0.7.0, todavía sin publicar. Convive con la visión estratégica de [`handoff-atlas-adaptive-core.md`](./handoff-atlas-adaptive-core.md): ese documento marca el norte de **Atlas Adaptive Core V1**; este README traduce el estado operativo y lo que queda. Para el checkpoint paso-a-paso y evidencia de pruebas ver [`handoff-2026-09.md`](./handoff-2026-09.md).
 
 ## Estado actual del producto
 
@@ -12,7 +12,8 @@ Atlas ya dejó atrás el scaffold: existe un loop usable de **onboarding → Hoy
 - ✅ **Coach freeText / adaptación honesta**: la adaptación interpreta poco tiempo, fatiga y falta de máquinas, con motivos trazables y fallback determinístico.
 - ✅ **`dayReason` honesto**: `lib/services/day-reason.ts` reemplaza leaks de notas libres por copy determinístico basado en check-in, descanso previo y objetivo del plan.
 - ✅ **Plan semanal — crear y editar**: creación manual, `GET/PATCH /api/training-plan/[id]`, pantalla `/dashboard/plan/[id]/edit` y modo edit de `usePlanBuilder`.
-- ✅ **Plan guiado**: wizard `/dashboard/plan/guided` genera draft sobre catálogo real, crea rutinas por día, guarda plan y limpia rutinas si falla el plan.
+- ✅ **Plan guiado**: wizard `/dashboard/plan/guided` genera un borrador sobre catálogo real; solo al confirmar crea el plan y sus rutinas por día, de forma atómica e idempotente.
+- ✅ **Coach Context (PR #118–#124, candidato v0.7.0)**: persistencia autenticada de `goal/pace/equipment` con distinción entre fila ausente y fila explícita con todos los valores `null`; Finish de onboarding sincroniza, Skip no sincroniza; importación legacy exige vista previa/confirmación y alta condicional. Perfil permite editar/guardar sin alterar el plan activo. El brief guiado lee contexto guardado como valores iniciales editables (`days-5` → `5`), sin generar ni guardar automáticamente. La generación autenticada muestra si el resultado vino de Gemini o del fallback, y solo persiste tras Guardar explícito con escritura atómica/idempotente.
 - ✅ **Convergencia Figma**:
   - sesión guiada: Técnica/media, Notas, set table mobile y CTA fija;
   - Progreso: interpretación, fuerza, consistencia, bienestar, hábitos y sesiones;
@@ -51,18 +52,17 @@ Atlas ya dejó atrás el scaffold: existe un loop usable de **onboarding → Hoy
 
 ### Should — próximos candidatos
 
-- Mejorar la explicación de Coach Atlas en creación semanal: mostrar claramente qué vino de IA (`source: 'gemini'`) vs fallback y por qué cada día quedó asignado.
-- Endurecer UX de errores en creación guiada cuando falla una rutina intermedia o falla la limpieza compensatoria.
+- Si PO prioriza más explicabilidad, agregar una razón por día basada únicamente en el brief y el borrador observables. La revisión actual atribuye Gemini/fallback y muestra objetivo, día, foco y ejercicios con series/repeticiones; no presenta una explicación basada en historial, check-ins, biometría ni aprendizaje.
 - Ampliar rate limiting durable a superficies adicionales sólo si el uso lo requiere; login/register ya tienen límite durable. No hay evidencia actual para considerar implementados límites de Telegram, Gemini o crons.
 - Observabilidad más completa para endpoints sensibles si aumenta el uso real.
 - Telegram Mini App consumiendo los mismos `/api/*` (ADR-002), si aporta más que la PWA instalada.
 
 ### Deferred / follow-up (perfil)
 
-- **Preferencias de Coach** y **Notificaciones y recordatorios**: filas removidas de "Mi Atlas" en v0.6.1; reintroducir solo cuando existan pantallas/acciones reales.
-- Pantalla dedicada para editar **Equipamiento/Objetivos** desde Perfil, sin obligar a rehacer el flujo guiado (hoy Equipamiento muestra el valor real del onboarding y enlaza al plan builder).
+- **Notificaciones y recordatorios**: continúan diferidos; no hay pantalla ni acción real implementada.
 - **Pantalla de Hábitos de bienestar** dedicada (hoy la fila enlaza a Hoy, donde viven los hábitos).
-- **Tour de onboarding** que exponga `goal/pace/equipment` a Coach Atlas para generación de plan con más contexto trazable, y permita al usuario contrastarlo/editarlo.
+
+Coach Context no implica aprendizaje automático ni modifica el plan activo al editar preferencias. Las preferencias solo se usan como valores iniciales del brief editable del plan guiado; generación, revisión y guardado siguen siendo pasos separados bajo control del usuario.
 
 ### UX gaps conocidos (pendientes de verificar/priorizar)
 
@@ -98,8 +98,8 @@ Atlas ya dejó atrás el scaffold: existe un loop usable de **onboarding → Hoy
 ## Orden sugerido de entrega
 
 1. Si QA lo requiere, validar progreso de fuerza con historial QA real; no convertir la falta de esa evidencia en bug confirmado.
-2. Explicabilidad del plan semanal (IA vs fallback) y tour de onboarding que alimente a Coach.
-3. Editores dedicados de Perfil (Equipamiento/Objetivos) y pantalla de Hábitos si PO prioriza.
+2. Si PO prioriza, ampliar la explicación diaria del borrador sin atribuir señales o aprendizaje que el código no usa ni muestra.
+3. Pantalla de Hábitos si PO prioriza; las notificaciones siguen diferidas hasta contar con una acción real.
 4. Cada entrega: TDD → auditoría pre-PR con `code-review` → suite full limpia → PR a `develop` → release candidate desde `develop` → `main` + tag + back-merge.
 
 ## Handoffs

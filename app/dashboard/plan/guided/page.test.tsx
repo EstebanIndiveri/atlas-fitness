@@ -2,7 +2,7 @@
  * @jest-environment jsdom
  */
 import { afterEach, describe, expect, it, jest } from '@jest/globals';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 const mockPush = jest.fn();
 const originalFetch = global.fetch;
@@ -26,6 +26,19 @@ const catalog = [
   { id: 4, slug: 'plancha', name: 'Plancha', muscleGroup: 'Core', instructions: 'Sostené.', imageUrl: null, videoUrl: null, isSystem: true },
 ];
 
+const noSavedPreferences = {
+  hasSavedPreferences: false,
+  preferences: { goal: null, pace: null, equipment: null },
+};
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
+}
+
 afterEach(() => {
   global.fetch = originalFetch;
   mockPush.mockClear();
@@ -33,7 +46,9 @@ afterEach(() => {
 
 describe('GuidedPlanPage', () => {
   it('loads the catalog and renders the guided brief form', async () => {
-    global.fetch = jest.fn<typeof fetch>().mockResolvedValue(jsonResponse(catalog));
+    global.fetch = jest.fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse(catalog))
+      .mockResolvedValueOnce(jsonResponse(noSavedPreferences));
     const { default: GuidedPlanPage } = await import('./page');
 
     render(<GuidedPlanPage />);
@@ -54,13 +69,36 @@ describe('GuidedPlanPage', () => {
     expect((await screen.findByRole('alert')).textContent).toContain('No se pudieron cargar ejercicios.');
   });
 
-  it('reviews the proposed days and saves through the existing endpoints', async () => {
+  it('reviews the proposed days and saves them through one guided-save endpoint', async () => {
     const fetchMock = jest
       .fn<typeof fetch>()
       .mockResolvedValueOnce(jsonResponse(catalog))
-      .mockResolvedValueOnce(jsonResponse({ id: 10 }))
-      .mockResolvedValueOnce(jsonResponse({ id: 20 }))
-      .mockResolvedValueOnce(jsonResponse({ id: 30 }))
+      .mockResolvedValueOnce(jsonResponse(noSavedPreferences))
+      .mockResolvedValueOnce(jsonResponse({
+        source: 'fallback',
+        name: 'Coach Atlas · fuerza general',
+        goal: 'fuerza general',
+        days: [
+          {
+            dayOfWeek: 1,
+            title: 'Día 1',
+            focus: 'Empuje',
+            exercises: [{ exerciseId: 1, exerciseName: 'Press banca', muscleGroup: 'Pecho', sortOrder: 0, targetSets: 3, targetReps: 8 }],
+          },
+          {
+            dayOfWeek: 3,
+            title: 'Día 2',
+            focus: 'Tirón',
+            exercises: [{ exerciseId: 2, exerciseName: 'Remo', muscleGroup: 'Espalda', sortOrder: 0, targetSets: 3, targetReps: 8 }],
+          },
+          {
+            dayOfWeek: 5,
+            title: 'Día 3',
+            focus: 'Piernas',
+            exercises: [{ exerciseId: 3, exerciseName: 'Sentadilla', muscleGroup: 'Piernas', sortOrder: 0, targetSets: 3, targetReps: 8 }],
+          },
+        ],
+      }))
       .mockResolvedValueOnce(jsonResponse({ plan: { id: 77 }, schedule: [] }));
     global.fetch = fetchMock;
     const { default: GuidedPlanPage } = await import('./page');
@@ -74,9 +112,75 @@ describe('GuidedPlanPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Guardar plan' }));
 
     await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/dashboard/today'));
-    expect(fetchMock).toHaveBeenLastCalledWith('/api/training-plan', expect.objectContaining({
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/training-plan/guided', expect.objectContaining({
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
     }));
+    expect(fetchMock.mock.calls.some(([url]) => String(url).startsWith('/api/routines'))).toBe(false);
+  });
+
+  it('shows preference loading and preserves edits made before the GET resolves', async () => {
+    const pendingPreferences = deferred<Response>();
+    const fetchMock = jest.fn<typeof fetch>().mockImplementation((input) => {
+      if (String(input) === '/api/exercises') {
+        return Promise.resolve(jsonResponse(catalog));
+      }
+      return pendingPreferences.promise;
+    });
+    global.fetch = fetchMock;
+    const { default: GuidedPlanPage } = await import('./page');
+
+    render(<GuidedPlanPage />);
+
+    expect(await screen.findByRole('heading', { name: 'Crear plan con Coach Atlas' })).toBeTruthy();
+    expect(screen.getByRole('status').textContent).toContain('Cargando preferencias');
+    fireEvent.change(screen.getByLabelText('Objetivo'), { target: { value: 'Mi objetivo' } });
+
+    await act(async () => {
+      pendingPreferences.resolve(jsonResponse({
+        hasSavedPreferences: true,
+        preferences: { goal: 'strength', pace: 'days-5', equipment: 'bands' },
+      }));
+    });
+
+    await waitFor(() => expect(screen.getByLabelText('Objetivo')).toHaveProperty('value', 'Mi objetivo'));
+    expect(screen.getByLabelText('Días por semana')).toHaveProperty('value', '5');
+    expect(screen.getByLabelText('Equipo disponible')).toHaveProperty('value', 'Bandas elásticas');
+    expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual([
+      '/api/exercises',
+      '/api/profile/preferences',
+    ]);
+  });
+
+  it('shows a preference GET error and retries without generating or saving', async () => {
+    const fetchMock = jest.fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse(catalog))
+      .mockResolvedValueOnce(jsonResponse({
+        code: 'UNAUTHORIZED',
+        message: 'Iniciá sesión para cargar tus preferencias.',
+      }, 401))
+      .mockResolvedValueOnce(jsonResponse({
+        hasSavedPreferences: true,
+        preferences: { goal: 'fitness', pace: null, equipment: null },
+      }));
+    global.fetch = fetchMock;
+    const { default: GuidedPlanPage } = await import('./page');
+
+    render(<GuidedPlanPage />);
+
+    expect(await screen.findByRole('alert')).toHaveProperty(
+      'textContent',
+      'Iniciá sesión para cargar tus preferencias.',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Reintentar preferencias' }));
+
+    await waitFor(() => expect(screen.getByLabelText('Objetivo')).toHaveProperty('value', 'Mejorar condición física'));
+    expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual([
+      '/api/exercises',
+      '/api/profile/preferences',
+      '/api/profile/preferences',
+    ]);
+    expect(fetchMock.mock.calls.slice(1).every(([, init]) => init === undefined)).toBe(true);
   });
 });

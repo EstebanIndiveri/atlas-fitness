@@ -2,7 +2,7 @@
 
 Asistente de fitness personal para registrar entrenamientos, pesos, consejos, media de ejercicios y motivación — vía **web app** y **bot de Telegram** (misma lógica de producto que Hermes Finance: un dominio, dos canales).
 
-> Última versión publicada: **v0.6.2**, release de estabilidad de testing/documentación sin nuevas funcionalidades de producto. `develop` incluye PR #114, que estabiliza la observación de respuestas en Playwright sin cambios de comportamiento de producto. El estado operativo y la evidencia de pruebas están en [`docs/backlog/handoff-2026-09.md`](./docs/backlog/handoff-2026-09.md).
+> Última versión publicada: **v0.6.2**, release de estabilidad de testing/documentación sin nuevas funcionalidades de producto. Los PR #118–#124 de Coach Context están integrados en `develop` y preparan v0.7.0, todavía sin publicar. El estado operativo y la evidencia de pruebas están en [`docs/backlog/handoff-2026-09.md`](./docs/backlog/handoff-2026-09.md).
 
 ## Visión (borrador)
 
@@ -180,17 +180,18 @@ Ver [`AGENTS.md`](./AGENTS.md) §3–5 para el branching model completo.
 
 ## Estado Actual (última versión publicada: v0.6.2)
 
-El producto descrito abajo corresponde a v0.6.1. Los cambios posteriores en `develop` incluyen la estabilización de pruebas E2E de PR #114; no representan nuevas funciones de producto.
+La versión publicada sigue siendo v0.6.2. La lista refleja también el estado de `develop`: Coach Context se integró en los PR #118–#124 y está preparado para v0.7.0, aún sin release.
 
 ✅ **Completado / usable:**
 - Auth + sesiones HMAC revocables, link Telegram y webhooks modulares
 - Turso/libSQL + Drizzle con migraciones, seed local/QA y ownership de catálogo
 - PWA instalable con manifest, service worker de shell y prompts iOS/Chrome
-- Onboarding Figma-aligned de 4 pasos
+- Onboarding de 4 pasos; al terminar sincroniza `goal`, `pace` y `equipment` con el perfil autenticado (una respuesta 401 conserva las respuestas locales). Omitir no sincroniza.
+- Coach Context en Perfil: preferencias persistidas y editables; valores explícitos no modifican el plan activo. Respuestas antiguas del navegador solo se importan tras vista previa y confirmación, y nunca sobre una fila existente.
 - Hoy con check-in ánimo/energía, hero de entrenamiento, motivo honesto y acciones Empezar/Adaptar (convergencia Figma released en v0.6.0, regresiones de dispositivo corregidas en v0.6.1)
 - Plan semanal manual + edición (`/dashboard/plan/[id]/edit`)
-- Plan guiado “Crear con Coach Atlas” sobre catálogo real, con cleanup compensatorio
-- Coach AI weekly-plan (v0.6.0): Gemini con fallback determinístico verificable sobre catálogo real
+- Plan guiado “Crear con Coach Atlas” sobre catálogo real; guardar crea el plan y sus rutinas de forma explícita, atómica e idempotente
+- Coach AI weekly-plan: el brief del plan guiado precarga las preferencias guardadas como campos editables; generar solo devuelve un borrador. La revisión identifica Gemini o fallback y muestra el objetivo, los focos y ejercicios/series/repeticiones propuestos; guardar es explícito, atómico e idempotente.
 - Entrenar hub, rutinas, detalle de rutina y sesión guiada responsive (player pulido en v0.6.1: CTA verde+check, timer de descanso siempre visible, "Añadir serie")
 - Coach adaptation con preview/apply, freeText y fallback determinístico
 - Post-workout feedback y Progreso con métricas honestas (consistencia, fuerza, bienestar, hábitos, sesiones)

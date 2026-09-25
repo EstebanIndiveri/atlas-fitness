@@ -1,13 +1,21 @@
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Input, TextArea } from '@/components/ui/Input';
-import type { GuidedPlanField, GuidedPlanFormState } from './useGuidedPlan';
+import { ErrorState, LoadingState } from '@/components/ui/states';
+import type {
+  GuidedPlanField,
+  GuidedPlanFormState,
+  GuidedPlanPreferenceStatus,
+} from './useGuidedPlan';
 
 interface GuidedPlanBriefStepProps {
   form: GuidedPlanFormState;
   busy: boolean;
   canGenerate: boolean;
+  preferenceStatus: GuidedPlanPreferenceStatus;
+  preferenceError: string | null;
   onFieldChange: <K extends GuidedPlanField>(field: K, value: GuidedPlanFormState[K]) => void;
+  onRetryPreferences: () => void;
   onSubmit: () => Promise<void>;
 }
 
@@ -15,11 +23,25 @@ export function GuidedPlanBriefStep({
   form,
   busy,
   canGenerate,
+  preferenceStatus,
+  preferenceError,
   onFieldChange,
+  onRetryPreferences,
   onSubmit,
 }: GuidedPlanBriefStepProps) {
   return (
     <Card className="space-y-4 rounded-2xl">
+      {preferenceStatus === 'loading' ? (
+        <LoadingState label="Cargando preferencias…" compact />
+      ) : null}
+      {preferenceStatus === 'error' && preferenceError ? (
+        <div className="space-y-2">
+          <ErrorState message={preferenceError} />
+          <Button variant="secondary" size="sm" onClick={onRetryPreferences}>
+            Reintentar preferencias
+          </Button>
+        </div>
+      ) : null}
       <div>
         <p className="text-sm font-semibold uppercase tracking-wide text-brand">Coach Atlas</p>
         <h1 className="mt-1 text-title font-bold text-ink">Crear plan con Coach Atlas</h1>
@@ -33,6 +55,7 @@ export function GuidedPlanBriefStep({
           id="guided-goal"
           label="Objetivo"
           rows={3}
+          minLength={2}
           maxLength={60}
           value={form.goal}
           placeholder="Ej: ganar fuerza sin dejar de moverme bien"
@@ -76,6 +99,8 @@ export function GuidedPlanBriefStep({
           <Input
             id="guided-equipment"
             label="Equipo disponible"
+            hint="Separá por comas. Hasta 8 elementos de 40 caracteres."
+            maxLength={327}
             value={form.availableEquipment}
             onChange={(event) => onFieldChange('availableEquipment', event.target.value)}
           />
@@ -83,7 +108,8 @@ export function GuidedPlanBriefStep({
         <Input
           id="guided-focus"
           label="Focos preferidos"
-          hint="Separá por comas. Si lo dejás vacío, Atlas usa un split equilibrado."
+          hint="Separá por comas. Hasta 6 focos de 40 caracteres; vacío usa un split equilibrado."
+          maxLength={245}
           value={form.focusAreas}
           onChange={(event) => onFieldChange('focusAreas', event.target.value)}
         />

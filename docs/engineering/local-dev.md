@@ -344,6 +344,24 @@ Comportamiento **siguiente ejercicio** (Epic-E):
 - Sin clave, timeout o JSON inválido → **fallback** determinista (orden de `routine_exercises`).
 - ADR: `docs/architecture/ADR-003-gemini-guided-session.md`.
 
+#### Coach Context / preferencias del usuario
+
+- `GET/PUT /api/profile/preferences` requiere sesión y opera sobre `goal`, `pace` y `equipment`. `hasSavedPreferences` indica existencia de la fila: sin fila es `false` y tres `null`; una fila guardada con los tres `null` es `true`.
+- Finish de onboarding guarda las respuestas locales y las sincroniza con el perfil autenticado. Una respuesta `401` deja las respuestas en el navegador y permite continuar; Skip solo marca onboarding completo y navega a Hoy, sin sincronizar.
+- La importación de respuestas legacy muestra una vista previa y exige confirmación. Solo intenta crear preferencias si no hay fila; el `PUT` condicional protege también contra una fila creada en paralelo. Una fila ya guardada, incluso con todos sus valores `null`, no se reemplaza.
+- Preferencias de Coach en Perfil permite editar los tres campos y guardarlos explícitamente; esa edición no altera el plan activo.
+- Al abrir el plan guiado, un `GET` precarga los valores guardados no nulos en el brief editable (`days-5` → `5`). Esa lectura no genera ni guarda propuestas y no representa aprendizaje ni inferencia de hábitos.
+
+Comportamiento **borrador de plan semanal guiado**:
+
+- `POST /api/training-plan/generate` requiere sesión autenticada, valida el brief y carga el catálogo visible para ese usuario en el servidor.
+- La generación tiene un límite durable de 5 propuestas por minuto por usuario + IP (configurable con `WEEKLY_PLAN_GENERATE_PER_MINUTE`, máximo 60); al excederlo responde 429 con `Retry-After`.
+- Gemini y `GEMINI_API_KEY` permanecen server-side; la respuesta incluye `source: "gemini"` o `source: "fallback"`.
+- Las propuestas Gemini se validan y normalizan contra el catálogo y los límites de objetivos. Días inválidos o repetidos usan el fallback determinista.
+- Generar y revisar no persiste rutinas ni planes. Solo la acción explícita **Guardar plan** escribe datos.
+- La revisión identifica si la propuesta vino de Gemini o del fallback y muestra el objetivo y el borrador (día, foco, ejercicios, series/repeticiones). No presenta una razón personalizada por día ni evidencia basada en historial, check-ins o aprendizaje; los objetivos de series/repeticiones son propuestas para revisar, no una duración validada ni un ajuste garantizado de equipo.
+- Guardar envía una mutación explícita; el servidor crea el plan, sus rutinas y su horario en una transacción y responde idempotentemente a reintentos de la misma propuesta.
+
 El curl de smoke del cron alcanza para ver un tip `source: "system"` sin red de IA.
 
 ### Volver al smoke (sin red)

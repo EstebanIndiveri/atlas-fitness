@@ -1,5 +1,10 @@
 import { sql } from 'drizzle-orm';
 import { sqliteTable, text, integer, uniqueIndex, index, check } from 'drizzle-orm/sqlite-core';
+import type {
+  UserEquipmentPreference,
+  UserGoalPreference,
+  UserPacePreference,
+} from '@/types/user-preferences';
 
 /**
  * Users table — authentication and profile
@@ -14,6 +19,42 @@ export const users = sqliteTable('users', {
     .notNull()
     .default(sql`(unixepoch())`),
 });
+
+/**
+ * Explicitly selected onboarding preferences, kept separate from training plans.
+ */
+export const userPreferences = sqliteTable(
+  'user_preferences',
+  {
+    userId: integer('user_id')
+      .primaryKey()
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    goal: text('goal').$type<UserGoalPreference>(),
+    pace: text('pace').$type<UserPacePreference>(),
+    equipment: text('equipment').$type<UserEquipmentPreference>(),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .default(sql`(unixepoch())`),
+    updatedAt: integer('updated_at', { mode: 'timestamp' })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (table) => ({
+    goalValue: check(
+      'user_preferences_goal_check',
+      sql`${table.goal} IS NULL OR ${table.goal} IN ('muscle', 'strength', 'fitness', 'consistency', 'wellbeing')`,
+    ),
+    paceValue: check(
+      'user_preferences_pace_check',
+      sql`${table.pace} IS NULL OR ${table.pace} IN ('days-2', 'days-3', 'days-4', 'days-5')`,
+    ),
+    equipmentValue: check(
+      'user_preferences_equipment_check',
+      sql`${table.equipment} IS NULL OR ${table.equipment} IN ('gym', 'dumbbells', 'bodyweight', 'bands')`,
+    ),
+  }),
+);
 
 /**
  * Auth sessions — HMAC cookie revocation store (ADR-004).
@@ -104,6 +145,31 @@ export const trainingPlans = sqliteTable(
     uniqueActiveUserPlan: uniqueIndex('training_plans_user_id_active_unique')
       .on(table.userId)
       .where(sql`${table.isActive} = 1 AND ${table.deletedAt} IS NULL`),
+  }),
+);
+
+/**
+ * Guided plan save idempotency keys, committed atomically with their plan.
+ */
+export const guidedTrainingPlanSaves = sqliteTable(
+  'guided_training_plan_saves',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id),
+    clientMutationId: text('client_mutation_id').notNull(),
+    payloadHash: text('payload_hash').notNull(),
+    trainingPlanId: integer('training_plan_id').references(() => trainingPlans.id),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (table) => ({
+    uniqueUserMutation: uniqueIndex('guided_training_plan_saves_user_mutation_unique').on(
+      table.userId,
+      table.clientMutationId,
+    ),
   }),
 );
 
@@ -495,6 +561,8 @@ export const habitLogs = sqliteTable(
 // Type exports
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
+export type UserPreferencesRow = typeof userPreferences.$inferSelect;
+export type NewUserPreferencesRow = typeof userPreferences.$inferInsert;
 export type SessionRow = typeof sessions.$inferSelect;
 export type NewSessionRow = typeof sessions.$inferInsert;
 

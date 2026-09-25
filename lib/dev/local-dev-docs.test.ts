@@ -51,11 +51,15 @@ describe('docs/engineering/local-dev.md (HU-D integraciones reales)', () => {
     expect(md).toMatch(/\/ayuda|\/log|\/start/);
   });
 
-  it('documents system tip fallback and optional GEMINI_API_KEY with next-exercise fallback', () => {
+  it('documents system tip and server-only Gemini fallbacks for guided features', () => {
     expect(md).toMatch(/fallback/i);
     expect(md).toMatch(/source\s*=\s*'system'|source=system/i);
     expect(md).toMatch(/GEMINI_API_KEY/);
     expect(md).toMatch(/next-exercise|siguiente ejercicio/i);
+    expect(md).toMatch(/POST \/api\/training-plan\/generate/);
+    expect(md).toMatch(/source: "gemini"|source: "fallback"/);
+    expect(md).toMatch(/Solo la acción explícita.*Guardar plan.*escribe datos/);
+    expect(md).toMatch(/no.*duración validada.*ajuste garantizado de equipo/i);
   });
 
   it("lists Won't: Mini App, Vercel crons, secrets in repo, implementing AI", () => {

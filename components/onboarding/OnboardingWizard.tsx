@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState, type KeyboardEvent } from 'react';
 
 import { Button } from '@/components/ui/Button';
+import { LegacyPreferencesImport } from '@/components/onboarding/LegacyPreferencesImport';
 import {
   ONBOARDING_COPY,
   ONBOARDING_TEST_IDS,
@@ -19,7 +20,7 @@ const EMPTY_ANSWERS: OnboardingAnswers = { goal: null, pace: null, equipment: nu
 
 type OnboardingWizardProps = {
   /** Called with the collected answers when the user starts (finishes the wizard). */
-  onFinish: (answers: OnboardingAnswers) => void;
+  onFinish: (answers: OnboardingAnswers) => void | Promise<void>;
   /** Called when the user skips onboarding or backs out of the first step. */
   onSkip: () => void;
 };
@@ -160,6 +161,8 @@ function SelectableStep({
 export function OnboardingWizard({ onFinish, onSkip }: OnboardingWizardProps) {
   const [stepIndex, setStepIndex] = useState(0);
   const [answers, setAnswers] = useState<OnboardingAnswers>(EMPTY_ANSWERS);
+  const [isFinishing, setIsFinishing] = useState(false);
+  const [finishError, setFinishError] = useState<string | null>(null);
 
   const currentStep = stepIndex < PROPOSAL_INDEX ? SELECTABLE_STEPS[stepIndex] : null;
   const currentSelection = currentStep ? answers[currentStep.id] : null;
@@ -171,6 +174,7 @@ export function OnboardingWizard({ onFinish, onSkip }: OnboardingWizardProps) {
       if (!currentStep) {
         return;
       }
+      setFinishError(null);
       setAnswers((prev) => ({ ...prev, [currentStep.id]: optionId }));
     },
     [currentStep],
@@ -186,17 +190,37 @@ export function OnboardingWizard({ onFinish, onSkip }: OnboardingWizardProps) {
     });
   }, [onSkip]);
 
-  const handlePrimary = useCallback(() => {
+  const handlePrimary = useCallback(async () => {
     if (isProposal) {
-      onFinish(answers);
+      if (isFinishing) {
+        return;
+      }
+      setIsFinishing(true);
+      setFinishError(null);
+      try {
+        await onFinish(answers);
+      } catch (error) {
+        setFinishError(
+          error instanceof Error ? error.message : ONBOARDING_COPY.sync.finishFailure,
+        );
+      } finally {
+        setIsFinishing(false);
+      }
       return;
     }
     setStepIndex((index) => Math.min(index + 1, PROPOSAL_INDEX));
-  }, [answers, isProposal, onFinish]);
+  }, [answers, isFinishing, isProposal, onFinish]);
 
   const primaryLabel = useMemo(
-    () => (isProposal ? ONBOARDING_COPY.actions.start : ONBOARDING_COPY.actions.continue),
-    [isProposal],
+    () =>
+      isProposal
+        ? finishError
+          ? ONBOARDING_COPY.sync.retry
+          : isFinishing
+            ? 'Guardando…'
+            : ONBOARDING_COPY.actions.start
+        : ONBOARDING_COPY.actions.continue,
+    [finishError, isFinishing, isProposal],
   );
 
   return (
@@ -214,15 +238,23 @@ export function OnboardingWizard({ onFinish, onSkip }: OnboardingWizardProps) {
             onSelect={handleSelect}
           />
         ) : (
-          <ProposalSummary answers={answers} />
+          <div className="space-y-5">
+            <ProposalSummary answers={answers} />
+            <LegacyPreferencesImport />
+          </div>
         )}
       </div>
 
       <div className="sticky bottom-0 border-t border-line bg-surface/95 px-4 py-4 backdrop-blur">
+        {finishError ? (
+          <p role="alert" className="mb-3 text-sm text-danger">
+            {finishError}
+          </p>
+        ) : null}
         <Button
           className="min-h-12 w-full rounded-full bg-ink text-base text-surface hover:bg-ink/90"
           onClick={handlePrimary}
-          disabled={!canContinue}
+          disabled={!canContinue || isFinishing}
           data-testid={ONBOARDING_TEST_IDS.continue}
         >
           {primaryLabel}
