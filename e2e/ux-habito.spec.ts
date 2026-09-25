@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { expectNoHorizontalOverflow } from './helpers/viewport';
 
 async function registerFreshUser(page: import('@playwright/test').Page): Promise<void> {
   const testUser = {
@@ -49,6 +50,18 @@ test.describe('UX hábito — mobile 390px', () => {
     await expect(page.getByRole('heading', { name: 'Entrenar' })).toBeVisible();
     await expect(page.getByTestId('start-routine').first()).toBeVisible({ timeout: 10000 });
     await expect(page.getByTestId('app-bottom-nav')).toBeVisible();
+  });
+
+  test('dedicated habits page fits the mobile viewport', async ({ page }) => {
+    await registerFreshUser(page);
+    await page.goto('/dashboard/habits');
+
+    await expect(page.getByRole('heading', { name: 'Hábitos', level: 1 })).toBeVisible();
+    const habitsList = page.getByTestId('habits-list');
+    await expect(habitsList).toBeVisible();
+    await expect(habitsList.getByRole('listitem')).toHaveCount(4);
+    await expect(page.getByText('0 de 4 completados', { exact: true })).toBeVisible();
+    await expectNoHorizontalOverflow(page);
   });
 });
 

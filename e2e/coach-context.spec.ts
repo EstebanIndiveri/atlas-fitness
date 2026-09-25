@@ -454,6 +454,7 @@ test.describe('Coach Context', () => {
     }
 
     await page.goto('/dashboard/settings');
+    await expect(page.getByRole('heading', { name: 'Mi Atlas' })).toBeVisible();
     const activePlanLink = page.getByTestId('training-plan-settings');
     await expect(activePlanLink).toHaveAttribute(
       'href',
@@ -461,7 +462,19 @@ test.describe('Coach Context', () => {
     );
     await activePlanLink.click();
     await expect(page).toHaveURL(new RegExp(`/dashboard/plan/${savedPlan.plan.id}$`));
-    await expect(page.getByTestId('plan-hub-week-grid')).toBeVisible();
+    await expect(page.getByText('Plan activo', { exact: true })).toBeVisible();
+    const weekGrid = page.getByTestId('plan-hub-week-grid');
+    await expect(weekGrid).toBeVisible();
+    await expect(weekGrid.getByRole('listitem')).toHaveCount(7);
+    await expect(weekGrid.getByRole('heading', { level: 3 })).toHaveText([
+      'Lunes',
+      'Martes',
+      'Miércoles',
+      'Jueves',
+      'Viernes',
+      'Sábado',
+      'Domingo',
+    ]);
   });
 
   test('imports legacy browser answers only after preview and explicit confirmation when no row exists', async ({
