@@ -8,11 +8,20 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { ErrorState, LoadingState } from '@/components/ui/states';
 import { useCoachAdapt } from '@/hooks/useCoachAdapt';
+import type { CoachCheckInContext } from '@/hooks/useCoachAdapt';
 import { cn } from '@/lib/ui/cn';
 import type { CoachAdaptationResult } from '@/types/coach';
 
+export type TodayAvailability = 'loading' | 'error' | 'empty' | 'ready';
+export type CheckInAvailability = 'loading' | 'saving' | 'error' | 'missing' | 'ready';
+
 type CoachAtlasCardProps = {
   routineId: number | null;
+  todayAvailability: TodayAvailability;
+  todayError: string | null;
+  checkInAvailability: CheckInAvailability;
+  checkInError: string | null;
+  checkInContext: CoachCheckInContext | null;
   onResult?: (result: CoachAdaptationResult) => void;
 };
 
@@ -24,10 +33,14 @@ type Preset = {
 
 const COPY = {
   eyebrow: 'Rutina + datos que registraste',
-  insight: 'La propuesta compara la rutina de hoy con tu check-in (si lo completaste) y el ajuste que elegís o escribís.',
+  insight: 'La propuesta combina la rutina de hoy, tu check-in de ánimo y energía, y el ajuste que elegís o escribís.',
   quickAdjustments: 'Ajustes rápidos para tu sesión:',
   previewOnly: 'Vista previa: tu rutina guardada no cambia hasta iniciar la sesión.',
   noRoutine: 'Necesitás un entrenamiento de hoy para adaptar.',
+  todayLoading: 'Cargando el entrenamiento de hoy…',
+  checkInRequired: 'Registrá tu ánimo y energía para preparar una vista previa.',
+  checkInLoading: 'Cargando tu check-in de hoy…',
+  checkInSaving: 'Guardando tu check-in…',
   inputLabel: 'Preguntarle algo a Atlas',
   inputPlaceholder: 'Preguntarle algo a Atlas',
   submitAria: 'Enviar pregunta a Atlas',
@@ -47,18 +60,29 @@ const PRESETS: readonly Preset[] = [
  * Renders a data-honest Coach Atlas preview and starts the adapted workout only
  * after the user confirms the session start.
  *
- * @param props Today's routine id and an optional callback for a successful preview.
+ * @param props Today's routine and check-in availability plus an optional preview callback.
  * @returns The Today Coach Atlas card.
  * @example
- * <CoachAtlasCard routineId={today.kind === 'workout' ? today.routineId : null} />
+ * <CoachAtlasCard routineId={12} todayAvailability="ready" todayError={null}
+ *   checkInAvailability="ready" checkInError={null} />
  */
-export function CoachAtlasCard({ routineId, onResult }: CoachAtlasCardProps) {
-  const adapt = useCoachAdapt({ routineId });
+export function CoachAtlasCard({
+  routineId,
+  todayAvailability,
+  todayError,
+  checkInAvailability,
+  checkInError,
+  checkInContext,
+  onResult,
+}: CoachAtlasCardProps) {
+  const todayReady = todayAvailability === 'ready' && routineId !== null;
+  const checkInReady = checkInAvailability === 'ready' && checkInContext !== null;
+  const adapt = useCoachAdapt({ routineId, checkInContext: todayReady && checkInReady ? checkInContext : null });
   const [loadingKey, setLoadingKey] = useState<string | null>(null);
   const [freeText, setFreeText] = useState('');
   const started = adapt.startStatus === 'started';
   const busy = adapt.previewing || adapt.starting || started;
-  const canAdapt = routineId !== null;
+  const canAdapt = todayReady && checkInReady;
 
   const requestPreview = async (text: string, key: string): Promise<void> => {
     if (!canAdapt || busy) {
@@ -118,7 +142,31 @@ export function CoachAtlasCard({ routineId, onResult }: CoachAtlasCardProps) {
         })}
       </div>
 
-      {!canAdapt ? <p className="mt-3 text-xs text-ink-muted">{COPY.noRoutine}</p> : null}
+      {todayAvailability === 'loading' ? <LoadingState label={COPY.todayLoading} compact /> : null}
+      {todayAvailability === 'error' ? (
+        <div className="mt-3"><ErrorState message={todayError ?? 'No se pudo cargar el plan de hoy.'} /></div>
+      ) : null}
+      {todayAvailability === 'empty' ? (
+        <p className="mt-3 text-xs text-ink-muted">{COPY.noRoutine}</p>
+      ) : null}
+      {todayAvailability === 'ready' && routineId === null ? (
+        <p className="mt-3 text-xs text-ink-muted">{COPY.noRoutine}</p>
+      ) : null}
+      {todayReady && checkInAvailability === 'loading' ? (
+        <LoadingState label={COPY.checkInLoading} compact />
+      ) : null}
+      {todayReady && checkInAvailability === 'saving' ? (
+        <LoadingState label={COPY.checkInSaving} compact />
+      ) : null}
+      {todayReady && checkInAvailability === 'error' ? (
+        <div className="mt-3"><ErrorState message={checkInError ?? 'No se pudo cargar el check-in de hoy.'} /></div>
+      ) : null}
+      {todayReady && (
+        checkInAvailability === 'missing' ||
+        (checkInAvailability === 'ready' && checkInContext === null)
+      ) ? (
+        <p className="mt-3 text-xs text-ink-muted">{COPY.checkInRequired}</p>
+      ) : null}
 
       <form onSubmit={submitFreeText} className="mt-4">
         <label className="sr-only" htmlFor="coach-atlas-free-text">

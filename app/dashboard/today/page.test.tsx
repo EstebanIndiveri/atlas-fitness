@@ -200,6 +200,113 @@ describe('TodayPage', () => {
     expect(screen.getByRole('heading', { name: 'Consistencia Semanal' })).toBeTruthy();
   });
 
+  it('does not present a missing Today response as a confirmed empty workout while loading', async () => {
+    mockHooks(null);
+    useToday.mockReturnValue({
+      today: null,
+      loading: true,
+      error: null,
+      reload: jest.fn(),
+    });
+    mockFetch((url) => {
+      if (url.includes('/api/auth/me')) {
+        return jsonResponse({ id: 1, name: 'Esteban', email: 'e@x.com', telegramUserId: null });
+      }
+      return jsonResponse(null);
+    });
+
+    render(<TodayPage />);
+
+    expect(await screen.findByText('Cargando el entrenamiento de hoy…')).toBeTruthy();
+    expect(screen.queryByText('Necesitás un entrenamiento de hoy para adaptar.')).toBeNull();
+  });
+
+  it('shows the Today load error instead of a confirmed empty workout', async () => {
+    mockHooks(null);
+    useToday.mockReturnValue({
+      today: null,
+      loading: false,
+      error: 'No se pudo cargar el plan de hoy.',
+      reload: jest.fn(),
+    });
+    mockFetch((url) => {
+      if (url.includes('/api/auth/me')) {
+        return jsonResponse({ id: 1, name: 'Esteban', email: 'e@x.com', telegramUserId: null });
+      }
+      return jsonResponse(null);
+    });
+
+    render(<TodayPage />);
+
+    expect((await screen.findAllByText('No se pudo cargar el plan de hoy.')).length).toBeGreaterThan(0);
+    expect(screen.queryByText('Necesitás un entrenamiento de hoy para adaptar.')).toBeNull();
+  });
+
+  it('requires a completed user check-in before requesting a free-text preview', async () => {
+    mockHooks(workoutToday);
+    const fetchMock = jest.fn((url: unknown) => {
+      const value = String(url);
+      if (value.includes('/api/auth/me')) {
+        return Promise.resolve(jsonResponse({ id: 1, name: 'Esteban', email: 'e@x.com', telegramUserId: null }));
+      }
+      return Promise.resolve(jsonResponse({
+        id: 7,
+        name: 'Push A',
+        kind: 'gym',
+        description: null,
+        exercises: [{ id: 1, name: 'Bench', targetSets: 4 }],
+      }));
+    });
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    render(<TodayPage />);
+    const previewButton = await screen.findByRole('button', { name: 'Tengo 30 min' });
+
+    expect(previewButton.hasAttribute('disabled')).toBe(true);
+    expect(await screen.findByText('Registrá tu ánimo y energía para preparar una vista previa.')).toBeTruthy();
+    fireEvent.click(previewButton);
+
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/api/coach/preview'))).toBe(false);
+  });
+
+  it('blocks Coach preview while the user check-in save is pending', async () => {
+    mockHooks(workoutToday);
+    useDailyCheckin.mockReturnValue({
+      checkin: {
+        id: 12,
+        userId: 1,
+        localDate: '2026-09-24',
+        mood: 4,
+        energy: 'high',
+        note: null,
+        createdAt: '2026-09-24T10:00:00.000Z',
+        updatedAt: '2026-09-24T10:00:00.000Z',
+      },
+      loading: false,
+      saving: true,
+      error: null,
+      reload: jest.fn(),
+      submit: jest.fn<ReturnType<typeof useDailyCheckinHook>['submit']>(),
+    });
+    mockFetch((url) => {
+      if (url.includes('/api/auth/me')) {
+        return jsonResponse({ id: 1, name: 'Esteban', email: 'e@x.com', telegramUserId: null });
+      }
+      return jsonResponse({
+        id: 7,
+        name: 'Push A',
+        kind: 'gym',
+        description: null,
+        exercises: [{ id: 1, name: 'Bench', targetSets: 4 }],
+      });
+    });
+
+    render(<TodayPage />);
+
+    expect(await screen.findByText('Guardando tu check-in…')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Tengo 30 min' }).hasAttribute('disabled')).toBe(true);
+  });
+
   it('starts the scheduled workout with its routineId and navigates', async () => {
     mockHooks(workoutToday);
     mockFetch((url) => {

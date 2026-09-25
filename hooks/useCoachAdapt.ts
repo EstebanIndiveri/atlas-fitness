@@ -1,16 +1,24 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
+import type { CheckInEnergy, CheckInMood } from '@/lib/api/checkin';
 import * as coachPreview from '@/lib/api/coach-preview';
 import type { CoachAdaptationResult } from '@/types/coach';
 
 export type CoachAdaptStep = 'motivo' | 'comparacion' | 'confirmado';
 export type CoachWorkoutStartStatus = 'idle' | 'pending' | 'conflict' | 'error' | 'started';
 
+export type CoachCheckInContext = Readonly<{
+  dailyCheckInId: number;
+  mood: CheckInMood;
+  energy: CheckInEnergy;
+}>;
+
 export interface UseCoachAdaptInput {
   routineId: number | null;
+  checkInContext: CoachCheckInContext | null;
 }
 
 export interface UseCoachAdaptResult {
@@ -30,26 +38,86 @@ const COPY = {
   startFallback: 'No se pudo iniciar el entrenamiento. Probá de nuevo en unos minutos.',
   startConflict: 'Ya hay un entrenamiento activo. Continuá esa sesión antes de iniciar otra.',
   missingRoutine: 'Necesitás un entrenamiento de hoy para adaptar.',
+  missingCheckIn: 'Registrá tu ánimo y energía antes de preparar una vista previa.',
+  missingPreview: 'Prepará una vista previa antes de iniciar el entrenamiento adaptado.',
+  stalePreview: 'La rutina o el check-in cambió. Prepará una nueva vista previa antes de iniciar.',
 } as const;
 
 /**
  * Coordinates the Coach Atlas adaptation state machine and workout start flow.
  *
- * @param input Routine id to preview and start.
+ * @param input Routine id and the current user-provided mood/energy snapshot, if complete.
  * @returns State and actions for motivo, comparación, and confirmado steps.
  * @example
- * const adapt = useCoachAdapt({ routineId: 12 });
+ * const adapt = useCoachAdapt({ routineId: 12, checkInContext: { mood: 4, energy: 'high' } });
  */
-export function useCoachAdapt({ routineId }: UseCoachAdaptInput): UseCoachAdaptResult {
+export function useCoachAdapt({ routineId, checkInContext }: UseCoachAdaptInput): UseCoachAdaptResult {
   const router = useRouter();
   const [step, setStep] = useState<CoachAdaptStep>('motivo');
   const [result, setResult] = useState<CoachAdaptationResult | null>(null);
+  const [resultRoutineId, setResultRoutineId] = useState<number | null>(null);
+  const [resultCheckInContextKey, setResultCheckInContextKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [previewing, setPreviewing] = useState(false);
   const [starting, setStarting] = useState(false);
   const [startStatus, setStartStatus] = useState<CoachWorkoutStartStatus>('idle');
   const startingRef = useRef(false);
-  const adaptationRef = useRef<{ result: CoachAdaptationResult; freeText: string } | null>(null);
+  const routineIdRef = useRef(routineId);
+  const previewRequestRef = useRef(0);
+  const invalidatedPreviewRef = useRef(false);
+  const checkInEnergy = checkInContext?.energy;
+  const checkInMood = checkInContext?.mood;
+  const dailyCheckInId = checkInContext?.dailyCheckInId;
+  const checkInContextKey =
+    dailyCheckInId === undefined || checkInEnergy === undefined || checkInMood === undefined
+      ? null
+      : `${dailyCheckInId}:${checkInMood}:${checkInEnergy}`;
+  const checkInContextKeyRef = useRef(checkInContextKey);
+  const adaptationRef = useRef<{
+    routineId: number;
+    checkInContextKey: string;
+    result: CoachAdaptationResult;
+    freeText: string;
+    checkInContext: CoachCheckInContext;
+  } | null>(null);
+
+  useEffect(() => {
+    if (routineIdRef.current === routineId) {
+      return;
+    }
+
+    routineIdRef.current = routineId;
+    previewRequestRef.current += 1;
+    invalidatedPreviewRef.current =
+      invalidatedPreviewRef.current || adaptationRef.current !== null;
+    adaptationRef.current = null;
+    setStep('motivo');
+    setResult(null);
+    setResultRoutineId(null);
+    setResultCheckInContextKey(null);
+    setError(null);
+    setPreviewing(false);
+    setStartStatus('idle');
+  }, [routineId]);
+
+  useEffect(() => {
+    if (checkInContextKeyRef.current === checkInContextKey) {
+      return;
+    }
+
+    checkInContextKeyRef.current = checkInContextKey;
+    previewRequestRef.current += 1;
+    invalidatedPreviewRef.current =
+      invalidatedPreviewRef.current || adaptationRef.current !== null;
+    adaptationRef.current = null;
+    setStep('motivo');
+    setResult(null);
+    setResultRoutineId(null);
+    setResultCheckInContextKey(null);
+    setError(null);
+    setPreviewing(false);
+    setStartStatus('idle');
+  }, [checkInContextKey]);
 
   const previewWithContext = useCallback(
     async (freeText: string): Promise<CoachAdaptationResult | null> => {
@@ -57,29 +125,73 @@ export function useCoachAdapt({ routineId }: UseCoachAdaptInput): UseCoachAdaptR
         setError(COPY.missingRoutine);
         return null;
       }
+      if (checkInContext === null || checkInContextKey === null) {
+        setError(COPY.missingCheckIn);
+        setResult(null);
+        setResultRoutineId(null);
+        setResultCheckInContextKey(null);
+        adaptationRef.current = null;
+        setStep('motivo');
+        setStartStatus('idle');
+        return null;
+      }
       const trimmed = freeText.trim();
+      const requestCheckInContextKey = checkInContextKey;
+      const requestCheckInContext = { ...checkInContext };
+      const requestId = previewRequestRef.current + 1;
+      previewRequestRef.current = requestId;
       setPreviewing(true);
       setError(null);
       setResult(null);
+      setResultRoutineId(null);
+      setResultCheckInContextKey(null);
       setStartStatus('idle');
+      adaptationRef.current = null;
       try {
         const preview = await coachPreview.previewCoachAdaptation({
           routineId,
+          energy: checkInEnergy,
+          mood: checkInMood,
           ...(trimmed ? { freeText: trimmed } : {}),
         });
+        if (
+          requestId !== previewRequestRef.current ||
+          routineIdRef.current !== routineId ||
+          checkInContextKeyRef.current !== requestCheckInContextKey
+        ) {
+          return null;
+        }
         setResult(preview);
-        adaptationRef.current = { result: preview, freeText: trimmed };
+        setResultRoutineId(routineId);
+        setResultCheckInContextKey(requestCheckInContextKey);
+        adaptationRef.current = {
+          routineId,
+          checkInContextKey: requestCheckInContextKey,
+          result: preview,
+          freeText: trimmed,
+          checkInContext: requestCheckInContext,
+        };
+        invalidatedPreviewRef.current = false;
         setStep('comparacion');
         return preview;
       } catch (caught) {
+        if (
+          requestId !== previewRequestRef.current ||
+          routineIdRef.current !== routineId ||
+          checkInContextKeyRef.current !== requestCheckInContextKey
+        ) {
+          return null;
+        }
         setError(mapPreviewError(caught));
         setStep('motivo');
         return null;
       } finally {
-        setPreviewing(false);
+        if (requestId === previewRequestRef.current) {
+          setPreviewing(false);
+        }
       }
     },
-    [routineId],
+    [checkInContext, checkInEnergy, checkInMood, checkInContextKey, routineId],
   );
 
   const startWorkout = useCallback(async (applyAdaptation: boolean = true): Promise<void> => {
@@ -91,18 +203,40 @@ export function useCoachAdapt({ routineId }: UseCoachAdaptInput): UseCoachAdaptR
       setStartStatus('error');
       return;
     }
+    const storedAdaptation = adaptationRef.current;
+    const stalePreview = (invalidatedPreviewRef.current && storedAdaptation === null) ||
+      (storedAdaptation !== null &&
+        (storedAdaptation.routineId !== routineId ||
+          storedAdaptation.checkInContextKey !== checkInContextKey));
+    if (applyAdaptation && stalePreview) {
+      setError(COPY.stalePreview);
+      setStartStatus('error');
+      return;
+    }
+    if (applyAdaptation && storedAdaptation === null) {
+      setError(COPY.missingPreview);
+      setStartStatus('error');
+      return;
+    }
     startingRef.current = true;
     setStarting(true);
     setStartStatus('pending');
     setError(null);
     try {
-      const adaptation = applyAdaptation ? adaptationRef.current : null;
+      const adaptation = applyAdaptation && storedAdaptation?.routineId === routineId
+        ? storedAdaptation
+        : null;
       const payload = adaptation
         ? {
             routineId,
             adaptation: {
               result: adaptation.result,
               ...(adaptation.freeText ? { freeText: adaptation.freeText } : {}),
+              dailyCheckInId: adaptation.checkInContext.dailyCheckInId,
+              checkInContext: {
+                mood: adaptation.checkInContext.mood,
+                energy: adaptation.checkInContext.energy,
+              },
             },
           }
         : { routineId };
@@ -135,19 +269,27 @@ export function useCoachAdapt({ routineId }: UseCoachAdaptInput): UseCoachAdaptR
       startingRef.current = false;
       setStarting(false);
     }
-  }, [routineId, router]);
+  }, [checkInContextKey, routineId, router]);
 
   const adjustAgain = useCallback((): void => {
     setStep('motivo');
     setResult(null);
+    setResultRoutineId(null);
+    setResultCheckInContextKey(null);
     setError(null);
     setStartStatus('idle');
     adaptationRef.current = null;
+    invalidatedPreviewRef.current = false;
   }, []);
 
+  const previewMatchesCurrentInputs =
+    resultRoutineId === routineId &&
+    resultCheckInContextKey === checkInContextKey &&
+    checkInContextKey !== null;
+
   return {
-    step,
-    result,
+    step: result !== null && !previewMatchesCurrentInputs ? 'motivo' : step,
+    result: previewMatchesCurrentInputs ? result : null,
     error,
     previewing,
     starting,

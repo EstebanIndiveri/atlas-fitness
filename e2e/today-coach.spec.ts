@@ -104,7 +104,9 @@ test.describe('Today Coach adapted session', () => {
         }),
       });
     });
+    const previewRequests: unknown[] = [];
     await page.route('**/api/coach/preview', async (route) => {
+      previewRequests.push(route.request().postDataJSON());
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -113,14 +115,22 @@ test.describe('Today Coach adapted session', () => {
     });
 
     const workoutPosts: import('@playwright/test').Request[] = [];
+    const checkInPosts: import('@playwright/test').Request[] = [];
     const forbiddenMutations: string[] = [];
     page.on('request', (request) => {
       const { pathname } = new URL(request.url());
       if (pathname === '/api/workouts' && request.method() === 'POST') {
         workoutPosts.push(request);
       }
+      if (pathname === '/api/checkin' && request.method() === 'POST') {
+        checkInPosts.push(request);
+      }
       if (
-        (pathname.startsWith('/api/training-plan') || pathname.startsWith('/api/routines')) &&
+        (
+          pathname.startsWith('/api/training-plan') ||
+          pathname.startsWith('/api/routines') ||
+          pathname.startsWith('/api/exercises')
+        ) &&
         request.method() !== 'GET'
       ) {
         forbiddenMutations.push(`${request.method()} ${pathname}`);
@@ -136,8 +146,43 @@ test.describe('Today Coach adapted session', () => {
     expect(activeBeforePreview.status()).toBe(200);
     expect(await activeBeforePreview.json()).toBeNull();
 
+    const moodSave = page.waitForResponse((response) => {
+      const request = response.request();
+      return new URL(response.url()).pathname === '/api/checkin' &&
+        request.method() === 'POST' &&
+        request.postDataJSON().mood === 1;
+    });
+    await page.getByRole('radio', { name: 'Agotado' }).click();
+    expect((await moodSave).status()).toBe(200);
+
+    const energySave = page.waitForResponse((response) => {
+      const request = response.request();
+      return new URL(response.url()).pathname === '/api/checkin' &&
+        request.method() === 'POST' &&
+        request.postDataJSON().energy === 'low';
+    });
+    await page.getByRole('button', { name: 'Seleccionar energía Baja' }).click();
+    expect((await energySave).status()).toBe(200);
+    await expect(page.getByRole('button', { name: 'Seleccionar energía Baja' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(checkInPosts[1]?.postDataJSON()).toEqual({ mood: 1, energy: 'low' });
+    const savedCheckInResponse = await page.request.get('/api/checkin');
+    expect(savedCheckInResponse.status()).toBe(200);
+    const savedCheckIn = (await savedCheckInResponse.json()) as {
+      id: number;
+      mood: number;
+      energy: string;
+    };
     await page.getByRole('button', { name: 'Tengo 30 min' }).click();
     await expect(page.getByRole('region', { name: 'Vista previa de adaptación de Coach Atlas' })).toBeVisible();
+    expect(previewRequests).toEqual([{
+      routineId: routine.id,
+      energy: 'low',
+      mood: 1,
+      freeText: 'Tengo 30 minutos',
+    }]);
     await expect(
       page.getByText('Vista previa: tu rutina guardada no cambia hasta iniciar la sesión.'),
     ).toBeVisible();
@@ -162,7 +207,15 @@ test.describe('Today Coach adapted session', () => {
     const createdWorkout = (await createResponse.json()) as { id: number };
     expect(createResponse.request().postDataJSON()).toEqual({
       routineId: routine.id,
-      adaptation: { result: preview, freeText: 'Tengo 30 minutos' },
+      adaptation: {
+        result: preview,
+        freeText: 'Tengo 30 minutos',
+        dailyCheckInId: savedCheckIn.id,
+        checkInContext: {
+          mood: savedCheckIn.mood,
+          energy: savedCheckIn.energy,
+        },
+      },
     });
     expect(workoutPosts).toHaveLength(1);
     expect(forbiddenMutations).toEqual([]);

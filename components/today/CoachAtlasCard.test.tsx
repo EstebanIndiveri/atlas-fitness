@@ -3,6 +3,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it } from '@jest/globals';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import type { CoachCheckInContext } from '@/hooks/useCoachAdapt';
 import type { CoachAdaptationResult } from '@/types/coach';
 
 declare const jest: typeof import('@jest/globals').jest;
@@ -55,6 +56,25 @@ const result: CoachAdaptationResult = {
   source: 'deterministic',
 };
 
+type CoachAtlasCardProps = Parameters<typeof CoachAtlasCard>[0];
+const READY_CHECK_IN: CoachCheckInContext = { dailyCheckInId: 17, mood: 4, energy: 'high' };
+
+function renderCoachCard(
+  props: Pick<CoachAtlasCardProps, 'routineId'> & Partial<CoachAtlasCardProps>,
+) {
+  return render(
+    <CoachAtlasCard
+      routineId={props.routineId}
+      todayAvailability={props.todayAvailability ?? 'ready'}
+      todayError={props.todayError ?? null}
+      checkInAvailability={props.checkInAvailability ?? 'ready'}
+      checkInError={props.checkInError ?? null}
+      checkInContext={props.checkInContext === undefined ? READY_CHECK_IN : props.checkInContext}
+      {...(props.onResult ? { onResult: props.onResult } : {})}
+    />,
+  );
+}
+
 describe('CoachAtlasCard', () => {
   const originalFetch = global.fetch;
 
@@ -68,7 +88,7 @@ describe('CoachAtlasCard', () => {
   });
 
   it('renders the Figma heading, honest provenance copy, three preset chips and free-text input row', () => {
-    render(<CoachAtlasCard routineId={42} />);
+    renderCoachCard({ routineId: 42 });
 
     expect(screen.getByRole('heading', { name: '◎ Coach Atlas' })).toBeTruthy();
     expect(screen.queryByText('Basado en datos biométricos')).toBeNull();
@@ -82,7 +102,7 @@ describe('CoachAtlasCard', () => {
   });
 
   it('disables adaptation controls without a workout routine and never calls preview', () => {
-    render(<CoachAtlasCard routineId={null} />);
+    renderCoachCard({ routineId: null, todayAvailability: 'empty' });
 
     expect(screen.getByText('Necesitás un entrenamiento de hoy para adaptar.')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Tengo 30 min' }));
@@ -93,19 +113,24 @@ describe('CoachAtlasCard', () => {
 
   it('calls the preview client with routineId and the selected preset free text', async () => {
     previewMock.mockResolvedValue(result);
-    render(<CoachAtlasCard routineId={42} />);
+    renderCoachCard({ routineId: 42 });
 
     fireEvent.click(screen.getByRole('button', { name: 'Tengo 30 min' }));
 
     await waitFor(() => {
-      expect(previewMock).toHaveBeenCalledWith({ routineId: 42, freeText: 'Tengo 30 minutos' });
+      expect(previewMock).toHaveBeenCalledWith({
+        routineId: 42,
+        energy: 'high',
+        mood: 4,
+        freeText: 'Tengo 30 minutos',
+      });
     });
   });
 
   it('renders successful original-vs-adapted numbers and calls onResult', async () => {
     previewMock.mockResolvedValue(result);
     const onResult = jest.fn();
-    render(<CoachAtlasCard routineId={42} onResult={onResult} />);
+    renderCoachCard({ routineId: 42, onResult });
 
     fireEvent.click(screen.getByRole('button', { name: 'Estoy cansado' }));
 
@@ -118,6 +143,69 @@ describe('CoachAtlasCard', () => {
     expect(onResult).toHaveBeenCalledWith(result);
   });
 
+  it('shows Today loading distinctly from an empty workout and disables preview', () => {
+    renderCoachCard({ routineId: null, todayAvailability: 'loading' });
+
+    expect(screen.getByText('Cargando el entrenamiento de hoy…')).toBeTruthy();
+    expect(screen.queryByText('Necesitás un entrenamiento de hoy para adaptar.')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Tengo 30 min' }).hasAttribute('disabled')).toBe(true);
+  });
+
+  it('shows Today load failures distinctly from an empty workout', () => {
+    renderCoachCard({
+      routineId: null,
+      todayAvailability: 'error',
+      todayError: 'No se pudo cargar el plan de hoy.',
+    });
+
+    expect(screen.getByRole('alert').textContent).toContain('No se pudo cargar el plan de hoy.');
+    expect(screen.queryByText('Necesitás un entrenamiento de hoy para adaptar.')).toBeNull();
+  });
+
+  it('requires a completed check-in before creating a preview', () => {
+    renderCoachCard({
+      routineId: 42,
+      checkInAvailability: 'missing',
+      checkInContext: null,
+    });
+
+    expect(screen.getByText('Registrá tu ánimo y energía para preparar una vista previa.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Tengo 30 min' }).hasAttribute('disabled')).toBe(true);
+  });
+
+  it('shows check-in loading and failure states instead of enabling preview', () => {
+    const { unmount } = renderCoachCard({
+      routineId: 42,
+      checkInAvailability: 'loading',
+      checkInContext: null,
+    });
+
+    expect(screen.getByText('Cargando tu check-in de hoy…')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Tengo 30 min' }).hasAttribute('disabled')).toBe(true);
+    unmount();
+
+    renderCoachCard({
+      routineId: 42,
+      checkInAvailability: 'error',
+      checkInError: 'No se pudo cargar el check-in de hoy.',
+      checkInContext: null,
+    });
+
+    expect(screen.getByRole('alert').textContent).toContain('No se pudo cargar el check-in de hoy.');
+    expect(screen.getByRole('button', { name: 'Tengo 30 min' }).hasAttribute('disabled')).toBe(true);
+  });
+
+  it('blocks preview while the persisted check-in is being saved', () => {
+    renderCoachCard({
+      routineId: 42,
+      checkInAvailability: 'saving',
+      checkInContext: null,
+    });
+
+    expect(screen.getByText('Guardando tu check-in…')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Tengo 30 min' }).hasAttribute('disabled')).toBe(true);
+  });
+
   it('renders validation errors honestly when the server needs a check-in', async () => {
     previewMock.mockRejectedValue(
       new CoachPreviewClientError(
@@ -127,7 +215,7 @@ describe('CoachAtlasCard', () => {
         { code: 'VALIDATION', message: 'Necesitás registrar cómo estás hoy antes de adaptar.' },
       ),
     );
-    render(<CoachAtlasCard routineId={42} />);
+    renderCoachCard({ routineId: 42 });
 
     fireEvent.click(screen.getByRole('button', { name: 'Sin poleas' }));
 
@@ -147,7 +235,7 @@ describe('CoachAtlasCard', () => {
           { code: 'VALIDATION', message: 'Necesitás registrar cómo estás hoy antes de adaptar.' },
         ),
       );
-    render(<CoachAtlasCard routineId={42} />);
+    renderCoachCard({ routineId: 42 });
 
     fireEvent.click(screen.getByRole('button', { name: 'Estoy cansado' }));
     expect(await screen.findByText('Sugerencia de Atlas')).toBeTruthy();
@@ -166,7 +254,7 @@ describe('CoachAtlasCard', () => {
     previewMock.mockImplementation(
       () => new Promise<CoachAdaptationResult>((resolve) => { resolvePreview = resolve; }),
     );
-    render(<CoachAtlasCard routineId={42} />);
+    renderCoachCard({ routineId: 42 });
 
     fireEvent.click(screen.getByRole('button', { name: 'Sin poleas' }));
 
@@ -186,7 +274,7 @@ describe('CoachAtlasCard', () => {
       json: async () => ({ id: 91 }),
     } as Response);
     global.fetch = fetchMock as unknown as typeof fetch;
-    render(<CoachAtlasCard routineId={42} />);
+    renderCoachCard({ routineId: 42 });
 
     fireEvent.click(screen.getByRole('button', { name: 'Estoy cansado' }));
 
@@ -205,7 +293,12 @@ describe('CoachAtlasCard', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           routineId: 42,
-          adaptation: { result, freeText: 'Estoy cansado' },
+          adaptation: {
+            result,
+            freeText: 'Estoy cansado',
+            dailyCheckInId: 17,
+            checkInContext: { mood: 4, energy: 'high' },
+          },
         }),
       });
     });
@@ -218,7 +311,7 @@ describe('CoachAtlasCard', () => {
     global.fetch = jest.fn<typeof fetch>(
       () => new Promise<Response>((resolve) => { resolveStart = resolve; }),
     ) as unknown as typeof fetch;
-    render(<CoachAtlasCard routineId={42} />);
+    renderCoachCard({ routineId: 42 });
 
     fireEvent.click(screen.getByRole('button', { name: 'Tengo 30 min' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Empezar entrenamiento adaptado' }));
@@ -242,7 +335,7 @@ describe('CoachAtlasCard', () => {
       status: 409,
       json: async () => ({ code: 'CONFLICT', message: 'Ya tenés un entrenamiento en curso.' }),
     } as Response) as unknown as typeof fetch;
-    render(<CoachAtlasCard routineId={42} />);
+    renderCoachCard({ routineId: 42 });
 
     fireEvent.click(screen.getByRole('button', { name: 'Estoy cansado' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Empezar entrenamiento adaptado' }));
