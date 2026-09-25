@@ -109,7 +109,7 @@ describe('generateWeeklyPlanDraft', () => {
 
     expect(draft.source).toBe('gemini');
     expect(draft.name).toBe('Semana fuerza Atlas');
-    expect(draft.goal).toBe('fuerza progresiva');
+    expect(draft.goal).toBe(input(2).goal);
     expect(draft.days).toHaveLength(2);
     expect(draft.days[0]).toMatchObject({
       dayOfWeek: 2,
@@ -150,7 +150,7 @@ describe('generateWeeklyPlanDraft', () => {
     expect(draft.days.map((day) => day.dayOfWeek)).toEqual([1, 3, 5]);
   });
 
-  it('resolves Gemini exercises through the catalog and clamps training targets', async () => {
+  it('rejects a Gemini proposal with an invalid weekday', async () => {
     const fetchImpl = jest.fn(async () => geminiResponse({
       candidates: [{
         content: {
@@ -179,9 +179,74 @@ describe('generateWeeklyPlanDraft', () => {
       fetchImpl,
     });
 
-    expect(draft.source).toBe('gemini');
+    expect(draft.source).toBe('fallback');
     expect(draft.days).toHaveLength(1);
     expect(draft.days[0]?.dayOfWeek).toBe(1);
+
+  });
+
+  it('falls back when Gemini assigns duplicate weekdays', async () => {
+    const fetchImpl = jest.fn(async () => geminiResponse({
+      candidates: [{
+        content: {
+          parts: [{
+            text: JSON.stringify({
+              name: 'Semana con días repetidos',
+              goal: 'fuerza',
+              days: [2, 2].map((dayOfWeek) => ({
+                dayOfWeek,
+                title: 'Día de fuerza',
+                focus: 'Fuerza',
+                exercises: [{ exerciseId: 3, targetSets: 3, targetReps: 8 }],
+              })),
+            }),
+          }],
+        },
+      }],
+    }));
+
+    const draft = await generateWeeklyPlanDraft(input(2), {
+      env: { GEMINI_API_KEY: 'test-key' },
+      fetchImpl,
+    });
+
+    expect(draft.source).toBe('fallback');
+    expect(draft.days.map((day) => day.dayOfWeek)).toEqual([1, 4]);
+    expect(new Set(draft.days.map((day) => day.dayOfWeek)).size).toBe(draft.days.length);
+  });
+
+  it('resolves Gemini exercises through the catalog and clamps training targets', async () => {
+    const fetchImpl = jest.fn(async () => geminiResponse({
+      candidates: [{
+        content: {
+          parts: [{
+            text: JSON.stringify({
+              name: 'Semana validada',
+              goal: 'fuerza',
+              days: [{
+                dayOfWeek: 2,
+                title: '  Día con catálogo  ',
+                focus: '  Piernas  ',
+                exercises: [
+                  { exerciseId: 999, targetSets: 99, targetReps: 99 },
+                  { exerciseId: 3, targetSets: 99, targetReps: 0 },
+                  { exerciseId: 3, targetSets: 2, targetReps: 12 },
+                ],
+              }],
+            }),
+          }],
+        },
+      }],
+    }));
+
+    const draft = await generateWeeklyPlanDraft(input(1), {
+      env: { GEMINI_API_KEY: 'test-key' },
+      fetchImpl,
+    });
+
+    expect(draft.source).toBe('gemini');
+    expect(draft.days).toHaveLength(1);
+    expect(draft.days[0]?.dayOfWeek).toBe(2);
     expect(draft.days[0]?.exercises).toEqual([
       expect.objectContaining({
         exerciseId: 3,

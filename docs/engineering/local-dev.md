@@ -344,6 +344,15 @@ Comportamiento **siguiente ejercicio** (Epic-E):
 - Sin clave, timeout o JSON inválido → **fallback** determinista (orden de `routine_exercises`).
 - ADR: `docs/architecture/ADR-003-gemini-guided-session.md`.
 
+Comportamiento **borrador de plan semanal guiado**:
+
+- `POST /api/training-plan/generate` requiere sesión autenticada, valida el brief y carga el catálogo visible para ese usuario en el servidor.
+- La generación tiene un límite durable de 5 propuestas por minuto por usuario + IP (configurable con `WEEKLY_PLAN_GENERATE_PER_MINUTE`, máximo 60); al excederlo responde 429 con `Retry-After`.
+- Gemini y `GEMINI_API_KEY` permanecen server-side; la respuesta incluye `source: "gemini"` o `source: "fallback"`.
+- Las propuestas Gemini se validan y normalizan contra el catálogo y los límites de objetivos. Días inválidos o repetidos usan el fallback determinista.
+- Generar y revisar no persiste rutinas ni planes. Solo la acción explícita **Guardar plan** escribe datos.
+- La revisión identifica si la propuesta vino de Gemini o del fallback y muestra nombres de días en es-AR; los objetivos de series/repeticiones son propuestas para revisar, no una duración validada ni un ajuste garantizado de equipo.
+
 El curl de smoke del cron alcanza para ver un tip `source: "system"` sin red de IA.
 
 ### Volver al smoke (sin red)

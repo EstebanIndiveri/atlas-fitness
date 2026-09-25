@@ -33,6 +33,7 @@ export function GuidedPlanBriefStep({
           id="guided-goal"
           label="Objetivo"
           rows={3}
+          minLength={2}
           maxLength={60}
           value={form.goal}
           placeholder="Ej: ganar fuerza sin dejar de moverme bien"
@@ -76,6 +77,8 @@ export function GuidedPlanBriefStep({
           <Input
             id="guided-equipment"
             label="Equipo disponible"
+            hint="Separá por comas. Hasta 8 elementos de 40 caracteres."
+            maxLength={327}
             value={form.availableEquipment}
             onChange={(event) => onFieldChange('availableEquipment', event.target.value)}
           />
@@ -83,7 +86,8 @@ export function GuidedPlanBriefStep({
         <Input
           id="guided-focus"
           label="Focos preferidos"
-          hint="Separá por comas. Si lo dejás vacío, Atlas usa un split equilibrado."
+          hint="Separá por comas. Hasta 6 focos de 40 caracteres; vacío usa un split equilibrado."
+          maxLength={245}
           value={form.focusAreas}
           onChange={(event) => onFieldChange('focusAreas', event.target.value)}
         />
