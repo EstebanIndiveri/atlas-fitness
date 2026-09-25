@@ -1,6 +1,6 @@
-# Handoff — Atlas Fitness · Coach Context v0.7.0 release prep (Septiembre 2026)
+# Handoff — Atlas Fitness · Coach Context v0.7.0 post-release (Septiembre 2026)
 
-> **Documento de checkpoint operativo.** Es la fuente de verdad para que un agente o persona entienda el estado del proyecto en el snapshot indicado abajo, qué está hecho/released, qué quedó diferido en backlog y cómo continuar. Última actualización: 2026-09-25. La última versión publicada es v0.6.2, una release de estabilidad de testing/documentación sin nuevas funcionalidades de producto. Los PR #118–#124 de Coach Context están integrados en `develop`; el trabajo se prepara como v0.7.0 y todavía no está publicado.
+> **Documento de checkpoint operativo.** Es la fuente de verdad para que un agente o persona entienda el estado actual del proyecto, qué está hecho/released, qué quedó diferido en backlog y cómo continuar. Última actualización: 2026-09-25. v0.7.0 se publicó mediante el PR #126; el tag `v0.7.0` y las ramas `main` y `develop` apuntan al commit `dae2bc949538f9cb9fa02faf8db0712d04b9d9f9`. El back-merge PR #127 sincronizó `develop`. El deployment de producción en [`atlas-fitness-655yg94r0-eindi-acme.vercel.app`](https://atlas-fitness-655yg94r0-eindi-acme.vercel.app) terminó correctamente: la raíz respondió HTTP 200 y el workflow de migración de producción pasó.
 
 ## 1. Recap producto / visión
 
@@ -46,11 +46,11 @@ Estado del recorrido **onboarding → today → start/adapt → guided session �
 7. **Post-workout**: feedback post-workout y close summary existen en services/routes/componentes de sesión.
 8. **Progress**: pantalla Progreso Figma-aligned con interpretación, resumen, consistencia semanal, fuerza, bienestar, hábitos y sesiones recientes en [`app/dashboard/progress/page.tsx`](../../app/dashboard/progress/page.tsx).
 
-DoD funcional: el loop principal está implementado y released end-to-end hasta v0.6.1. Coach Context se integró después en `develop` como trabajo candidato a v0.7.0, aún no publicado. DoD de release por wave sigue exigiendo revalidación end-to-end, auditoría pre-PR y suite full limpia.
+DoD funcional: el loop principal y Coach Context están incluidos en la release v0.7.0. Las cifras E2E anotadas abajo son evidencia histórica de sus respectivas waves y no deben presentarse como una corrida de la suite sobre el estado actual. Para futuras waves, el DoD de release sigue exigiendo revalidación end-to-end, auditoría pre-PR y suite full limpia.
 
 **E2E de PR #114 (evidencia histórica):** las carreras de observación de respuesta/acción fueron corregidas y el golden path quedó estabilizado según la evidencia de esa wave. Resultado registrado entonces: 40 E2E aprobados y 1 omitido intencionalmente; los specs críticos de auth/workouts/session/routines-editor pasaron 51/51 en `repeat-each=3`. RoutineEditor cubre `90 → vacío → 30`. PR #124 agrega `e2e/coach-context.spec.ts`; las cifras de PR #114 no representan una corrida de la suite sobre el estado posterior a #124.
 
-## 5. Entregado v0.3.1 → v0.6.1 y candidato v0.7.0
+## 5. Entregado v0.3.1 → v0.7.0
 
 - **v0.3.1**: Coach adaptation interpreta freeText (tiempo/fatiga/sin máquinas), motivos trazables, Today completed-state + Adaptar, sesión guiada mobile con set table/notas/CTA fija y fixes de inputs de descanso/sets.
 - **v0.3.2**: `dayReason` honesto y determinístico, Progress fixes (chart desde 1 punto, labels/overflow), CTA “Crear con Coach Atlas” en rutinas/plan.
@@ -58,19 +58,21 @@ DoD funcional: el loop principal está implementado y released end-to-end hasta 
 - **v0.5.0**: convergencia Figma de Onboarding, Entrenar hub, Perfil/Settings y bottom nav con iconos + active states.
 - **v0.6.0**: convergencia Figma de Hoy home; generación de plan semanal Coach AI (Gemini + fallback determinístico verificable); CHANGELOG + handoff. Fix del contrato `streak-chip` (golden-path E2E).
 - **v0.6.1**: fixes UX/UI de dispositivo real + Figma (`12:1830` player, `8-1413` hero): CTA verde+check, descanso siempre visible, "Añadir serie", contraste de ánimo (raíz `cn()` sin tailwind-merge), overflow de hábitos, hero+progress bar, equipamiento real en Perfil y limpieza de filas backlog.
-- **Candidato v0.7.0 (PR #118–#124, integrado en `develop`, no publicado)**: preferencias `goal/pace/equipment` persistidas por usuario; Finish de onboarding sincroniza y Skip no; importación legacy con preview, confirmación y protección condicional de filas existentes; edición explícita en Perfil sin cambiar el plan activo; precarga editable del brief guiado; generación semanal autenticada con atribución Gemini/fallback; guardado explícito e idempotente. Ver límites y checklist en §6–§7.
+- **v0.7.0 (publicado 2026-09-25, release PR #126)**: incluye el trabajo de Coach Context de los PR #118–#124: preferencias `goal/pace/equipment` persistidas por usuario; Finish de onboarding sincroniza y Skip no; importación legacy con preview, confirmación y protección condicional de filas existentes; edición explícita en Perfil sin cambiar el plan activo; precarga editable del brief guiado; generación semanal autenticada con atribución Gemini/fallback; guardado explícito e idempotente. Ver límites en §6–§7.
 
 Ver [`../../CHANGELOG.md`](../../CHANGELOG.md) para detalle agrupado Added/Changed/Fixed.
 
-## 6. Snapshot de base (pre-PR documental; última release v0.6.2)
+## 6. Estado del release y snapshot de base
 
-**Base verificada antes de este PR documental**: el `HEAD` de trabajo y `origin/develop` estaban en `6552667a37329799bb1d644534072c4f58f50fe0`, con PR #118–#124 integrados. Este SHA documenta el punto de partida, no el estado de `develop` después de integrar estos documentos. La última versión publicada continúa siendo v0.6.2; Coach Context aún no está publicado. No afirmar que `develop` está alineada con `main`.
+**Release v0.7.0 (2026-09-25):** el PR #126 se fusionó en `main`; el tag `v0.7.0` apunta a `dae2bc949538f9cb9fa02faf8db0712d04b9d9f9`. El back-merge PR #127 fast-forwarded `develop` al mismo SHA, por lo que `main` y `develop` quedaron sincronizadas. El deployment de producción en [`https://atlas-fitness-655yg94r0-eindi-acme.vercel.app`](https://atlas-fitness-655yg94r0-eindi-acme.vercel.app) sobre ese commit tuvo éxito; la raíz respondió HTTP 200 y el workflow de migración de producción pasó.
+
+**Snapshot histórico previo al release:** el `HEAD` de trabajo y `origin/develop` estaban en `6552667a37329799bb1d644534072c4f58f50fe0`, con PR #118–#124 integrados. Ese SHA documenta la base anterior al release, no el estado actual de `main` o `develop`; en ese snapshot v0.6.2 era la última versión publicada y Coach Context aún no estaba publicado.
 
 **Salud del repo:** los resultados de typecheck/build, Jest 198 suites / 1126 tests, E2E 40 aprobados / 1 omitido intencionalmente y specs críticos 51/51 en `repeat-each=3` son evidencia histórica de PR #114.
 
 **Validación de PR #124:** los checks de GitHub `Lint, Typecheck, and Test` y `Playwright E2E Tests` pasaron. La validación local de F registró Playwright E2E con 43 aprobados y 1 omitido esperado, typecheck aprobado y lint con 0 errores y un warning conocido. No se consigna una cifra de Jest separada ni un resultado de build para esta validación.
 
-**Qué está cerrado en código (todavía no released como v0.7.0)**: preferencias de Coach autenticadas y persistidas; onboarding Finish/Skip con sincronización diferenciada; importación legacy confirmada y no destructiva; edición en Perfil; prefill editable del brief guiado; generación autenticada con Gemini opcional/fallback visible; guardado de plan explícito, atómico e idempotente. El loop principal sigue released hasta v0.6.1 y PR #114 conserva su evidencia histórica.
+**Incluido en v0.7.0**: preferencias de Coach autenticadas y persistidas; onboarding Finish/Skip con sincronización diferenciada; importación legacy confirmada y no destructiva; edición en Perfil; prefill editable del brief guiado; generación autenticada con Gemini opcional/fallback visible; guardado de plan explícito, atómico e idempotente. PR #114 conserva evidencia histórica de sus pruebas; no representa una corrida de la suite sobre la wave v0.7.0.
 
 **Paso a paso para retomar (nuevo agente o persona)**:
 
@@ -84,13 +86,12 @@ Ver [`../../CHANGELOG.md`](../../CHANGELOG.md) para detalle agrupado Added/Chang
 8. Auditoría pre-PR obligatoria: full suite verde → agente `code-review` sobre el diff completo → aplicar **todas** las observaciones → re-correr suite → commits Conventional Commits → PR a `develop`.
 9. Release: cortar `release/x.y.z` desde `develop`, bump `package.json`, PR a `main` (`--merge`, no squash), tag `vX.Y.Z`, back-merge `main→develop` (fast-forward), verificar prod con `curl` (`/`, `/login`, `/onboarding` = 200; `/dashboard/today` = 307).
 
-### Preparación de release v0.7.0 (pendiente; no ejecutar desde este trabajo)
+### Resultado de release v0.7.0
 
-- [x] PR #118–#124 integrados en `develop` en el snapshot de base citado arriba.
-- [x] Redactar y verificar esta sincronización documental en la rama de trabajo; todavía no está integrada.
-- [ ] Integrar primero esta documentación en `develop`; después cortar `release/0.7.0` según el flujo aprobado.
-- [ ] Ejecutar y registrar CI/regresión sobre el candidato; actualizar `package.json` y lockfile en el trabajo de release, no en esta documentación.
-- [ ] Al publicar, mover estas entradas a `[0.7.0]` con fecha real, crear tag tras aprobación y completar el back-merge. Hasta entonces no declarar v0.7.0 como publicada ni crear branch/tag desde esta tarea.
+- [x] PR #118–#124 integrados como trabajo de Coach Context.
+- [x] PR #126 fusionado en `main`; tag `v0.7.0` apunta a `dae2bc949538f9cb9fa02faf8db0712d04b9d9f9`.
+- [x] PR #127 completó el back-merge por fast-forward; `develop` quedó en el mismo SHA que `main`.
+- [x] Deployment de producción sobre ese commit exitoso; la raíz respondió HTTP 200 y el workflow de migración de producción pasó.
 
 ## 7. Backlog restante
 
@@ -134,7 +135,7 @@ Ver [`AGENTS.md`](../../AGENTS.md) antes de tocar código. Resumen operativo:
 
 ## 9. Recomendaciones senior: próximos pasos y riesgos
 
-1. **Estado de la wave**: Hoy está released hasta v0.6.1; v0.6.2 es la última release publicada. Coach Context de PR #118–#124 está integrado en `develop` pero sigue unreleased como candidato v0.7.0. Los resultados E2E de PR #114 son evidencia histórica, no validación de la wave nueva.
+1. **Estado de la wave**: v0.7.0 es la última release publicada. El tag y `main`/`develop` apuntan a `dae2bc949538f9cb9fa02faf8db0712d04b9d9f9`; PR #126 publicó el release y PR #127 sincronizó `develop`. Los resultados E2E de PR #114 son evidencia histórica, no una validación de la wave v0.7.0.
 2. **Tratar IA como enhancer, no dependencia**: el wizard debe ser útil con catálogo real aunque Gemini no responda; Gemini solo puede mejorar selección/texto validado.
 3. **Agregar tests de contrato para weekly-plan AI**: catálogo vacío, IDs inválidos de Gemini, respuesta malformada, timeout, no key, días 1–6, foco/equipment raros.
 4. **Auditar copy de honestidad**: cualquier “Atlas sabe/aprende/recuperación” debe mapear a datos reales o cambiarse a “Atlas usa tu plan/check-in/historial”. No describir las preferencias guardadas como aprendizaje, ni atribuir la propuesta a datos que el brief no incluye.
