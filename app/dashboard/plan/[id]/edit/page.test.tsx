@@ -110,9 +110,13 @@ describe('EditPlanPage', () => {
       mode: 'edit',
       initialPlan: loadedPlan,
     });
-    expect(screen.getByRole('heading', { name: 'Crear una nueva versión del plan' })).toBeTruthy();
-    expect(screen.getByText('La versión actual se conservará en el historial cuando confirmes el reemplazo.')).toBeTruthy();
-    expect(screen.getByTestId('plan-submit').textContent).toBe('Crear nueva versión');
+    expect(screen.getByRole('heading', { name: 'Editar plan semanal' })).toBeTruthy();
+    expect(
+      screen.getByText(
+        'Guardar crea una versión nueva del plan y conserva la anterior en el historial.',
+      ),
+    ).toBeTruthy();
+    expect(screen.getByTestId('plan-submit').textContent).toBe('Guardar cambios');
     expect(screen.getByRole('link', { name: 'Volver al plan' }).getAttribute('href')).toBe(
       '/dashboard/plan/77',
     );
@@ -121,6 +125,56 @@ describe('EditPlanPage', () => {
     fireEvent.click(screen.getByTestId('plan-submit'));
 
     await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/dashboard/plan/88'));
+  });
+
+  it('keeps manual plan editing separate from guided generation', async () => {
+    const loadedPlan = {
+      plan: {
+        id: 77,
+        userId: 1,
+        name: 'Semana actual',
+        goal: null,
+        isActive: false,
+        createdAt: new Date(0),
+        updatedAt: new Date(0),
+        deletedAt: null,
+      },
+      schedule: [],
+    };
+    mockUseEditableTrainingPlan.mockReturnValue({
+      plan: loadedPlan,
+      loading: false,
+      error: null,
+      notFound: false,
+    });
+    mockUsePlanBuilder.mockReturnValue({
+      name: 'Semana actual',
+      goal: '',
+      assignments: {
+        0: { routineId: null, note: '' },
+        1: { routineId: null, note: '' },
+        2: { routineId: null, note: '' },
+        3: { routineId: null, note: '' },
+        4: { routineId: null, note: '' },
+        5: { routineId: null, note: '' },
+        6: { routineId: null, note: '' },
+      },
+      selectedCount: 0,
+      canSubmit: false,
+      submitting: false,
+      error: null,
+      setName: jest.fn(),
+      setGoal: jest.fn(),
+      setDayRoutine: jest.fn(),
+      setDayNote: jest.fn(),
+      submit: jest.fn(),
+    });
+    const { default: EditPlanPage } = await import('./page');
+
+    render(<EditPlanPage />);
+
+    expect(screen.getByRole('heading', { name: 'Editar plan semanal' })).toBeTruthy();
+    expect(screen.queryByRole('link', { name: /coach atlas|generar/i })).toBeNull();
   });
 
   it('treats partially numeric route params as not found', async () => {

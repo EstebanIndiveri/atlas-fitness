@@ -36,7 +36,9 @@ function baseProps() {
     6: { routineId: null, note: '' },
   };
   return {
+    planId: 77,
     routines,
+    mutableRoutineIds: [10, 20],
     name: '',
     goal: '',
     assignments,
@@ -89,6 +91,32 @@ describe('PlanBuilderForm', () => {
     expect(screen.queryByTestId(PLAN_TEST_IDS.dayNote(2))).toBeNull();
   });
 
+  it('offers plan-scoped routine details and editing only for mutable routines', () => {
+    const props = baseProps();
+    props.assignments[1] = { routineId: 10, note: 'Foco técnico' };
+    props.assignments[2] = { routineId: 20, note: '' };
+    props.mutableRoutineIds = [10];
+    render(<PlanBuilderForm {...props} />);
+
+    expect(screen.getByRole('link', { name: 'Ver rutina Empuje' }).getAttribute('href')).toBe(
+      '/dashboard/routines/10?trainingPlanId=77',
+    );
+    expect(screen.getByRole('link', { name: 'Editar rutina Empuje' }).getAttribute('href')).toBe(
+      '/dashboard/routines/10/edit',
+    );
+    expect(screen.getByRole('link', { name: 'Ver rutina Pierna' }).getAttribute('href')).toBe(
+      '/dashboard/routines/20?trainingPlanId=77',
+    );
+    expect(screen.queryByRole('link', { name: 'Editar rutina Pierna' })).toBeNull();
+    expect(screen.getByLabelText('Nota o foco de Lunes')).toBeTruthy();
+  });
+
+  it('does not render routine actions for a rest day or a missing assignment', () => {
+    render(<PlanBuilderForm {...baseProps()} />);
+
+    expect(screen.queryByRole('link', { name: /rutina/i })).toBeNull();
+  });
+
   it('shows the summary count and disables submit until it can submit', () => {
     const props = baseProps();
     props.selectedCount = 2;
@@ -123,6 +151,25 @@ describe('PlanBuilderForm', () => {
     props.canSubmit = true;
     render(<PlanBuilderForm {...props} mode="edit" />);
 
-    expect(screen.getByTestId(PLAN_TEST_IDS.submit).textContent).toBe('Crear nueva versión');
+    expect(screen.getByRole('heading', { name: 'Editar plan semanal' })).toBeTruthy();
+    expect(
+      screen.getByText(
+        'Guardar crea una versión nueva del plan y conserva la anterior en el historial.',
+      ),
+    ).toBeTruthy();
+    expect(screen.getByTestId(PLAN_TEST_IDS.submit).textContent).toBe('Guardar cambios');
+  });
+
+  it('pins the exact submit label of each mode', () => {
+    const props = baseProps();
+    props.canSubmit = true;
+    const { unmount } = render(<PlanBuilderForm {...props} />);
+
+    expect(screen.getByTestId(PLAN_TEST_IDS.submit).textContent).toBe('Guardar plan');
+
+    unmount();
+    render(<PlanBuilderForm {...props} mode="edit" />);
+
+    expect(screen.getByTestId(PLAN_TEST_IDS.submit).textContent).toBe('Guardar cambios');
   });
 });

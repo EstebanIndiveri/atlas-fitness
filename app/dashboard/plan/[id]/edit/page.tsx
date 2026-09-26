@@ -97,6 +97,7 @@ function EditPlanForm({
       <div className="mt-4">
         <PlanBuilderForm
           mode="edit"
+          planId={planId}
           routines={routines}
           name={builder.name}
           goal={builder.goal}

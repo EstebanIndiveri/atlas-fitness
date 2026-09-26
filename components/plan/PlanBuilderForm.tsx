@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import type { FormEvent } from 'react';
 
 import { Button } from '@/components/ui/Button';
@@ -11,6 +12,8 @@ import type { RoutineSummary } from '@/types/routine';
 
 export interface PlanBuilderFormProps {
   mode?: 'create' | 'edit';
+  planId?: number;
+  mutableRoutineIds?: readonly number[];
   routines: readonly RoutineSummary[];
   name: string;
   goal: string;
@@ -27,6 +30,46 @@ export interface PlanBuilderFormProps {
 }
 
 /**
+ * Builds the routine detail link for a plan day, keeping plan context when the
+ * form runs inside a saved plan.
+ *
+ * @param planId - Identifier of the plan being edited, if any.
+ * @param routineId - Routine assigned to the day.
+ * @returns The routine detail href, with `?trainingPlanId=` only inside a plan.
+ */
+function routineDetailHref(planId: number | undefined, routineId: number): string {
+  const base = `/dashboard/routines/${routineId}`;
+  return planId === undefined ? base : `${base}?trainingPlanId=${planId}`;
+}
+
+type DayRoutineLinksProps = {
+  planId: number | undefined;
+  routine: RoutineSummary;
+  mutable: boolean;
+};
+
+function DayRoutineLinks({ planId, routine, mutable }: DayRoutineLinksProps) {
+  return (
+    <div className="flex flex-wrap gap-x-4 gap-y-1">
+      <Link
+        href={routineDetailHref(planId, routine.id)}
+        className="text-xs font-semibold text-brand hover:underline"
+      >
+        {PLAN_COPY.viewRoutine(routine.name)}
+      </Link>
+      {mutable ? (
+        <Link
+          href={`/dashboard/routines/${routine.id}/edit`}
+          className="text-xs font-semibold text-ink-muted hover:underline"
+        >
+          {PLAN_COPY.editRoutine(routine.name)}
+        </Link>
+      ) : null}
+    </div>
+  );
+}
+
+/**
  * Controlled weekly plan builder: a name, an optional goal, and a routine (or rest) per weekday.
  *
  * @param props - Controlled field values plus change/submit callbacks owned by usePlanBuilder.
@@ -34,6 +77,8 @@ export interface PlanBuilderFormProps {
  */
 export function PlanBuilderForm({
   mode = 'create',
+  planId,
+  mutableRoutineIds = [],
   routines,
   name,
   goal,
@@ -109,6 +154,9 @@ export function PlanBuilderForm({
             const dayLabel = PLAN_DAY_LABELS[day];
             const assignment = assignments[day];
             const hasRoutine = assignment.routineId !== null;
+            const assignedRoutine = hasRoutine
+              ? routines.find((candidate) => candidate.id === assignment.routineId)
+              : undefined;
             const selectId = `plan-day-${day}`;
 
             return (
@@ -133,22 +181,31 @@ export function PlanBuilderForm({
                 </select>
 
                 {hasRoutine ? (
-                  <div className="mt-2">
-                    <label
-                      htmlFor={`${selectId}-note`}
-                      className="mb-1 block text-xs font-medium text-ink-muted"
-                    >
-                      {PLAN_COPY.noteLabel}
-                    </label>
-                    <input
-                      id={`${selectId}-note`}
-                      data-testid={PLAN_TEST_IDS.dayNote(day)}
-                      className={fieldClassName(false)}
-                      value={assignment.note}
-                      maxLength={140}
-                      placeholder={PLAN_COPY.notePlaceholder}
-                      onChange={(event) => onDayNoteChange(day, event.target.value)}
-                    />
+                  <div className="mt-2 space-y-2">
+                    {assignedRoutine ? (
+                      <DayRoutineLinks
+                        planId={planId}
+                        routine={assignedRoutine}
+                        mutable={mutableRoutineIds.includes(assignedRoutine.id)}
+                      />
+                    ) : null}
+                    <div>
+                      <label
+                        htmlFor={`${selectId}-note`}
+                        className="mb-1 block text-xs font-medium text-ink-muted"
+                      >
+                        {PLAN_COPY.noteLabel(dayLabel)}
+                      </label>
+                      <input
+                        id={`${selectId}-note`}
+                        data-testid={PLAN_TEST_IDS.dayNote(day)}
+                        className={fieldClassName(false)}
+                        value={assignment.note}
+                        maxLength={140}
+                        placeholder={PLAN_COPY.notePlaceholder}
+                        onChange={(event) => onDayNoteChange(day, event.target.value)}
+                      />
+                    </div>
                   </div>
                 ) : null}
               </li>
@@ -176,7 +233,7 @@ export function PlanBuilderForm({
         {submitting
           ? PLAN_COPY.submitting
           : mode === 'edit'
-            ? 'Crear nueva versión'
+            ? PLAN_COPY.editSubmit
             : PLAN_COPY.submit}
       </Button>
     </form>
