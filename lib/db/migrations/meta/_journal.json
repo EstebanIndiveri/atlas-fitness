@@ -148,6 +148,13 @@
       "when": 1790352265000,
       "tag": "0020_guided_training_plan_saves",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "6",
+      "when": 1790392684698,
+      "tag": "0021_user_onboarding_completion",
+      "breakpoints": true
     }
   ]
 }

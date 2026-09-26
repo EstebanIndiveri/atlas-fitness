@@ -4,8 +4,6 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 declare const jest: typeof import('@jest/globals').jest;
 
 import type { TodayResponse } from '@/lib/api/today';
-import { markOnboardingDone } from '@/lib/onboarding/state';
-
 const push = jest.fn();
 const replace = jest.fn();
 
@@ -19,23 +17,10 @@ jest.mock('@/hooks/useToday', () => ({ useToday: jest.fn() }));
 jest.mock('@/hooks/useDailyCheckin', () => ({ useDailyCheckin: jest.fn() }));
 jest.mock('@/hooks/useStreak', () => ({ useStreak: jest.fn() }));
 
-jest.mock('@/lib/onboarding/state', () => {
-  const actual = jest.requireActual<typeof import('@/lib/onboarding/state')>(
-    '@/lib/onboarding/state',
-  );
-  return { ...actual, isOnboardingDone: jest.fn(actual.isOnboardingDone) };
-});
-
 import { useToday as useTodayHook } from '@/hooks/useToday';
 import { useDailyCheckin as useDailyCheckinHook } from '@/hooks/useDailyCheckin';
 import { useStreak as useStreakHook } from '@/hooks/useStreak';
-import { isOnboardingDone } from '@/lib/onboarding/state';
 import TodayPage from './page';
-
-const actualIsOnboardingDone = jest.requireActual<
-  typeof import('@/lib/onboarding/state')
->('@/lib/onboarding/state').isOnboardingDone;
-const mockedIsOnboardingDone = jest.mocked(isOnboardingDone);
 
 const useToday = jest.mocked(useTodayHook);
 const useDailyCheckin = jest.mocked(useDailyCheckinHook);
@@ -60,6 +45,9 @@ const noPlanToday: TodayResponse = {
   dayOfWeek: 4,
 };
 
+let serverOnboardingCompleted = true;
+let serverOnboardingError: Response | null = null;
+
 function mockHooks(today: TodayResponse | null) {
   useToday.mockReturnValue({ today, loading: false, error: null, reload: jest.fn() });
   useDailyCheckin.mockReturnValue({
@@ -79,9 +67,16 @@ function mockHooks(today: TodayResponse | null) {
 }
 
 function mockFetch(handler: (url: string) => Response) {
-  global.fetch = jest.fn((input: unknown) =>
-    Promise.resolve(handler(String(input))),
-  ) as unknown as typeof fetch;
+  global.fetch = jest.fn((input: unknown) => {
+    const url = String(input);
+    if (url.includes('/api/profile/onboarding')) {
+      if (serverOnboardingError) {
+        return Promise.resolve(serverOnboardingError);
+      }
+      return Promise.resolve(jsonResponse({ completed: serverOnboardingCompleted }));
+    }
+    return Promise.resolve(handler(url));
+  }) as unknown as typeof fetch;
 }
 
 function jsonResponse(body: unknown, ok = true): Response {
@@ -96,16 +91,17 @@ function jsonResponse(body: unknown, ok = true): Response {
 afterEach(() => {
   window.localStorage.clear();
   jest.clearAllMocks();
-  mockedIsOnboardingDone.mockImplementation(actualIsOnboardingDone);
 });
 
 describe('TodayPage', () => {
   beforeEach(() => {
-    markOnboardingDone();
+    serverOnboardingCompleted = true;
+    serverOnboardingError = null;
   });
 
-  it('redirects first-time users to the onboarding wizard', async () => {
-    window.localStorage.clear();
+  it('redirects when the server says onboarding is incomplete despite a local completion marker', async () => {
+    window.localStorage.setItem('atlas:onboarding:welcome-done', 'true');
+    serverOnboardingCompleted = false;
     mockHooks(workoutToday);
     mockFetch((url) => {
       if (url.includes('/api/auth/me')) {
@@ -126,8 +122,9 @@ describe('TodayPage', () => {
     expect(screen.queryByRole('heading', { level: 1, name: 'Hola, Esteban' })).toBeNull();
   });
 
-  it('renders Hoy after onboarding completion was persisted', async () => {
-    markOnboardingDone();
+  it('renders Hoy from persisted completion when local storage has no completion marker', async () => {
+    window.localStorage.clear();
+    serverOnboardingCompleted = true;
     mockHooks(workoutToday);
     mockFetch((url) => {
       if (url.includes('/api/auth/me')) {
@@ -148,33 +145,20 @@ describe('TodayPage', () => {
     expect(replace).not.toHaveBeenCalled();
   });
 
-  it('does not redirect onboarded users when the initial render snapshot is stale', async () => {
-    // Reproduces the SSR/hydration path: the render snapshot is stale (false)
-    // while the live store is true. The redirect must read the live value, not
-    // the snapshot, so an already-onboarded user is never bounced to the wizard.
-    markOnboardingDone();
+  it('shows a retryable error when the server completion state cannot be loaded', async () => {
+    serverOnboardingError = jsonResponse({ code: 'SERVICE_UNAVAILABLE' }, false);
     mockHooks(workoutToday);
-    mockFetch((url) => {
-      if (url.includes('/api/auth/me')) {
-        return jsonResponse({ id: 1, name: 'Esteban', email: 'e@x.com', telegramUserId: null });
-      }
-      return jsonResponse({
-        id: 7,
-        name: 'Push A',
-        kind: 'gym',
-        description: null,
-        exercises: [{ id: 1, name: 'Bench', targetSets: 4 }],
-      });
-    });
-    let calls = 0;
-    mockedIsOnboardingDone.mockImplementation(() => {
-      calls += 1;
-      return calls > 1;
-    });
+    mockFetch(() => jsonResponse(null));
 
     render(<TodayPage />);
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'Hola, Esteban' })).toBeTruthy();
+    expect(await screen.findByText(
+      'No pudimos comprobar si el onboarding está completo. Revisá tu conexión e intentá de nuevo.',
+    )).toBeTruthy();
+    serverOnboardingError = null;
+    fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Hola' })).toBeTruthy();
     expect(replace).not.toHaveBeenCalled();
   });
 
@@ -246,6 +230,9 @@ describe('TodayPage', () => {
     mockHooks(workoutToday);
     const fetchMock = jest.fn((url: unknown) => {
       const value = String(url);
+      if (value.includes('/api/profile/onboarding')) {
+        return Promise.resolve(jsonResponse({ completed: serverOnboardingCompleted }));
+      }
       if (value.includes('/api/auth/me')) {
         return Promise.resolve(jsonResponse({ id: 1, name: 'Esteban', email: 'e@x.com', telegramUserId: null }));
       }

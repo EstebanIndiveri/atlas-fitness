@@ -40,7 +40,12 @@ export const ONBOARDING_COPY = {
   },
   sync: {
     finishFailure:
-      'No pudimos guardar tus preferencias en tu cuenta. Tus respuestas siguen guardadas en este dispositivo. Revisá tu conexión e intentá sincronizar de nuevo.',
+      'No pudimos guardar tus preferencias y finalizar el onboarding en tu cuenta. Tus respuestas siguen guardadas en este dispositivo. Revisá tu conexión e intentá sincronizar de nuevo.',
+    skipFailure:
+      'No pudimos guardar la finalización del onboarding en tu cuenta. Revisá tu conexión e intentá de nuevo.',
+    loadFailure:
+      'No pudimos comprobar si el onboarding está completo. Revisá tu conexión e intentá de nuevo.',
+    unauthorized: 'Iniciá sesión para consultar o guardar el onboarding en tu cuenta.',
     retry: 'Reintentar sincronización',
     importAction: 'Revisar respuestas anteriores',
     importPrompt: 'Si ya habías respondido el onboarding en este navegador, podés revisar esas respuestas antes de importarlas.',
