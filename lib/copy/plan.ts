@@ -19,7 +19,7 @@ export const PLAN_COPY = {
   title: 'Crear mi plan',
   subtitle: 'Elegí qué días entrenás y qué rutina hacés cada día. Atlas te mostrará el entrenamiento correcto cada mañana.',
   editTitle: 'Editar plan semanal',
-  editSubtitle: 'La versión actual se conservará en el historial cuando confirmes el reemplazo.',
+  editSubtitle: 'Guardar crea una versión nueva del plan y conserva la anterior en el historial.',
   nameLabel: 'Nombre del plan',
   namePlaceholder: 'Ej: Semana de hipertrofia',
   goalLabel: 'Objetivo (opcional)',
