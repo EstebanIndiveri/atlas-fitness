@@ -1,8 +1,9 @@
+import { MAX_ENGINE_FOCUS_AREAS } from './weekly-plan-focus-vocabulary';
 import type { WeeklyPlanStrategyDay, WeeklyPlanWeekday } from './weekly-plan-week-types';
 
 export const RECOVERY_DAY_FOCUS = 'Movilidad y recuperación';
 /** The Routine Engine V2 accepts at most six focus areas per session. */
-const MAX_LABELS_PER_DAY = 6;
+const MAX_LABELS_PER_DAY = MAX_ENGINE_FOCUS_AREAS;
 
 /** Joins the focus labels of a day the way the product copy reads them: `A`, `A y B`, `A, B y C`. */
 export function joinFocusLabels(labels: readonly string[]): string {

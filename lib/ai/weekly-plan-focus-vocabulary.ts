@@ -36,6 +36,15 @@ export const LOWER_BODY_GROUPS = new Set([
 /** Focus labels a user may type for the lower body as a whole. */
 export const LOWER_BODY_ALIASES = new Set(['pierna', 'piernas', 'tren inferior', 'lower body']);
 
+/**
+ * Focus areas the Routine Engine V2 schedules in a single session.
+ *
+ * Mirrors the engine guard in `lib/ai/routine-draft-selection.ts`, which rejects a routine context
+ * with more than six focus areas. The weekly layer never exceeds it, so a week trains at most
+ * `6 × training days` groups and no requested area is dropped while capacity allows.
+ */
+export const MAX_ENGINE_FOCUS_AREAS = 6;
+
 /** Catalog groups that describe recovery work instead of a muscle group to train. */
 export const RECOVERY_GROUPS = new Set([
   'core',

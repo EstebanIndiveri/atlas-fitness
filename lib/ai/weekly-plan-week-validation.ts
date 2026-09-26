@@ -5,7 +5,7 @@ import {
   listCatalogMuscleGroups,
   matchesMuscleGroup,
   recoveryFocusAreas,
-  requiredFocusLabels,
+  requiredFocusCoverage,
   resolveFocusAreas,
 } from './weekly-plan-focus';
 import type {
@@ -160,11 +160,19 @@ function collectIssues(
         matchesMuscleGroup(day.focus, label) ||
         day.focusAreas.some((area) => matchesMuscleGroup(area, label)),
     );
-  const uncovered = requiredFocusLabels(input).filter((label) => !covered(label));
+  // The Routine Engine V2 schedules at most six focus areas per session, so a week covers at most
+  // `6 × daysPerWeek` labels: the labels beyond that capacity are reported as a note, never as a
+  // failure, because no week can train them.
+  const coverage = requiredFocusCoverage(input);
+  const uncovered = coverage.labels
+    .slice(0, coverage.coverageThreshold)
+    .filter((label) => !covered(label));
   if (uncovered.length > 0) {
     issues.push({
       code: 'focus-coverage',
-      reason: `La semana no cubre el foco pedido: ${uncovered.join(', ')}.`,
+      reason: `La semana no cubre el foco pedido: ${uncovered.join(', ')}.${
+        coverage.uncoveredNote ? ` ${coverage.uncoveredNote}` : ''
+      }`,
     });
   }
 

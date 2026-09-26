@@ -2,7 +2,7 @@ import {
   isRecoveryGroup,
   matchesMuscleGroup,
   normalizeFocusLabel,
-  requiredFocusLabels,
+  requiredFocusCoverage,
   resolveFocusAreas,
 } from './weekly-plan-focus';
 import type { WeeklyPlanStrategyDay, WeeklyPlanStrategyInput } from './weekly-plan-week-types';
@@ -41,20 +41,25 @@ export function isBoundRecoveryDay(
 }
 
 /**
- * Checks that the training days of the week cover every requested or goal derived focus label.
+ * Checks that the training days of the week cover the required focus labels the engine can schedule.
+ *
+ * The Routine Engine V2 schedules at most six focus areas per session, so a week only has to cover
+ * the required labels up to that capacity (see `requiredFocusCoverage`). Labels beyond it are
+ * reported as a capacity note instead of making an otherwise valid week incoherent.
  *
  * @param trainingDays Strategy days that carry training work.
  * @param input Weekly brief with the goal, the requested focus areas and the visible catalog.
- * @returns True when every required label is matched by at least one declared area of the week.
+ * @returns True when every required label inside the engine capacity is matched by a declared area.
  */
 export function coversRequiredFocus(
   trainingDays: readonly WeeklyPlanStrategyDay[],
   input: WeeklyPlanStrategyInput,
 ): boolean {
+  const coverage = requiredFocusCoverage(input);
+  const mandatory = coverage.labels.slice(0, coverage.coverageThreshold);
+  if (mandatory.length === 0) return true;
   const areas = trainingDays.flatMap((day) => day.focusAreas);
-  return requiredFocusLabels(input).every((label) =>
-    areas.some((area) => matchesMuscleGroup(area, label)),
-  );
+  return mandatory.every((label) => areas.some((area) => matchesMuscleGroup(area, label)));
 }
 
 /**

@@ -3,6 +3,7 @@ import {
   GYM_EQUIPMENT_KEYWORDS,
   LOWER_BODY_ALIASES,
   LOWER_BODY_GROUPS,
+  MAX_ENGINE_FOCUS_AREAS,
   RECOVERY_GROUPS,
   RECOVERY_KEYWORDS,
 } from './weekly-plan-focus-vocabulary';
@@ -181,19 +182,105 @@ function dedupeLabels(labels: readonly string[]): string[] {
 /**
  * Focus labels a week must cover: the requested areas, or the groups named by the goal.
  *
+ * Lower body labels are collapsed first: the engine treats any lower body label as covering every
+ * lower body catalog group, so the expanded groups would only spend session capacity.
+ *
  * @param input Brief with the goal, the requested focus areas and the visible catalog.
  * @returns The labels that must appear in the weekly distribution.
  * @example
  * requiredFocusLabels({ goal: 'ganar fuerza', focusAreas: [], catalog }); // []
  */
 export function requiredFocusLabels(input: WeeklyPlanFocusBrief): string[] {
-  const requested = dedupeLabels(
-    input.focusAreas.flatMap((area) => resolveFocusAreas(area, input.catalog)),
+  const requested = requestedFocusLabels(input);
+  if (requested.length > 0) return collapseLowerBodyLabels(requested);
+  return collapseLowerBodyLabels(
+    dedupeLabels(expandLowerBodyLabels(goalFocusLabels(input.goal, input.catalog), input.catalog)),
   );
-  if (requested.length > 0) return requested;
+}
+
+/**
+ * Resolves the requested areas, keeping the label the user wrote instead of its expanded groups.
+ *
+ * A lower body area such as `Piernas` is kept as the area itself: the engine already matches it
+ * against every lower body catalog group, so a split catalog without a `Piernas` group still gets
+ * an honest lower body label instead of the eight groups it would expand to.
+ */
+function requestedFocusLabels(input: WeeklyPlanFocusBrief): string[] {
   return dedupeLabels(
-    expandLowerBodyLabels(goalFocusLabels(input.goal, input.catalog), input.catalog),
+    input.focusAreas.flatMap((area) => {
+      const resolved = resolveFocusAreas(area, input.catalog);
+      if (resolved.length === 0) return [];
+      if (!isLowerBodyLabel(normalizeFocusLabel(area))) return resolved;
+      const target = normalizeFocusLabel(area);
+      const catalogLabel = resolved.find((label) => normalizeFocusLabel(label) === target);
+      return [catalogLabel ?? area];
+    }),
   );
+}
+
+/**
+ * Collapses a resolved focus set to at most one lower body label, keeping brief order.
+ *
+ * The Routine Engine V2 matches any lower body label against every lower body catalog group (see
+ * `matchesMuscleGroup`), so a set that expanded `Piernas` into the eight lower body groups of a
+ * split catalog covers nothing extra while consuming eight of the six session slots.
+ *
+ * @param labels Resolved focus labels, in brief order.
+ * @returns The same labels with the lower body represented once.
+ * @example
+ * collapseLowerBodyLabels(['Piernas', 'Glúteos', 'Pecho']); // ['Piernas', 'Pecho']
+ */
+export function collapseLowerBodyLabels(labels: readonly string[]): string[] {
+  const collapsed: string[] = [];
+  let seenLowerBody = false;
+  for (const label of labels) {
+    if (!isLowerBodyLabel(normalizeFocusLabel(label))) {
+      collapsed.push(label);
+      continue;
+    }
+    if (seenLowerBody) continue;
+    seenLowerBody = true;
+    collapsed.push(label);
+  }
+  return collapsed;
+}
+
+/** Focus coverage a weekly brief requires from the Routine Engine V2. */
+export interface RequiredFocusCoverage {
+  /** Required focus labels, in brief order, with the lower body represented once. */
+  labels: string[];
+  /** Required labels a week must cover, capped by the engine session capacity. */
+  coverageThreshold: number;
+  /** Note about the labels that exceed the engine capacity; empty when every label fits. */
+  uncoveredNote: string;
+}
+
+/**
+ * Focus labels a brief requires together with how many of them the engine can schedule.
+ *
+ * The engine schedules at most six focus areas per session, so a week covers at most
+ * `6 × daysPerWeek` labels. The labels beyond that capacity are not a validation failure: the
+ * engine simply cannot train them, and the week reports them through `uncoveredNote`.
+ *
+ * @param input Brief with the goal, the requested focus areas, the days and the visible catalog.
+ * @returns Required labels, the coverage threshold and the capacity note.
+ * @example
+ * requiredFocusCoverage(brief); // { labels: ['Piernas', 'Pecho'], coverageThreshold: 2, uncoveredNote: '' }
+ */
+export function requiredFocusCoverage(
+  input: WeeklyPlanFocusBrief & { daysPerWeek: number },
+): RequiredFocusCoverage {
+  const labels = requiredFocusLabels(input);
+  const capacity = MAX_ENGINE_FOCUS_AREAS * Math.max(0, Math.trunc(input.daysPerWeek));
+  const coverageThreshold = Math.min(labels.length, capacity);
+  return {
+    labels,
+    coverageThreshold,
+    uncoveredNote:
+      coverageThreshold >= labels.length
+        ? ''
+        : `El motor de rutinas programa hasta ${MAX_ENGINE_FOCUS_AREAS} áreas de enfoque por sesión: la semana cubre los primeros ${coverageThreshold} de ${labels.length} focos pedidos.`,
+  };
 }
 
 /**

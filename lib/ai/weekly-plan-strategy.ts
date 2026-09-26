@@ -1,6 +1,6 @@
 import { AppError } from '@/types/errors';
 
-import { isRecoveryFocus, recoveryFocusAreas, weeklyFocusLabels } from './weekly-plan-focus';
+import { isRecoveryFocus, recoveryFocusAreas, requiredFocusCoverage, weeklyFocusLabels } from './weekly-plan-focus';
 import {
   coversRequiredFocus,
   hasDeclaredFocus,
@@ -45,10 +45,11 @@ function weekdayPatternFor(daysPerWeek: number): readonly WeeklyPlanWeekday[] {
  * Distributes the week with the deterministic goal and focus aware strategy.
  *
  * The pattern spreads sessions instead of stacking them, turns the isolated rest day of a
- * six day week into an explicit recovery session, and consumes every requested focus label by
+ * six day week into an explicit recovery session, and consumes the requested focus labels by
  * grouping them over the training days, so the artifact is coherent for every accepted brief
  * without repeating a single hardcoded split. A recovery day is only scheduled when the visible
  * catalog exposes recovery work; otherwise the week keeps honest training days and its rest days.
+ * The labels a week cannot schedule are bounded by the engine session capacity, never by a split.
  *
  * @param input Weekly brief with goal, training days, focus areas and the visible catalog.
  * @returns The deterministic weekly strategy, always coherent for the given brief.
@@ -59,7 +60,8 @@ function weekdayPatternFor(daysPerWeek: number): readonly WeeklyPlanWeekday[] {
 export function buildDeterministicWeeklyStrategy(
   input: WeeklyPlanStrategyInput,
 ): WeeklyPlanStrategy {
-  const labels = weeklyFocusLabels(input);
+  const coverage = requiredFocusCoverage(input);
+  const labels = coverage.labels.length > 0 ? coverage.labels : weeklyFocusLabels(input);
   if (labels.length === 0) {
     throw new AppError(
       'VALIDATION',

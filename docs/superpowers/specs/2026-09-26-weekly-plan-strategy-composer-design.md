@@ -13,6 +13,7 @@ Make Plan Coach generate a coherent weekly plan rather than independently genera
 - Keep Coach Context semantics: goal, frequency, experience, session length, equipment, and focus areas are explicit brief inputs. Do not infer or synchronize preferences, alter saved context, or mutate an active plan.
 - Add a Phase 7 composer for guided Plan Coach generation. Keep the existing generator used by plan improvement unchanged so Workstream G behavior is not modified.
 - For every training day, call the shared Routine Engine V2 `buildRoutineDraft`. Do not reimplement its eligibility filtering, Gemini request/normalization, validation, fallback, or exercise selection.
+- Routine Engine V2 schedules at most six focus areas per session, so a week declares at most `6 × daysPerWeek` focus areas: requested areas are never silently dropped while that capacity allows, and the labels beyond it are reported as a capacity note instead of a weekly validation failure.
 - The weekly strategy layer owns day placement, per-day focus, recovery, and whole-week coherence. It validates complete Routine Engine outputs against weekly constraints and visible catalog IDs.
 - Do not touch Manual Plan/Routine UI, E2E test files, lifecycle/routine-scope behavior from A/D, or Routine Engine V2 semantics.
 
