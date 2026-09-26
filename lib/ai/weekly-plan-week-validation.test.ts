@@ -128,7 +128,7 @@ describe('validateWeeklyProposal', () => {
       day(3, 'Piernas', ['Piernas'], [exercise(7, 'Piernas')]),
       day(4, 'Empuje', ['Pecho'], [exercise(2, 'Pecho')]),
       day(5, 'Tirón', ['Espalda'], [exercise(4, 'Espalda')]),
-      day(6, 'Movilidad y recuperación', [], [exercise(15, 'Core')]),
+      day(6, 'Movilidad y recuperación', ['Core'], [exercise(15, 'Core')]),
     ]);
 
     const result = validateWeeklyProposal(withRecovery, validationInput({ daysPerWeek: 6 }));
@@ -156,6 +156,58 @@ describe('validateWeeklyProposal', () => {
     expect(foreign.valid).toBe(false);
     expect(foreign.failures).toContain('recovery-focus');
     expect(bounded.valid).toBe(true);
+  });
+
+  it('rejects a recovery day bound to training work instead of a genuine recovery group', () => {
+    const dishonest = proposal([
+      day(1, 'Empuje', ['Pecho'], [exercise(1, 'Pecho')]),
+      day(2, 'Tirón', ['Espalda'], [exercise(3, 'Espalda')]),
+      day(3, 'Piernas', ['Piernas'], [exercise(7, 'Piernas')]),
+      day(4, 'Empuje', ['Pecho'], [exercise(2, 'Pecho')]),
+      day(5, 'Tirón', ['Espalda'], [exercise(4, 'Espalda')]),
+      day(6, 'Movilidad y recuperación', ['Piernas'], [exercise(9, 'Glúteos')]),
+    ]);
+
+    const result = validateWeeklyProposal(dishonest, validationInput({ daysPerWeek: 6 }));
+
+    expect(result.valid).toBe(false);
+    expect(result.failures).toContain('recovery-focus');
+  });
+
+  it('requires a genuine recovery point when the visible catalog exposes no recovery group', () => {
+    const withoutRecoveryGroup = catalog.filter((item) => item.muscleGroup !== 'Core');
+    const honest = proposal([
+      day(1, 'Empuje', ['Pecho'], [exercise(1, 'Pecho')]),
+      day(2, 'Tirón', ['Espalda'], [exercise(3, 'Espalda')]),
+      day(3, 'Piernas', ['Piernas'], [exercise(7, 'Piernas')]),
+      day(4, 'Empuje', ['Pecho'], [exercise(2, 'Pecho')]),
+      day(5, 'Tirón', ['Espalda'], [exercise(4, 'Espalda')]),
+      day(6, 'Piernas', ['Piernas'], [exercise(8, 'Piernas')]),
+    ]);
+    const labelledRecovery = proposal([
+      day(0, 'Movilidad y recuperación', ['Piernas'], [exercise(9, 'Glúteos')]),
+      day(1, 'Empuje', ['Pecho'], [exercise(1, 'Pecho')]),
+      day(2, 'Tirón', ['Espalda'], [exercise(3, 'Espalda')]),
+      day(3, 'Piernas', ['Piernas'], [exercise(7, 'Piernas')]),
+      day(4, 'Empuje', ['Pecho'], [exercise(2, 'Pecho')]),
+      day(5, 'Tirón', ['Espalda'], [exercise(4, 'Espalda')]),
+      day(6, 'Piernas', ['Piernas'], [exercise(8, 'Piernas')]),
+    ]);
+
+    const honestResult = validateWeeklyProposal(
+      honest,
+      validationInput({ daysPerWeek: 6, catalog: withoutRecoveryGroup }),
+    );
+    const dishonestResult = validateWeeklyProposal(
+      labelledRecovery,
+      validationInput({ daysPerWeek: 7, catalog: withoutRecoveryGroup }),
+    );
+
+    expect(honestResult.valid).toBe(true);
+    expect(honestResult.failures).toEqual([]);
+    expect(dishonestResult.valid).toBe(false);
+    expect(dishonestResult.failures).toContain('recovery-focus');
+    expect(dishonestResult.failures).toContain('missing-recovery');
   });
 
   it('rejects a week that does not cover the requested or goal focus areas', () => {

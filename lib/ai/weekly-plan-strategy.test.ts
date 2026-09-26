@@ -129,16 +129,20 @@ describe('buildDeterministicWeeklyStrategy', () => {
     },
   );
 
-  it('spreads up to four sessions instead of stacking consecutive days', () => {
-    for (const daysPerWeek of [2, 3, 4]) {
+  it('keeps up to four sessions inside the Monday to Friday window', () => {
+    for (const daysPerWeek of [1, 2, 3, 4]) {
       const weekdays = buildDeterministicWeeklyStrategy(strategyInput({ daysPerWeek }))
         .days.map((day) => day.dayOfWeek)
         .sort((left, right) => left - right);
 
-      for (let index = 1; index < weekdays.length; index += 1) {
-        expect(weekdays[index]! - weekdays[index - 1]!).toBeGreaterThan(1);
-      }
+      expect(weekdays).toHaveLength(daysPerWeek);
+      expect(new Set(weekdays).size).toBe(daysPerWeek);
+      expect(weekdays.every((weekday) => weekday >= 1 && weekday <= 5)).toBe(true);
     }
+
+    expect(
+      buildDeterministicWeeklyStrategy(strategyInput({ daysPerWeek: 4 })).days.map((day) => day.dayOfWeek),
+    ).toEqual([1, 2, 4, 5]);
   });
 
   it('keeps the Monday to Friday contract used by the guided flow', () => {
@@ -173,7 +177,61 @@ describe('buildDeterministicWeeklyStrategy', () => {
     expect(upper.days.map((day) => normalizeFocusLabel(day.focus))).toEqual(['pecho', 'espalda', 'pecho']);
 
     const open = buildDeterministicWeeklyStrategy(strategyInput({ daysPerWeek: 3, goal: 'mejorar condición general' }));
-    expect(open.days.map((day) => day.focus)).toEqual(['Pecho', 'Espalda', 'Hombros']);
+    expect(open.days.map((day) => day.focusAreas)).toEqual([
+      ['Pecho', 'Espalda', 'Hombros'],
+      ['Piernas', 'Glúteos', 'Bíceps'],
+      ['Tríceps', 'Core'],
+    ]);
+    expect(open.days.map((day) => day.focus)).toEqual([
+      'Pecho, Espalda y Hombros',
+      'Piernas, Glúteos y Bíceps',
+      'Tríceps y Core',
+    ]);
+  });
+
+  it('covers every requested focus label when the brief lists more areas than training days', () => {
+    const brief = strategyInput({
+      goal: 'hipertrofia de piernas',
+      daysPerWeek: 2,
+      focusAreas: ['Pecho', 'Espalda', 'Piernas', 'Hombros', 'Bíceps'],
+    });
+    const strategy = buildDeterministicWeeklyStrategy(brief);
+    const covered = (label: string): boolean =>
+      strategy.days.some((day) => day.focusAreas.some((area) => matchesMuscleGroup(area, label)));
+
+    expect(strategy.days).toHaveLength(2);
+    expect(strategy.days.every((day) => day.focusAreas.length > 0 && day.focusAreas.length <= 6)).toBe(true);
+    expect(['Pecho', 'Espalda', 'Piernas', 'Hombros', 'Bíceps'].every(covered)).toBe(true);
+    expect(isCoherentWeeklyStrategy(strategy, brief)).toBe(true);
+
+    const singleDay = strategyInput({ goal: 'hipertrofia', daysPerWeek: 1, focusAreas: ['Piernas', 'Pecho', 'Core'] });
+    const oneDayStrategy = buildDeterministicWeeklyStrategy(singleDay);
+
+    expect(oneDayStrategy.days).toHaveLength(1);
+    expect(oneDayStrategy.days[0]?.focusAreas).toEqual(['Piernas', 'Pecho', 'Core']);
+    expect(oneDayStrategy.days[0]?.focus).toBe('Piernas, Pecho y Core');
+    expect(isCoherentWeeklyStrategy(oneDayStrategy, singleDay)).toBe(true);
+  });
+
+  it('stays coherent for every accepted brief and training day count', () => {
+    const briefs: readonly WeeklyPlanStrategyInput[] = [
+      strategyInput(),
+      strategyInput({ goal: 'hipertrofia de piernas', focusAreas: ['Piernas'] }),
+      strategyInput({ goal: 'mejorar condición general' }),
+      strategyInput({ goal: 'hipertrofia', focusAreas: ['Piernas', 'Pecho', 'Core'] }),
+      strategyInput({ goal: 'hipertrofia de pecho y espalda' }),
+    ];
+
+    for (const base of briefs) {
+      for (const daysPerWeek of [1, 2, 3, 4, 5, 6]) {
+        const brief = { ...base, daysPerWeek };
+        const strategy = buildDeterministicWeeklyStrategy(brief);
+
+        expect(isCoherentWeeklyStrategy(strategy, brief)).toBe(true);
+        expect(strategy.days.every((day) => day.focusAreas.length > 0)).toBe(true);
+        expect(strategy.days.every((day) => day.focusAreas.length <= 6)).toBe(true);
+      }
+    }
   });
 
   it('adds a recovery focused day when the schedule leaves no rest time', () => {
@@ -188,19 +246,22 @@ describe('buildDeterministicWeeklyStrategy', () => {
     expect(strategy.days.filter((day) => !isRecoveryFocus(day.focus))).toHaveLength(5);
   });
 
-  it('binds the recovery day to the recovery groups visible in the catalog', () => {
+  it('only schedules a recovery day when the visible catalog exposes a recovery group', () => {
     const withoutRecoveryGroups: RoutineDraftCatalogItem[] = catalog.filter(
       (item) => item.muscleGroup !== 'Core',
     );
     const recoveryDay = buildDeterministicWeeklyStrategy(strategyInput({ daysPerWeek: 6 })).days[5]!;
-    const fallbackFocus = buildDeterministicWeeklyStrategy(
+    const honestWeek = buildDeterministicWeeklyStrategy(
       strategyInput({ daysPerWeek: 6, focusAreas: ['Piernas'], catalog: withoutRecoveryGroups }),
-    ).days[5]!;
+    );
 
     expect(recoveryDay.focus).toBe('Movilidad y recuperación');
     expect(recoveryDay.focusAreas).toEqual(['Core']);
-    expect(fallbackFocus.focus).toBe('Movilidad y recuperación');
-    expect(fallbackFocus.focusAreas).toEqual(['Piernas']);
+
+    expect(honestWeek.days).toHaveLength(6);
+    expect(honestWeek.days.filter((day) => isRecoveryFocus(day.focus))).toEqual([]);
+    expect(honestWeek.days.every((day) => day.focusAreas.length > 0)).toBe(true);
+    expect(honestWeek.restDays).toEqual([0]);
   });
 
   it('ignores focus areas missing from the catalog', () => {
@@ -258,16 +319,53 @@ describe('isCoherentWeeklyStrategy', () => {
     });
     expect(isCoherentWeeklyStrategy(missingArea, uncovered)).toBe(false);
 
-    const consecutive = strategyInput({ daysPerWeek: 4 });
+    const spread = strategyInput({ daysPerWeek: 3 });
     const stacked = strategy({
       days: [
         { dayOfWeek: 1, title: 'Día 1', focus: 'Pecho', focusAreas: ['Pecho'] },
         { dayOfWeek: 2, title: 'Día 2', focus: 'Espalda', focusAreas: ['Espalda'] },
-        { dayOfWeek: 4, title: 'Día 3', focus: 'Hombros', focusAreas: ['Hombros'] },
-        { dayOfWeek: 5, title: 'Día 4', focus: 'Core', focusAreas: ['Core'] },
+        { dayOfWeek: 3, title: 'Día 3', focus: 'Hombros', focusAreas: ['Hombros'] },
       ],
     });
-    expect(isCoherentWeeklyStrategy(stacked, consecutive)).toBe(false);
+    expect(isCoherentWeeklyStrategy(stacked, spread)).toBe(false);
+
+    const fourDay = strategyInput({ daysPerWeek: 4 });
+    expect(isCoherentWeeklyStrategy(buildDeterministicWeeklyStrategy(fourDay), fourDay)).toBe(true);
+  });
+
+  it('accepts coverage declared through the day focus areas instead of a single focus label', () => {
+    const brief = strategyInput({ goal: 'hipertrofia', daysPerWeek: 1, focusAreas: ['Piernas', 'Pecho'] });
+    const week: WeeklyPlanStrategy = {
+      source: 'gemini',
+      days: [
+        {
+          dayOfWeek: 1,
+          title: 'Día 1 · Piernas y Pecho',
+          focus: 'Piernas y Pecho',
+          focusAreas: ['Piernas', 'Pecho'],
+        },
+      ],
+      restDays: [0, 2, 3, 4, 5, 6],
+    };
+
+    expect(isCoherentWeeklyStrategy(week, brief)).toBe(true);
+  });
+
+  it('rejects a recovery day that is not bound to a genuine recovery group of the catalog', () => {
+    const brief = strategyInput({ daysPerWeek: 6, focusAreas: ['Piernas'] });
+    const withoutRecoveryGroups: RoutineDraftCatalogItem[] = catalog.filter(
+      (item) => item.muscleGroup !== 'Core',
+    );
+    const week = buildDeterministicWeeklyStrategy(brief);
+    const dishonestWeek: WeeklyPlanStrategy = {
+      ...week,
+      days: week.days.map((day, index) => (index === 5 ? { ...day, focusAreas: ['Piernas'] } : day)),
+    };
+    const honestWeek = buildDeterministicWeeklyStrategy({ ...brief, catalog: withoutRecoveryGroups });
+
+    expect(isCoherentWeeklyStrategy(dishonestWeek, brief)).toBe(false);
+    expect(honestWeek.days.filter((day) => isRecoveryFocus(day.focus))).toEqual([]);
+    expect(isCoherentWeeklyStrategy(honestWeek, { ...brief, catalog: withoutRecoveryGroups })).toBe(true);
   });
 });
 

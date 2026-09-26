@@ -45,6 +45,14 @@ function weekdaysOf(draft: WeeklyPlanComposerDraft): number[] {
   return draft.days.map((day) => day.dayOfWeek);
 }
 
+/** Focus of a response day covers a muscle group, directly or through one of its named areas. */
+function dayCoversGroup(day: WeeklyPlanComposerDraft['days'][number], muscleGroup: string): boolean {
+  return (
+    matchesMuscleGroup(day.focus, muscleGroup) ||
+    normalizeFocusLabel(day.focus).includes(normalizeFocusLabel(muscleGroup))
+  );
+}
+
 function restDaysOf(draft: WeeklyPlanComposerDraft): number[] {
   const scheduled = new Set(weekdaysOf(draft));
   return [0, 1, 2, 3, 4, 5, 6].filter((weekday) => !scheduled.has(weekday));
@@ -109,7 +117,7 @@ describe('composeWeeklyPlanProposal', () => {
       expect(day.exercises.every((item) => item.targetSets >= 1 && item.targetSets <= 8)).toBe(true);
       expect(day.exercises.every((item) => item.targetReps >= 1 && item.targetReps <= 30)).toBe(true);
       expect(day.exercises.every((item) => catalog.some((entry) => entry.id === item.exerciseId))).toBe(true);
-      expect(day.exercises.every((item) => matchesMuscleGroup(day.focus, item.muscleGroup))).toBe(true);
+      expect(day.exercises.every((item) => dayCoversGroup(day, item.muscleGroup))).toBe(true);
     }
   });
 
@@ -163,6 +171,71 @@ describe('composeWeeklyPlanProposal', () => {
         .flatMap((day) => day.exercises.map((item) => normalizeFocusLabel(item.muscleGroup)))
         .every((group) => group === 'espalda'),
     ).toBe(true);
+  });
+
+  it('covers every requested focus area when the brief lists more areas than training days', async () => {
+    const draft = await composeWeeklyPlanProposal(
+      brief({
+        goal: 'hipertrofia de piernas',
+        daysPerWeek: 2,
+        focusAreas: ['Pecho', 'Espalda', 'Piernas', 'Hombros', 'Bíceps'],
+      }),
+    );
+    const focusText = draft.days.map((day) => normalizeFocusLabel(day.focus)).join(' | ');
+
+    expect(draft.days).toHaveLength(2);
+    expect(new Set(weekdaysOf(draft)).size).toBe(2);
+    expect(draft.days.every((day) => day.exercises.length > 0)).toBe(true);
+    expect(restDaysOf(draft).length).toBeGreaterThanOrEqual(2);
+    for (const label of ['pecho', 'espalda', 'piernas', 'hombros', 'biceps']) {
+      expect(focusText).toContain(label);
+    }
+  });
+
+  it('covers the three requested muscle groups of a two day week', async () => {
+    const draft = await composeWeeklyPlanProposal(
+      brief({ goal: 'hipertrofia', daysPerWeek: 2, focusAreas: ['Piernas', 'Pecho', 'Core'] }),
+    );
+    const focusText = draft.days.map((day) => normalizeFocusLabel(day.focus)).join(' | ');
+
+    expect(draft.days).toHaveLength(2);
+    expect(draft.days.every((day) => day.exercises.length > 0)).toBe(true);
+    for (const label of ['piernas', 'pecho', 'core']) {
+      expect(focusText).toContain(label);
+    }
+  });
+
+  it('covers both muscle groups named by the goal of a single day week', async () => {
+    const draft = await composeWeeklyPlanProposal(
+      brief({ goal: 'hipertrofia de pecho y espalda', daysPerWeek: 1, focusAreas: [] }),
+    );
+    const focus = normalizeFocusLabel(draft.days[0]?.focus ?? '');
+
+    expect(draft.days).toHaveLength(1);
+    expect(draft.days[0]?.exercises.length).toBeGreaterThan(0);
+    expect(focus).toContain('pecho');
+    expect(focus).toContain('espalda');
+  });
+
+  it('never presents a hard session under a recovery label when the catalog has no recovery group', async () => {
+    const withoutRecoveryGroups = catalog.filter((item) => item.muscleGroup !== 'Core');
+    const draft = await composeWeeklyPlanProposal(
+      brief({
+        goal: 'hipertrofia de piernas',
+        daysPerWeek: 6,
+        focusAreas: ['Piernas'],
+        catalog: withoutRecoveryGroups,
+      }),
+    );
+    const trainedGroups = draft.days.flatMap((day) =>
+      day.exercises.map((item) => normalizeFocusLabel(item.muscleGroup)),
+    );
+
+    expect(draft.days).toHaveLength(6);
+    expect(draft.days.filter((day) => /movilidad|recuperaci/i.test(day.focus))).toEqual([]);
+    expect(restDaysOf(draft)).toEqual([0]);
+    expect(draft.days.every((day) => day.exercises.length > 0)).toBe(true);
+    expect(trainedGroups.every((group) => group === 'piernas' || group === 'gluteos')).toBe(true);
   });
 
   it('derives the week from the goal when the brief has no focus areas', async () => {
