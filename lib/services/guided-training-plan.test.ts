@@ -216,6 +216,20 @@ describe('guided weekly plan save service', () => {
     return Number(result.rows[0]?.count ?? 0);
   }
 
+  it('rejects an incomplete replacement snapshot before writing any guided-plan data', async () => {
+    await expect(
+      createGuidedTrainingPlan(userId, {
+        ...payload(),
+        replacePlanId: 11,
+      }),
+    ).rejects.toMatchObject({ code: 'VALIDATION' });
+
+    await expect(tableCount('training_plans')).resolves.toBe(0);
+    await expect(tableCount('routines')).resolves.toBe(0);
+    await expect(tableCount('scheduled_routines')).resolves.toBe(0);
+    await expect(tableCount('guided_training_plan_saves')).resolves.toBe(0);
+  });
+
   it('creates all routines, exercises, plan, and schedule as one save', async () => {
     const result = await createGuidedTrainingPlan(userId, payload());
 
