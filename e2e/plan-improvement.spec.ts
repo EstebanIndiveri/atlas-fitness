@@ -86,19 +86,19 @@ async function getRoutinesForPlan(
 async function expectPlanRoutinesVisible(
   page: Page,
   plan: TrainingPlanResult,
+  libraryBaselineIds: number[],
 ): Promise<RoutineSummary[]> {
   const scheduledRoutineIds = [
     ...new Set(plan.schedule.map(({ routineId }) => routineId)),
+  ].sort((left, right) => left - right);
+  const expectedPlanContextIds = [
+    ...new Set([...libraryBaselineIds, ...scheduledRoutineIds]),
   ].sort((left, right) => left - right);
 
   const planRoutines = await getRoutinesForPlan(page, plan.plan.id);
   const planRoutineIds = planRoutines.map(({ id }) => id);
   expect(new Set(planRoutineIds).size).toBe(planRoutineIds.length);
-  expect(
-    planRoutineIds
-      .filter((routineId) => scheduledRoutineIds.includes(routineId))
-      .sort((left, right) => left - right),
-  ).toEqual(scheduledRoutineIds);
+  expect(planRoutineIds.sort((left, right) => left - right)).toEqual(expectedPlanContextIds);
   return planRoutines;
 }
 
@@ -235,7 +235,11 @@ test('improves only the selected active weekly plan after review and explicit co
   expect(
     (await getRoutines(page)).find((routine) => routine.id === originalRoutine.id),
   ).toEqual(originalRoutine);
-  const routinesInRetiredPlan = await expectPlanRoutinesVisible(page, retiredPlan);
+  const routinesInRetiredPlan = await expectPlanRoutinesVisible(
+    page,
+    retiredPlan,
+    libraryBaselineIds,
+  );
   expect(routinesInRetiredPlan.map(({ id }) => id)).toContain(originalRoutine.id);
 
   const libraryAfterImprovement = await getRoutines(page);
@@ -244,7 +248,11 @@ test('improves only the selected active weekly plan after review and explicit co
   );
   const generatedRoutineIds = savedPlan.schedule.map(({ routineId }) => routineId);
   expect(libraryAfterImprovement.some(({ id }) => generatedRoutineIds.includes(id))).toBe(false);
-  const routinesInNewPlan = await expectPlanRoutinesVisible(page, savedPlan);
+  const routinesInNewPlan = await expectPlanRoutinesVisible(
+    page,
+    savedPlan,
+    libraryBaselineIds,
+  );
   const routinesInRetiredPlanIds = routinesInRetiredPlan.map(({ id }) => id);
   expect(
     generatedRoutineIds.some((routineId) => routinesInRetiredPlanIds.includes(routineId)),
@@ -283,7 +291,11 @@ test('improves only the selected active weekly plan after review and explicit co
   );
   expect(libraryAfterReplay.some(({ id }) => generatedRoutineIds.includes(id))).toBe(false);
   expect(libraryAfterReplay.map(({ id }) => id)).toContain(originalRoutine.id);
-  const routinesAfterReplay = await expectPlanRoutinesVisible(page, replayedPlan);
+  const routinesAfterReplay = await expectPlanRoutinesVisible(
+    page,
+    replayedPlan,
+    libraryBaselineIds,
+  );
   expect(routinesAfterReplay.map(({ id }) => id).sort((left, right) => left - right)).toEqual(
     routinesInNewPlan.map(({ id }) => id).sort((left, right) => left - right),
   );

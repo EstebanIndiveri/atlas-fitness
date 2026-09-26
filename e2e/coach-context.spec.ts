@@ -175,19 +175,19 @@ async function getRoutinesForPlan(
 async function expectPlanRoutinesVisible(
   page: Page,
   plan: SavedPlanResult,
+  libraryBaselineIds: number[],
 ): Promise<RoutineSummary[]> {
   const scheduledRoutineIds = [
     ...new Set(plan.schedule.map(({ routineId }) => routineId)),
+  ].sort((left, right) => left - right);
+  const expectedPlanContextIds = [
+    ...new Set([...libraryBaselineIds, ...scheduledRoutineIds]),
   ].sort((left, right) => left - right);
 
   const planRoutines = await getRoutinesForPlan(page, plan.plan.id);
   const planRoutineIds = planRoutines.map(({ id }) => id);
   expect(new Set(planRoutineIds).size).toBe(planRoutineIds.length);
-  expect(
-    planRoutineIds
-      .filter((routineId) => scheduledRoutineIds.includes(routineId))
-      .sort((left, right) => left - right),
-  ).toEqual(scheduledRoutineIds);
+  expect(planRoutineIds.sort((left, right) => left - right)).toEqual(expectedPlanContextIds);
   return planRoutines;
 }
 
@@ -416,7 +416,11 @@ test.describe('Coach Context', () => {
     );
     const scheduledRoutineIds = savedPlan.schedule.map(({ routineId }) => routineId);
     expect(libraryAfterSave.some(({ id }) => scheduledRoutineIds.includes(id))).toBe(false);
-    const routinesInSavedPlan = await expectPlanRoutinesVisible(page, savedPlan);
+    const routinesInSavedPlan = await expectPlanRoutinesVisible(
+      page,
+      savedPlan,
+      libraryBaselineIds,
+    );
     for (const scheduled of savedPlan.schedule) {
       const detailResponse = await page.request.get(
         `/api/routines/${scheduled.routineId}?trainingPlanId=${savedPlan.plan.id}`,
@@ -446,7 +450,11 @@ test.describe('Coach Context', () => {
       libraryBaselineIds,
     );
     expect(libraryAfterReplay.some(({ id }) => scheduledRoutineIds.includes(id))).toBe(false);
-    const routinesAfterReplay = await expectPlanRoutinesVisible(page, replayedPlan);
+    const routinesAfterReplay = await expectPlanRoutinesVisible(
+      page,
+      replayedPlan,
+      libraryBaselineIds,
+    );
     expect(routinesAfterReplay.map(({ id }) => id).sort((left, right) => left - right)).toEqual(
       routinesInSavedPlan.map(({ id }) => id).sort((left, right) => left - right),
     );
@@ -477,7 +485,11 @@ test.describe('Coach Context', () => {
       savedPlan.schedule.map(({ dayOfWeek, routineId }) => [dayOfWeek, routineId]),
     );
 
-    const persistedRoutines = await expectPlanRoutinesVisible(page, persistedPlan);
+    const persistedRoutines = await expectPlanRoutinesVisible(
+      page,
+      persistedPlan,
+      libraryBaselineIds,
+    );
     for (const scheduled of persistedPlan.schedule) {
       const routine = persistedRoutines.find((item) => item.id === scheduled.routineId);
       expect(routine).toBeDefined();
