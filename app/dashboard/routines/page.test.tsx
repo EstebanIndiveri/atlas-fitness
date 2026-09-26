@@ -93,7 +93,7 @@ describe('RoutinesPage', () => {
     render(<RoutinesPage />);
 
     await waitFor(() => {
-      const link = screen.getByText('Gestionar plan');
+      const link = screen.getByText('Gestionar plan semanal');
       expect(link.getAttribute('href')).toBe('/dashboard/plan/77');
     });
   });
