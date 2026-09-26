@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { completeOnboardingForCurrentUser } from './helpers/auth';
 
 const PASSWORD = 'Test1234!';
 const INTENT = 'Reducir volumen y mantener dos días de fuerza';
@@ -62,9 +63,9 @@ async function registerFreshUser(page: Page): Promise<void> {
       (response) =>
         response.url().endsWith('/api/auth/register') && response.status() === 201,
     ),
-    page.waitForURL('/dashboard/today', { timeout: 15000 }),
     page.getByRole('button', { name: 'Crear cuenta' }).click(),
   ]);
+  await completeOnboardingForCurrentUser(page);
 }
 
 async function getRoutines(page: Page): Promise<RoutineSummary[]> {

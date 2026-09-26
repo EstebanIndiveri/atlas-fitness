@@ -1,7 +1,7 @@
 import { expect, test, type Page, type Request } from '@playwright/test';
+import { completeOnboardingForCurrentUser } from './helpers/auth';
 
 const PASSWORD = 'Test1234!';
-const ONBOARDING_DONE_KEY = 'atlas:onboarding:welcome-done';
 const ONBOARDING_ANSWERS_KEY = 'atlas:onboarding:answers';
 const PREFERENCES_ENDPOINT = '/api/profile/preferences';
 const EMPTY_PREFERENCES = { goal: null, pace: null, equipment: null };
@@ -100,13 +100,7 @@ async function registerFreshUser(page: Page, startOnboarding = false): Promise<v
   const user = createTestUser(startOnboarding ? 'onboarding' : 'import');
   await page.goto('/register');
   if (startOnboarding) {
-    await page.evaluate(
-      ({ doneKey, answersKey }) => {
-        localStorage.removeItem(doneKey);
-        localStorage.removeItem(answersKey);
-      },
-      { doneKey: ONBOARDING_DONE_KEY, answersKey: ONBOARDING_ANSWERS_KEY },
-    );
+    await page.evaluate((answersKey) => localStorage.removeItem(answersKey), ONBOARDING_ANSWERS_KEY);
   }
 
   await page.fill('input[type="text"]', user.name);
@@ -121,11 +115,12 @@ async function registerFreshUser(page: Page, startOnboarding = false): Promise<v
         response.url().endsWith('/api/auth/register') &&
         response.status() === 201,
     ),
-    page.waitForURL(startOnboarding ? '/onboarding' : '/dashboard/today', {
-      timeout: 15000,
-    }),
+    ...(startOnboarding ? [page.waitForURL('/onboarding', { timeout: 15000 })] : []),
     page.getByRole('button', { name: 'Crear cuenta' }).click(),
   ]);
+  if (!startOnboarding) {
+    await completeOnboardingForCurrentUser(page);
+  }
 }
 
 async function selectOnboardingOption(
@@ -205,13 +200,14 @@ test.describe('Coach Context', () => {
     const [onboardingSave] = await Promise.all([
       page.waitForResponse(
         (response) =>
-          response.url().endsWith(PREFERENCES_ENDPOINT) &&
-          response.request().method() === 'PUT',
+          response.url().endsWith('/api/profile/onboarding') &&
+          response.request().method() === 'POST',
       ),
       page.waitForURL('/dashboard/today', { timeout: 10000 }),
       page.getByTestId('onboarding-continue').click(),
     ]);
     expect(onboardingSave.status()).toBe(200);
+    await expect(onboardingSave.json()).resolves.toEqual({ completed: true });
 
     const savedPreferences = await getPreferences(page);
     expect(savedPreferences).toEqual({

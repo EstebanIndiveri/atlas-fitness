@@ -1,5 +1,9 @@
 import { test, expect } from '@playwright/test';
 import { expectCssColor, ATLAS_SMOKE } from './tailwind-smoke';
+import {
+  completeOnboardingForCurrentUser,
+  persistOnboardingCompletionForCurrentUser,
+} from './helpers/auth';
 
 const TEST_USER = {
   name: 'E2E Test User',
@@ -25,10 +29,10 @@ test.describe('Authentication Flow', () => {
       page.waitForResponse(
         (resp) => resp.url().includes('/api/auth/register') && resp.status() === 201,
       ),
-      page.waitForURL('/dashboard/today', { timeout: 15000 }),
       page.getByRole('button', { name: 'Crear cuenta' }).click(),
     ]);
-    
+    await completeOnboardingForCurrentUser(page);
+
     // The welcome state is the user-visible confirmation that auth hydration completed.
     await expect(page.locator('[data-testid="welcome-message"]')).toBeVisible({ timeout: 10000 });
     await expect(page.locator('[data-testid="welcome-message"]')).toContainText(TEST_USER.name);
@@ -101,9 +105,9 @@ test.describe('Authentication Flow', () => {
       page.waitForResponse(
         (resp) => resp.url().includes('/api/auth/register') && resp.status() === 201,
       ),
-      page.waitForURL('/dashboard/today', { timeout: 15000 }),
       page.getByRole('button', { name: 'Crear cuenta' }).click(),
     ]);
+    await completeOnboardingForCurrentUser(page);
     await expect(page.locator('[data-testid="welcome-message"]')).toBeVisible({ timeout: 10000 });
 
     // Try to go to login page while logged in - middleware should redirect back to dashboard
@@ -124,11 +128,20 @@ test.describe('Authentication Flow', () => {
       page.waitForResponse(
         (resp) => resp.url().includes('/api/auth/login') && resp.status() === 200,
       ),
-      page.waitForURL('/dashboard/today', { timeout: 15000 }),
       page.getByRole('button', { name: 'Ingresar' }).click(),
     ]);
 
+    await page.waitForURL(
+      (url) => url.pathname === '/onboarding' || url.pathname === '/dashboard/today',
+      { timeout: 15000 },
+    );
+    await persistOnboardingCompletionForCurrentUser(page);
+    await page.goto('/dashboard/today');
     await expect(page.locator('[data-testid="welcome-message"]')).toBeVisible({ timeout: 10000 });
     await expect(page.locator('[data-testid="welcome-message"]')).toContainText('QA Test User');
+
+    const currentUser = await page.request.get('/api/auth/me');
+    expect(currentUser.status()).toBe(200);
+    await expect(currentUser.json()).resolves.toMatchObject({ id: expect.any(Number) });
   });
 });

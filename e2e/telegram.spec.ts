@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { completeOnboardingForCurrentUser } from './helpers/auth';
 
 function registerUser() {
   return {
@@ -20,9 +21,9 @@ async function registerAndLandOnDashboard(page: import('@playwright/test').Page)
     page.waitForResponse(
       (resp) => resp.url().includes('/api/auth/register') && resp.status() === 201,
     ),
-    page.waitForURL('/dashboard/today', { timeout: 15000 }),
     page.locator('button[type="submit"]').click(),
   ]);
+  await completeOnboardingForCurrentUser(page);
   await expect(page.locator('[data-testid="welcome-message"]')).toBeVisible({ timeout: 10000 });
   return user;
 }
