@@ -54,8 +54,10 @@ const draft: RoutineDraft = {
   ],
 };
 
-function request(body: unknown): NextRequest {
-  return new NextRequest('http://localhost:3000/api/routines/coach', {
+function request(body: unknown, mode?: string): NextRequest {
+  const url = new URL('http://localhost:3000/api/routines/coach');
+  if (mode) url.searchParams.set('mode', mode);
+  return new NextRequest(url, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(body),
@@ -133,6 +135,50 @@ describe('POST /api/routines/coach', () => {
       availableEquipment: ['mancuernas'],
       catalog,
     });
+    expect(mockGenerateRoutineDraft).not.toHaveBeenCalled();
+  });
+
+  it('returns only canonical eligible candidates for the unchanged proposal context', async () => {
+    const candidateCatalog = [
+      {
+        ...catalog[0],
+        equipment: ['barra'],
+        availableLocations: ['gym'] as const,
+      },
+      {
+        ...catalog[0],
+        id: 2,
+        slug: 'peso-muerto',
+        name: 'Peso muerto',
+        equipment: ['mancuernas'],
+        availableLocations: ['gym'] as const,
+      },
+      {
+        ...catalog[0],
+        id: 3,
+        slug: 'press-banca',
+        name: 'Press de banca',
+        muscleGroup: 'Pecho',
+        equipment: ['barra'],
+        availableLocations: ['gym'] as const,
+      },
+    ];
+    mockListExercises.mockResolvedValue(candidateCatalog);
+    const context = {
+      goal: 'ganar fuerza',
+      focusAreas: ['Piernas'],
+      location: 'gym',
+      availableEquipment: ['barra'],
+      level: 'intermediate',
+      sessionLengthMinutes: 45,
+    } as const;
+
+    const response = await POST(request(context, 'candidates'));
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual([candidateCatalog[0]]);
+    expect(mockListExercises).toHaveBeenCalledWith(7);
+    expect(mockBuildRoutineDraft).not.toHaveBeenCalled();
     expect(mockGenerateRoutineDraft).not.toHaveBeenCalled();
   });
 

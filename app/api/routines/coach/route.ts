@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { buildRoutineDraft } from '@/lib/ai/routine-draft';
+import { getEligibleRoutineExercises, normalizeRoutineDraftContext } from '@/lib/ai/routine-draft-selection';
 import { handleApiError, requireAuth } from '@/lib/auth/middleware';
 import { listExercises } from '@/lib/services/exercises';
 import { AppError } from '@/types/errors';
@@ -62,7 +63,7 @@ export async function POST(request: NextRequest) {
 
     const { goal, focusAreas, availableEquipment, location, level } = parsed.data;
     const sessionLengthMinutes = parsed.data.sessionLengthMinutes ?? legacyCoachSessionLengthMinutes();
-    const draft = await buildRoutineDraft({
+    const context = {
       goal,
       focusAreas: focusAreas ?? [],
       availableEquipment,
@@ -70,6 +71,14 @@ export async function POST(request: NextRequest) {
       level,
       sessionLengthMinutes,
       catalog,
+    };
+    if (new URL(request.url).searchParams.get('mode') === 'candidates') {
+      const normalizedContext = normalizeRoutineDraftContext(context);
+      return NextResponse.json(getEligibleRoutineExercises(normalizedContext));
+    }
+
+    const draft = await buildRoutineDraft({
+      ...context,
     });
     return NextResponse.json(draft);
   } catch (error) {

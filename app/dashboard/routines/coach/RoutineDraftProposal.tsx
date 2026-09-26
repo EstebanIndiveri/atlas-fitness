@@ -1,17 +1,21 @@
 import { buttonClassName } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { MetricValue } from '@/components/ui/MetricValue';
+import { RoutineDraftExerciseEditor } from '@/app/dashboard/routines/coach/RoutineDraftExerciseEditor';
+import { maxSetsForSession } from '@/lib/ai/routine-draft-selection';
 import { UI_COPY } from '@/lib/copy/ui';
 import { metric } from '@/types/metric';
-import type { RoutineDraft } from '@/lib/ai/routine-draft';
+import type { RoutineDraft, RoutineDraftCatalogItem } from '@/lib/ai/routine-draft';
 import type { MetricSource } from '@/types/metric';
 
 const COPY = UI_COPY.training.coachRoutine;
 
 export interface RoutineDraftProposalProps {
   draft: RoutineDraft;
-  daysPerWeek: number;
+  sessionLengthMinutes: number;
   busy: boolean;
+  onDraftChange: (draft: RoutineDraft) => void;
+  onLoadCandidates: () => Promise<RoutineDraftCatalogItem[]>;
   onAccept: () => void;
   onAdjust: () => void;
 }
@@ -26,13 +30,25 @@ export interface RoutineDraftProposalProps {
  */
 export function RoutineDraftProposal({
   draft,
-  daysPerWeek,
+  sessionLengthMinutes,
   busy,
+  onDraftChange,
+  onLoadCandidates,
   onAccept,
   onAdjust,
 }: RoutineDraftProposalProps) {
-  const source = sourceFromDraft(draft);
   const totalSets = draft.exercises.reduce((sum, exercise) => sum + exercise.targetSets, 0);
+  const hasInvalidTargets = draft.exercises.some((exercise) => (
+    !Number.isInteger(exercise.targetSets) || exercise.targetSets < 1 || exercise.targetSets > 8
+    || !Number.isInteger(exercise.targetReps) || exercise.targetReps < 1 || exercise.targetReps > 30
+  ));
+  const totalRepetitions = draft.exercises.reduce(
+    (sum, exercise) => sum + exercise.targetSets * exercise.targetReps,
+    0,
+  );
+  const exceedsSessionVolume = totalSets > maxSetsForSession(sessionLengthMinutes)
+    || totalRepetitions > sessionLengthMinutes * 12;
+  const canCreate = draft.exercises.length > 0 && !hasInvalidTargets && !exceedsSessionVolume;
 
   return (
     <div className="space-y-4">
@@ -45,42 +61,54 @@ export function RoutineDraftProposal({
           <p className="text-sm leading-6 text-ink-muted">{draft.description}</p>
         </div>
         <div className="grid gap-2 rounded-xl bg-canvas p-2 sm:grid-cols-3">
-          <SummaryPill value={formatCount(daysPerWeek, 'día', 'días')} label={COPY.daysMetric} source="user_input" />
+          <SummaryPill
+            value={formatCount(sessionLengthMinutes, 'minuto', 'minutos')}
+            label={COPY.sessionDurationMetric}
+          />
           <SummaryPill
             value={formatCount(draft.exercises.length, 'ejercicio', 'ejercicios')}
             label={COPY.exercisesMetric}
-            source={source}
+            source="atlas_computed"
           />
-          <SummaryPill value={formatCount(totalSets, 'serie', 'series')} label={COPY.setsMetric} source={source} />
+          <SummaryPill
+            value={formatCount(totalSets, 'serie', 'series')}
+            label={COPY.setsMetric}
+            source="atlas_computed"
+          />
         </div>
       </Card>
 
       <Card tone="brand" className="space-y-2 rounded-xl">
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-lg font-bold text-ink">{COPY.whyTitle}</h2>
-          <span className="rounded-full bg-surface px-3 py-1 text-xs font-semibold text-brand ring-1 ring-brand/20">
-            {source === 'ai_recommendation' ? COPY.aiSource : COPY.computedSource}
+          <span
+            aria-label={`${COPY.proposalSourceLabel}: ${draft.source}`}
+            className="rounded-full bg-surface px-3 py-1 text-xs font-semibold text-brand ring-1 ring-brand/20"
+          >
+            {draft.source === 'gemini' ? COPY.geminiSource : COPY.fallbackSource}
           </span>
         </div>
         <p className="text-sm leading-6 text-ink">{draft.reason}</p>
       </Card>
 
-      <Card className="space-y-3 rounded-xl">
-        <h2 className="text-lg font-bold text-ink">{COPY.exerciseBreakdownTitle}</h2>
-        <ul className="space-y-2">
-          {draft.exercises.map((exercise) => (
-            <li key={exercise.exerciseId} className="rounded-xl bg-canvas p-3 ring-1 ring-line">
-              <p className="font-semibold text-ink">{exercise.exerciseName}</p>
-              <p className="text-sm text-ink-muted">
-                {exercise.muscleGroup} · {exercise.targetSets}×{exercise.targetReps}
-              </p>
-            </li>
-          ))}
-        </ul>
-      </Card>
+      <RoutineDraftExerciseEditor
+        draft={draft}
+        busy={busy}
+        hasInvalidTargets={hasInvalidTargets}
+        onDraftChange={onDraftChange}
+        onLoadCandidates={onLoadCandidates}
+      />
+      {exceedsSessionVolume ? (
+        <p role="alert" className="text-sm text-danger">{COPY.sessionVolumeExceeded}</p>
+      ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <button type="button" className={buttonClassName({ size: 'lg' })} disabled={busy} onClick={onAccept}>
+        <button
+          type="button"
+          className={buttonClassName({ size: 'lg' })}
+          disabled={busy || !canCreate}
+          onClick={onAccept}
+        >
           {busy ? COPY.creating : COPY.accept}
         </button>
         <button
@@ -96,16 +124,27 @@ export function RoutineDraftProposal({
   );
 }
 
-function SummaryPill({ value, label, source }: { value: string; label: string; source: MetricSource }) {
+function SummaryPill({
+  value,
+  label,
+  source,
+}: {
+  value: string;
+  label: string;
+  source?: MetricSource;
+}) {
   return (
     <div className="rounded-lg bg-surface p-3 text-center">
-      <MetricValue metric={metric(value, source)} label={label} showSource className="flex-col items-center gap-1" />
+      {source ? (
+        <MetricValue metric={metric(value, source)} label={label} showSource className="flex-col items-center gap-1" />
+      ) : (
+        <div className="flex flex-col items-center gap-1">
+          <span className="font-medium text-ink">{value}</span>
+          <span className="text-xs text-ink-muted">{label}</span>
+        </div>
+      )}
     </div>
   );
-}
-
-function sourceFromDraft(draft: RoutineDraft): MetricSource {
-  return draft.source === 'gemini' ? 'ai_recommendation' : 'atlas_computed';
 }
 
 function formatCount(value: number, singular: string, plural: string): string {
