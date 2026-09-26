@@ -1,8 +1,10 @@
 import { maxSetsForSession } from './routine-draft-selection';
 import {
   isRecoveryFocus,
+  isRecoveryGroup,
   listCatalogMuscleGroups,
   matchesMuscleGroup,
+  recoveryFocusAreas,
   requiredFocusLabels,
   resolveFocusAreas,
 } from './weekly-plan-focus';
@@ -58,6 +60,22 @@ function hasForeignRecoveryWork(
   if (declared.length === 0) return false;
   return day.exercises.some(
     (exercise) => !declared.some((area) => matchesMuscleGroup(area, exercise.muscleGroup)),
+  );
+}
+
+/**
+ * A recovery label is only honest when it is bound to a recovery group the catalog exposes.
+ *
+ * @param day Composed day scheduled as recovery.
+ * @param input Weekly brief with the visible catalog.
+ * @returns True when the day declares a recovery focus area resolvable against the catalog.
+ */
+function isGenuineRecoveryDay(
+  day: WeeklyPlanComposedDay,
+  input: WeeklyPlanValidationInput,
+): boolean {
+  return day.focusAreas.some(
+    (area) => isRecoveryGroup(area) && resolveFocusAreas(area, input.catalog).length > 0,
   );
 }
 
@@ -117,13 +135,19 @@ function collectIssues(
   }
 
   const trainingDays = days.filter((day) => !isRecoveryFocus(day.focus));
-  const recoveryDayCount = days.length - trainingDays.length;
-  if (proposal.restDays.length === 0 && recoveryDayCount === 0) {
+  const recoveryDays = days.filter((day) => isRecoveryFocus(day.focus));
+  const genuineRecoveryCount = recoveryDays.filter((day) => isGenuineRecoveryDay(day, input)).length;
+  if (proposal.restDays.length === 0 && genuineRecoveryCount === 0) {
     issues.push({
       code: 'missing-recovery',
       reason: 'La semana no deja ningún día de descanso ni de recuperación.',
     });
-  } else if (proposal.restDays.length <= 1 && recoveryDayCount === 0) {
+  } else if (
+    proposal.restDays.length <= 1 &&
+    genuineRecoveryCount === 0 &&
+    // A catalog without recovery work cannot express it, so it is not demanded from the week.
+    recoveryFocusAreas(input).length > 0
+  ) {
     issues.push({
       code: 'insufficient-recovery',
       reason: 'La semana no intercala descanso ni recuperación entre las sesiones.',
@@ -157,13 +181,13 @@ function collectIssues(
     });
   }
 
-  const foreignRecoveryDays = days.filter(
-    (day) => isRecoveryFocus(day.focus) && hasForeignRecoveryWork(day, input),
+  const foreignRecoveryDays = recoveryDays.filter(
+    (day) => !isGenuineRecoveryDay(day, input) || hasForeignRecoveryWork(day, input),
   );
   if (foreignRecoveryDays.length > 0) {
     issues.push({
       code: 'recovery-focus',
-      reason: `La sesión de recuperación incluye ejercicios fuera de su foco: ${foreignRecoveryDays
+      reason: `La sesión de recuperación no está ligada a un grupo de recuperación visible o incluye ejercicios fuera de su foco: ${foreignRecoveryDays
         .map((day) => day.title)
         .join(', ')}.`,
     });

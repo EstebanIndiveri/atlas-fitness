@@ -38,6 +38,26 @@ export function isRecoveryFocus(focus: string): boolean {
   return normalized.length > 0 && RECOVERY_KEYWORDS.some((keyword) => normalized.includes(keyword));
 }
 
+/**
+ * Checks whether a focus label names recovery work the catalog can actually schedule.
+ *
+ * @param label Focus label of a strategy day or of a recovery area declaration.
+ * @returns True when the label is a catalog recovery group such as core or mobility.
+ * @example
+ * isRecoveryGroup('Core'); // true
+ */
+export function isRecoveryGroup(label: string): boolean {
+  const normalized = normalizeFocusLabel(label);
+  return normalized.length > 0 && RECOVERY_GROUPS.has(normalized);
+}
+
+/** Lists the recovery muscle groups the caller-visible catalog exposes, in catalog order. */
+export function listCatalogRecoveryGroups(
+  catalog: readonly RoutineDraftCatalogItem[],
+): string[] {
+  return listCatalogMuscleGroups(catalog).filter((group) => isRecoveryGroup(group));
+}
+
 /** Lists the distinct muscle groups of the caller-visible catalog in catalog order. */
 export function listCatalogMuscleGroups(catalog: readonly RoutineDraftCatalogItem[]): string[] {
   const groups: string[] = [];
@@ -193,20 +213,18 @@ export function weeklyFocusLabels(input: WeeklyPlanFocusBrief): string[] {
 /**
  * Focus areas of the recovery session scheduled when the week leaves no room for rest days.
  *
- * The engine matches a day focus against the catalog muscle groups, so a recovery day is bound to
- * the visible recovery groups (core and mobility work). A catalog without them binds the recovery
- * day to the week focus instead of letting the engine pick any muscle group of the catalog.
+ * The engine matches a day focus against the catalog muscle groups, so a recovery day is only
+ * scheduled when the visible catalog actually exposes recovery work (core and mobility groups).
+ * A catalog without them returns no areas, so the week keeps honest training days and its rest
+ * days instead of labelling a hard session as recovery.
  *
  * @param input Brief with the goal, the requested focus areas and the visible catalog.
- * @returns Catalog labels the recovery session may select exercises from.
+ * @returns Visible recovery catalog labels, or an empty array when the catalog has none.
  * @example
  * recoveryFocusAreas({ goal: 'hipertrofia de piernas', focusAreas: ['Piernas'], catalog }); // ['Core']
  */
 export function recoveryFocusAreas(input: WeeklyPlanFocusBrief): string[] {
-  const recovery = listCatalogMuscleGroups(input.catalog).filter((group) =>
-    RECOVERY_GROUPS.has(normalizeFocusLabel(group)),
-  );
-  return recovery.length > 0 ? recovery : weeklyFocusLabels(input);
+  return listCatalogRecoveryGroups(input.catalog);
 }
 
 /**

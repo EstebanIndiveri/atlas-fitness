@@ -1,25 +1,26 @@
 import { AppError } from '@/types/errors';
 
+import { isRecoveryFocus, recoveryFocusAreas, weeklyFocusLabels } from './weekly-plan-focus';
 import {
-  isRecoveryFocus,
-  listCatalogMuscleGroups,
-  matchesMuscleGroup,
-  recoveryFocusAreas,
-  requiredFocusLabels,
-  weeklyFocusLabels,
-} from './weekly-plan-focus';
+  coversRequiredFocus,
+  hasDeclaredFocus,
+  hasRestBetweenSessions,
+  isBoundRecoveryDay,
+} from './weekly-plan-strategy-coherence';
+import {
+  buildRecoveryDay,
+  buildTrainingDay,
+  splitFocusLabels,
+} from './weekly-plan-strategy-days';
 import { requestGeminiWeeklyFocusDays } from './weekly-plan-strategy-gemini';
 import {
   WEEKLY_PLAN_WEEKDAYS,
   type WeeklyPlanStrategy,
-  type WeeklyPlanStrategyDay,
   type WeeklyPlanStrategyDependencies,
   type WeeklyPlanStrategyInput,
   type WeeklyPlanWeekday,
 } from './weekly-plan-week-types';
 
-const RECOVERY_DAY_FOCUS = 'Movilidad y recuperación';
-/** Five and six day weeks keep the Monday to Friday contract, so only shorter weeks spread. */
 const MAX_SPREAD_DAYS_PER_WEEK = 4;
 
 /** Training weekdays used when no coherent Gemini distribution is available. */
@@ -27,7 +28,7 @@ const WEEKDAY_PATTERNS: Record<number, readonly WeeklyPlanWeekday[]> = {
   1: [1],
   2: [1, 4],
   3: [1, 3, 5],
-  4: [0, 2, 4, 6],
+  4: [1, 2, 4, 5],
   5: [1, 2, 3, 4, 5],
   6: [1, 2, 3, 4, 5, 6],
 };
@@ -40,39 +41,14 @@ function weekdayPatternFor(daysPerWeek: number): readonly WeeklyPlanWeekday[] {
   return pattern;
 }
 
-/** Rotates the requested focus labels over the training days of the week. */
-function buildTrainingDay(
-  dayOfWeek: WeeklyPlanWeekday,
-  ordinal: number,
-  focus: string,
-): WeeklyPlanStrategyDay {
-  return {
-    dayOfWeek,
-    title: `Día ${ordinal} · ${focus}`,
-    focus,
-    focusAreas: [focus],
-  };
-}
-
-function buildRecoveryDay(
-  dayOfWeek: WeeklyPlanWeekday,
-  ordinal: number,
-  focusAreas: readonly string[],
-): WeeklyPlanStrategyDay {
-  return {
-    dayOfWeek,
-    title: `Día ${ordinal} · ${RECOVERY_DAY_FOCUS}`,
-    focus: RECOVERY_DAY_FOCUS,
-    focusAreas,
-  };
-}
-
 /**
  * Distributes the week with the deterministic goal and focus aware strategy.
  *
  * The pattern spreads sessions instead of stacking them, turns the isolated rest day of a
- * six day week into an explicit recovery session and rotates the requested focus labels so
- * every training day has a specific focus without repeating a single hardcoded split.
+ * six day week into an explicit recovery session, and consumes every requested focus label by
+ * grouping them over the training days, so the artifact is coherent for every accepted brief
+ * without repeating a single hardcoded split. A recovery day is only scheduled when the visible
+ * catalog exposes recovery work; otherwise the week keeps honest training days and its rest days.
  *
  * @param input Weekly brief with goal, training days, focus areas and the visible catalog.
  * @returns The deterministic weekly strategy, always coherent for the given brief.
@@ -83,9 +59,6 @@ function buildRecoveryDay(
 export function buildDeterministicWeeklyStrategy(
   input: WeeklyPlanStrategyInput,
 ): WeeklyPlanStrategy {
-  const weekdays = weekdayPatternFor(input.daysPerWeek);
-  const restDays = WEEKLY_PLAN_WEEKDAYS.filter((weekday) => !weekdays.includes(weekday));
-  const recoveryWeekday = restDays.length <= 1 ? (weekdays[weekdays.length - 1] ?? null) : null;
   const labels = weeklyFocusLabels(input);
   if (labels.length === 0) {
     throw new AppError(
@@ -93,33 +66,26 @@ export function buildDeterministicWeeklyStrategy(
       'No hay ejercicios disponibles para distribuir el foco de la semana.',
     );
   }
-  const recoveryAreas = recoveryWeekday === null ? [] : recoveryFocusAreas(input);
+
+  const weekdays = weekdayPatternFor(input.daysPerWeek);
+  const restDays = WEEKLY_PLAN_WEEKDAYS.filter((weekday) => !weekdays.includes(weekday));
+  const recoveryAreas = recoveryFocusAreas(input);
+  const recoveryWeekday =
+    recoveryAreas.length > 0 && restDays.length <= 1
+      ? (weekdays[weekdays.length - 1] ?? null)
+      : null;
+  const trainingWeekdays = weekdays.filter((weekday) => weekday !== recoveryWeekday);
+  const focusGroups = splitFocusLabels(labels, trainingWeekdays.length);
 
   let trainingIndex = 0;
   const days = weekdays.map((dayOfWeek, index) => {
     if (dayOfWeek === recoveryWeekday) return buildRecoveryDay(dayOfWeek, index + 1, recoveryAreas);
-    const focus = labels[trainingIndex % labels.length] ?? labels[0];
+    const focusAreas = focusGroups[trainingIndex] ?? [labels[0] ?? ''];
     trainingIndex += 1;
-    return buildTrainingDay(dayOfWeek, index + 1, focus);
+    return buildTrainingDay(dayOfWeek, index + 1, focusAreas);
   });
 
   return { source: 'fallback', days, restDays };
-}
-
-function stacksConsecutiveDays(weekdays: readonly WeeklyPlanWeekday[]): boolean {
-  const sorted = [...weekdays].sort((left, right) => left - right);
-  return sorted.some(
-    (weekday, index) => index > 0 && weekday - (sorted[index - 1] ?? weekday) === 1,
-  );
-}
-
-function coversRequiredFocus(
-  trainingDays: readonly WeeklyPlanStrategyDay[],
-  input: WeeklyPlanStrategyInput,
-): boolean {
-  return requiredFocusLabels(input).every((label) =>
-    trainingDays.some((day) => matchesMuscleGroup(day.focus, label)),
-  );
 }
 
 /**
@@ -146,7 +112,7 @@ export async function requestGeminiWeeklyStrategy(
     days: focusDays.map((entry, index) =>
       isRecoveryFocus(entry.focus)
         ? buildRecoveryDay(entry.dayOfWeek, index + 1, recoveryAreas)
-        : buildTrainingDay(entry.dayOfWeek, index + 1, entry.focus),
+        : buildTrainingDay(entry.dayOfWeek, index + 1, [entry.focus]),
     ),
     restDays: WEEKLY_PLAN_WEEKDAYS.filter((weekday) => !scheduled.has(weekday)),
   };
@@ -192,18 +158,23 @@ export function isCoherentWeeklyStrategy(
   if (!weekdays.every((weekday) => WEEKLY_PLAN_WEEKDAYS.includes(weekday))) return false;
   if (!days.every((day) => day.title.trim().length > 0 && day.focus.trim().length > 0)) return false;
 
-  const groups = listCatalogMuscleGroups(input.catalog);
   const trainingDays = days.filter((day) => !isRecoveryFocus(day.focus));
+  const recoveryDays = days.filter((day) => isRecoveryFocus(day.focus));
   if (trainingDays.length === 0) return false;
+  if (!trainingDays.every((day) => hasDeclaredFocus(day, input))) return false;
+  if (!recoveryDays.every((day) => isBoundRecoveryDay(day, input))) return false;
+  if (!coversRequiredFocus(trainingDays, input)) return false;
   if (
-    !trainingDays.every((day) => groups.some((group) => matchesMuscleGroup(day.focus, group)))
+    input.daysPerWeek > 1 &&
+    input.daysPerWeek <= MAX_SPREAD_DAYS_PER_WEEK &&
+    !hasRestBetweenSessions(trainingDays.map((day) => day.dayOfWeek))
   ) {
     return false;
   }
-  if (!coversRequiredFocus(trainingDays, input)) return false;
   if (
-    input.daysPerWeek <= MAX_SPREAD_DAYS_PER_WEEK &&
-    stacksConsecutiveDays(trainingDays.map((day) => day.dayOfWeek))
+    recoveryDays.length === 0 &&
+    input.daysPerWeek >= WEEKLY_PLAN_WEEKDAYS.length - 1 &&
+    recoveryFocusAreas(input).length > 0
   ) {
     return false;
   }
