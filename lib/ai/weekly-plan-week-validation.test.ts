@@ -136,6 +136,28 @@ describe('validateWeeklyProposal', () => {
     expect(result.valid).toBe(true);
   });
 
+  it('rejects a recovery day that carries a full training session', () => {
+    const week = (recoveryExercises: readonly RoutineDraftExercise[]) =>
+      proposal([
+        day(1, 'Empuje', ['Pecho'], [exercise(1, 'Pecho')]),
+        day(2, 'Tirón', ['Espalda'], [exercise(3, 'Espalda')]),
+        day(3, 'Piernas', ['Piernas'], [exercise(7, 'Piernas')]),
+        day(4, 'Empuje', ['Pecho'], [exercise(2, 'Pecho')]),
+        day(5, 'Tirón', ['Espalda'], [exercise(4, 'Espalda')]),
+        day(6, 'Movilidad y recuperación', ['Core'], recoveryExercises),
+      ]);
+
+    const foreign = validateWeeklyProposal(
+      week([exercise(15, 'Core'), exercise(1, 'Pecho')]),
+      validationInput({ daysPerWeek: 6 }),
+    );
+    const bounded = validateWeeklyProposal(week([exercise(15, 'Core')]), validationInput({ daysPerWeek: 6 }));
+
+    expect(foreign.valid).toBe(false);
+    expect(foreign.failures).toContain('recovery-focus');
+    expect(bounded.valid).toBe(true);
+  });
+
   it('rejects a week that does not cover the requested or goal focus areas', () => {
     const requested = validateWeeklyProposal(coherentWeek, validationInput({ focusAreas: ['Piernas', 'Core'] }));
     const goal = validateWeeklyProposal(coherentWeek, validationInput({ goal: 'hipertrofia de bíceps' }));

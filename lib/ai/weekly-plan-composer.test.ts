@@ -122,6 +122,27 @@ describe('composeWeeklyPlanProposal', () => {
     expect(draft.days.every((day) => day.exercises.length > 0)).toBe(true);
   });
 
+  it('binds the recovery session of a six day week to recovery work only', async () => {
+    const draft = await composeWeeklyPlanProposal(
+      brief({ goal: 'hipertrofia de piernas', daysPerWeek: 6, focusAreas: ['Piernas'] }),
+    );
+    const recoveryDays = draft.days.filter((day) => /movilidad/i.test(day.focus));
+    const trainingDays = draft.days.filter((day) => !/movilidad/i.test(day.focus));
+    const recoveryGroups = (recoveryDays[0]?.exercises ?? []).map((item) =>
+      normalizeFocusLabel(item.muscleGroup),
+    );
+
+    expect(recoveryDays).toHaveLength(1);
+    expect(trainingDays).toHaveLength(5);
+    expect(recoveryGroups.length).toBeGreaterThan(0);
+    expect(recoveryGroups.every((group) => group === 'core')).toBe(true);
+    expect(
+      trainingDays
+        .flatMap((day) => day.exercises.map((item) => normalizeFocusLabel(item.muscleGroup)))
+        .every((group) => group === 'piernas' || group === 'gluteos'),
+    ).toBe(true);
+  });
+
   it('keeps a two day legs plan on the lower body without a hardcoded split', async () => {
     const draft = await composeWeeklyPlanProposal(legsBrief());
     const muscleGroups = draft.days.flatMap((day) => day.exercises.map((item) => normalizeFocusLabel(item.muscleGroup)));
@@ -189,6 +210,49 @@ describe('composeWeeklyPlanProposal', () => {
     expect(fetchImpl).toHaveBeenCalled();
     expect(draft).toEqual(deterministic);
     expect(draft.source).toBe('fallback');
+  });
+
+  it('recomposes deterministically when a coherent Gemini week fails weekly validation', async () => {
+    const fetchImpl = jest.fn<typeof fetch>().mockResolvedValue(
+      geminiRoutineText({
+        weekPattern: [
+          { dayOfWeek: 1, focus: 'Piernas' },
+          { dayOfWeek: 3, focus: 'Movilidad y recuperación' },
+          { dayOfWeek: 5, focus: 'Piernas' },
+        ],
+      }),
+    );
+    const { engine, calls } = createEngineStub((context) =>
+      context.focusAreas.some((area) => normalizeFocusLabel(area) === 'core')
+        ? {
+            ...routineFor(context),
+            exercises: [
+              {
+                exerciseId: 1,
+                exerciseName: 'Ejercicio 1',
+                muscleGroup: 'Pecho',
+                sortOrder: 0,
+                targetSets: 2,
+                targetReps: 10,
+              },
+            ],
+          }
+        : routineFor(context),
+    );
+
+    const draft = await composeWeeklyPlanProposal(
+      brief({ goal: 'hipertrofia de piernas', daysPerWeek: 3, focusAreas: ['Piernas'] }),
+      { env: { GEMINI_API_KEY: 'test-key' }, fetchImpl, buildRoutineDraft: engine },
+    );
+
+    expect(fetchImpl).toHaveBeenCalled();
+    expect(calls).toHaveLength(draft.days.length * 2);
+    expect(draft.source).toBe('fallback');
+    expect(draft.days.map((day) => normalizeFocusLabel(day.focus))).toEqual([
+      'piernas',
+      'piernas',
+      'piernas',
+    ]);
   });
 
   it('keeps the weekdays of a coherent Gemini strategy and attributes the proposal to Gemini', async () => {
@@ -313,25 +377,17 @@ describe('composeWeeklyPlanProposal', () => {
   });
 
   it('never persists plans, routines or scheduled assignments', async () => {
-    const tableIds = {
-      plans: trainingPlans.id,
-      routines: routines.id,
-      scheduled: scheduledRoutines.id,
-      saves: guidedTrainingPlanSaves.id,
-    };
-    const before = {
-      plans: (await db.select(tableIds).from(trainingPlans)).length,
-      routines: (await db.select(tableIds).from(routines)).length,
-      scheduled: (await db.select(tableIds).from(scheduledRoutines)).length,
-      saves: (await db.select(tableIds).from(guidedTrainingPlanSaves)).length,
-    };
+    const countRows = async (): Promise<Record<string, number>> => ({
+      plans: (await db.select({ id: trainingPlans.id }).from(trainingPlans)).length,
+      routines: (await db.select({ id: routines.id }).from(routines)).length,
+      scheduled: (await db.select({ id: scheduledRoutines.id }).from(scheduledRoutines)).length,
+      saves: (await db.select({ id: guidedTrainingPlanSaves.id }).from(guidedTrainingPlanSaves)).length,
+    });
+    const before = await countRows();
 
     const draft = await composeWeeklyPlanProposal(brief({ daysPerWeek: 3 }));
 
     expect(draft.days.length).toBeGreaterThan(0);
-    expect((await db.select(tableIds).from(trainingPlans)).length).toBe(before.plans);
-    expect((await db.select(tableIds).from(routines)).length).toBe(before.routines);
-    expect((await db.select(tableIds).from(scheduledRoutines)).length).toBe(before.scheduled);
-    expect((await db.select(tableIds).from(guidedTrainingPlanSaves)).length).toBe(before.saves);
+    expect(await countRows()).toEqual(before);
   });
 });

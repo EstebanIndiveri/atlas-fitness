@@ -94,6 +94,22 @@ describe('weekly plan focus helpers', () => {
     expect(inferWeeklyLocation(['peso corporal', 'bandas elásticas'])).toBe('home');
     expect(inferWeeklyLocation([])).toBe('home');
   });
+
+  it('resolves the singular lower body labels of the routine engine vocabulary', () => {
+    const engineGroups = ['Piernas', 'Glúteo', 'Femorales', 'Gemelos', 'Pantorrilla'];
+    const engineCatalog: RoutineDraftCatalogItem[] = engineGroups.map((muscleGroup, index) => ({
+      ...catalog[0]!,
+      id: index + 1,
+      slug: `engine-${index + 1}`,
+      muscleGroup,
+    }));
+
+    expect(resolveFocusAreas('gluteo', catalog)).toEqual(['Glúteos']);
+    expect(resolveFocusAreas('femorales', catalog)).toEqual([]);
+    expect(resolveFocusAreas('piernas', engineCatalog)).toEqual(['Piernas']);
+    expect(expandLowerBodyLabels(['Piernas'], engineCatalog)).toEqual(engineGroups);
+    expect(matchesMuscleGroup('Piernas', 'Femorales')).toBe(true);
+  });
 });
 
 describe('buildDeterministicWeeklyStrategy', () => {
@@ -113,8 +129,8 @@ describe('buildDeterministicWeeklyStrategy', () => {
     },
   );
 
-  it('spreads up to five sessions instead of stacking consecutive days', () => {
-    for (const daysPerWeek of [2, 3, 4, 5]) {
+  it('spreads up to four sessions instead of stacking consecutive days', () => {
+    for (const daysPerWeek of [2, 3, 4]) {
       const weekdays = buildDeterministicWeeklyStrategy(strategyInput({ daysPerWeek }))
         .days.map((day) => day.dayOfWeek)
         .sort((left, right) => left - right);
@@ -170,6 +186,21 @@ describe('buildDeterministicWeeklyStrategy', () => {
     expect(strategy.restDays).toEqual([0]);
     expect(recoveryDays).toEqual([6]);
     expect(strategy.days.filter((day) => !isRecoveryFocus(day.focus))).toHaveLength(5);
+  });
+
+  it('binds the recovery day to the recovery groups visible in the catalog', () => {
+    const withoutRecoveryGroups: RoutineDraftCatalogItem[] = catalog.filter(
+      (item) => item.muscleGroup !== 'Core',
+    );
+    const recoveryDay = buildDeterministicWeeklyStrategy(strategyInput({ daysPerWeek: 6 })).days[5]!;
+    const fallbackFocus = buildDeterministicWeeklyStrategy(
+      strategyInput({ daysPerWeek: 6, focusAreas: ['Piernas'], catalog: withoutRecoveryGroups }),
+    ).days[5]!;
+
+    expect(recoveryDay.focus).toBe('Movilidad y recuperación');
+    expect(recoveryDay.focusAreas).toEqual(['Core']);
+    expect(fallbackFocus.focus).toBe('Movilidad y recuperación');
+    expect(fallbackFocus.focusAreas).toEqual(['Piernas']);
   });
 
   it('ignores focus areas missing from the catalog', () => {
