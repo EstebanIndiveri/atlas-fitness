@@ -19,6 +19,7 @@ export type CoachCheckInContext = Readonly<{
 export interface UseCoachAdaptInput {
   routineId: number | null;
   checkInContext: CoachCheckInContext | null;
+  trainingPlanId?: number | null;
 }
 
 export interface UseCoachAdaptResult {
@@ -51,18 +52,23 @@ const COPY = {
  * @example
  * const adapt = useCoachAdapt({ routineId: 12, checkInContext: { mood: 4, energy: 'high' } });
  */
-export function useCoachAdapt({ routineId, checkInContext }: UseCoachAdaptInput): UseCoachAdaptResult {
+export function useCoachAdapt({
+  routineId,
+  checkInContext,
+  trainingPlanId = null,
+}: UseCoachAdaptInput): UseCoachAdaptResult {
   const router = useRouter();
   const [step, setStep] = useState<CoachAdaptStep>('motivo');
   const [result, setResult] = useState<CoachAdaptationResult | null>(null);
   const [resultRoutineId, setResultRoutineId] = useState<number | null>(null);
+  const [resultTrainingPlanId, setResultTrainingPlanId] = useState<number | null>(null);
   const [resultCheckInContextKey, setResultCheckInContextKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [previewing, setPreviewing] = useState(false);
   const [starting, setStarting] = useState(false);
   const [startStatus, setStartStatus] = useState<CoachWorkoutStartStatus>('idle');
   const startingRef = useRef(false);
-  const routineIdRef = useRef(routineId);
+  const routineContextRef = useRef({ routineId, trainingPlanId });
   const previewRequestRef = useRef(0);
   const invalidatedPreviewRef = useRef(false);
   const checkInEnergy = checkInContext?.energy;
@@ -75,6 +81,7 @@ export function useCoachAdapt({ routineId, checkInContext }: UseCoachAdaptInput)
   const checkInContextKeyRef = useRef(checkInContextKey);
   const adaptationRef = useRef<{
     routineId: number;
+    trainingPlanId: number | null;
     checkInContextKey: string;
     result: CoachAdaptationResult;
     freeText: string;
@@ -82,11 +89,14 @@ export function useCoachAdapt({ routineId, checkInContext }: UseCoachAdaptInput)
   } | null>(null);
 
   useEffect(() => {
-    if (routineIdRef.current === routineId) {
+    if (
+      routineContextRef.current.routineId === routineId &&
+      routineContextRef.current.trainingPlanId === trainingPlanId
+    ) {
       return;
     }
 
-    routineIdRef.current = routineId;
+    routineContextRef.current = { routineId, trainingPlanId };
     previewRequestRef.current += 1;
     invalidatedPreviewRef.current =
       invalidatedPreviewRef.current || adaptationRef.current !== null;
@@ -94,11 +104,12 @@ export function useCoachAdapt({ routineId, checkInContext }: UseCoachAdaptInput)
     setStep('motivo');
     setResult(null);
     setResultRoutineId(null);
+    setResultTrainingPlanId(null);
     setResultCheckInContextKey(null);
     setError(null);
     setPreviewing(false);
     setStartStatus('idle');
-  }, [routineId]);
+  }, [routineId, trainingPlanId]);
 
   useEffect(() => {
     if (checkInContextKeyRef.current === checkInContextKey) {
@@ -113,6 +124,7 @@ export function useCoachAdapt({ routineId, checkInContext }: UseCoachAdaptInput)
     setStep('motivo');
     setResult(null);
     setResultRoutineId(null);
+    setResultTrainingPlanId(null);
     setResultCheckInContextKey(null);
     setError(null);
     setPreviewing(false);
@@ -129,6 +141,7 @@ export function useCoachAdapt({ routineId, checkInContext }: UseCoachAdaptInput)
         setError(COPY.missingCheckIn);
         setResult(null);
         setResultRoutineId(null);
+        setResultTrainingPlanId(null);
         setResultCheckInContextKey(null);
         adaptationRef.current = null;
         setStep('motivo');
@@ -144,28 +157,33 @@ export function useCoachAdapt({ routineId, checkInContext }: UseCoachAdaptInput)
       setError(null);
       setResult(null);
       setResultRoutineId(null);
+      setResultTrainingPlanId(null);
       setResultCheckInContextKey(null);
       setStartStatus('idle');
       adaptationRef.current = null;
       try {
         const preview = await coachPreview.previewCoachAdaptation({
           routineId,
+          ...(trainingPlanId === null ? {} : { trainingPlanId }),
           energy: checkInEnergy,
           mood: checkInMood,
           ...(trimmed ? { freeText: trimmed } : {}),
         });
         if (
           requestId !== previewRequestRef.current ||
-          routineIdRef.current !== routineId ||
+          routineContextRef.current.routineId !== routineId ||
+          routineContextRef.current.trainingPlanId !== trainingPlanId ||
           checkInContextKeyRef.current !== requestCheckInContextKey
         ) {
           return null;
         }
         setResult(preview);
         setResultRoutineId(routineId);
+        setResultTrainingPlanId(trainingPlanId);
         setResultCheckInContextKey(requestCheckInContextKey);
         adaptationRef.current = {
           routineId,
+          trainingPlanId,
           checkInContextKey: requestCheckInContextKey,
           result: preview,
           freeText: trimmed,
@@ -177,7 +195,8 @@ export function useCoachAdapt({ routineId, checkInContext }: UseCoachAdaptInput)
       } catch (caught) {
         if (
           requestId !== previewRequestRef.current ||
-          routineIdRef.current !== routineId ||
+          routineContextRef.current.routineId !== routineId ||
+          routineContextRef.current.trainingPlanId !== trainingPlanId ||
           checkInContextKeyRef.current !== requestCheckInContextKey
         ) {
           return null;
@@ -191,7 +210,7 @@ export function useCoachAdapt({ routineId, checkInContext }: UseCoachAdaptInput)
         }
       }
     },
-    [checkInContext, checkInEnergy, checkInMood, checkInContextKey, routineId],
+    [checkInContext, checkInEnergy, checkInMood, checkInContextKey, routineId, trainingPlanId],
   );
 
   const startWorkout = useCallback(async (applyAdaptation: boolean = true): Promise<void> => {
@@ -207,6 +226,7 @@ export function useCoachAdapt({ routineId, checkInContext }: UseCoachAdaptInput)
     const stalePreview = (invalidatedPreviewRef.current && storedAdaptation === null) ||
       (storedAdaptation !== null &&
         (storedAdaptation.routineId !== routineId ||
+          storedAdaptation.trainingPlanId !== trainingPlanId ||
           storedAdaptation.checkInContextKey !== checkInContextKey));
     if (applyAdaptation && stalePreview) {
       setError(COPY.stalePreview);
@@ -226,9 +246,11 @@ export function useCoachAdapt({ routineId, checkInContext }: UseCoachAdaptInput)
       const adaptation = applyAdaptation && storedAdaptation?.routineId === routineId
         ? storedAdaptation
         : null;
+      const planContext = trainingPlanId === null ? {} : { trainingPlanId };
       const payload = adaptation
         ? {
             routineId,
+            ...planContext,
             adaptation: {
               result: adaptation.result,
               ...(adaptation.freeText ? { freeText: adaptation.freeText } : {}),
@@ -239,7 +261,7 @@ export function useCoachAdapt({ routineId, checkInContext }: UseCoachAdaptInput)
               },
             },
           }
-        : { routineId };
+        : { routineId, ...planContext };
       const response = await fetch('/api/workouts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -269,12 +291,13 @@ export function useCoachAdapt({ routineId, checkInContext }: UseCoachAdaptInput)
       startingRef.current = false;
       setStarting(false);
     }
-  }, [checkInContextKey, routineId, router]);
+  }, [checkInContextKey, routineId, router, trainingPlanId]);
 
   const adjustAgain = useCallback((): void => {
     setStep('motivo');
     setResult(null);
     setResultRoutineId(null);
+    setResultTrainingPlanId(null);
     setResultCheckInContextKey(null);
     setError(null);
     setStartStatus('idle');
@@ -284,6 +307,7 @@ export function useCoachAdapt({ routineId, checkInContext }: UseCoachAdaptInput)
 
   const previewMatchesCurrentInputs =
     resultRoutineId === routineId &&
+    resultTrainingPlanId === trainingPlanId &&
     resultCheckInContextKey === checkInContextKey &&
     checkInContextKey !== null;
 

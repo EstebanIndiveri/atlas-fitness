@@ -8,6 +8,7 @@ const originalFetch = global.fetch;
 jest.mock('next/navigation', () => ({
   useParams: () => routeParams,
   useRouter: () => ({ push: mockPush }),
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 function jsonResponse(body: unknown, status = 200): Response {

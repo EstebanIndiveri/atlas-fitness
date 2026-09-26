@@ -103,6 +103,7 @@ export default function TodayPage() {
   }, []);
 
   const routineId = today?.kind === 'workout' ? today.routineId : null;
+  const trainingPlanId = today?.kind === 'workout' ? today.trainingPlanId : undefined;
   const todayAvailability: TodayAvailability = todayLoading
     ? 'loading'
     : todayError
@@ -143,7 +144,7 @@ export default function TodayPage() {
       const response = await fetch('/api/workouts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ routineId }),
+        body: JSON.stringify({ routineId, trainingPlanId }),
       });
       if (!response.ok) {
         return;
@@ -155,14 +156,14 @@ export default function TodayPage() {
     } catch (error) {
       console.error('Today: failed to start scheduled workout', error);
     }
-  }, [routineId, router]);
+  }, [routineId, router, trainingPlanId]);
 
   const handleAdapt = useCallback(() => {
     if (today?.kind !== 'workout' || !Number.isInteger(today.routineId) || today.routineId <= 0) {
       return;
     }
     router.push(
-      `/dashboard/session/adapt?routineId=${today.routineId}&routineName=${encodeURIComponent(today.routineName)}&planGoal=${encodeURIComponent(today.planGoal ?? '')}`,
+      `/dashboard/session/adapt?routineId=${today.routineId}&routineName=${encodeURIComponent(today.routineName)}&planGoal=${encodeURIComponent(today.planGoal ?? '')}&trainingPlanId=${today.trainingPlanId}`,
     );
   }, [router, today]);
 

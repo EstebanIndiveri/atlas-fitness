@@ -1,7 +1,7 @@
-import { eq, and, isNull, asc } from 'drizzle-orm';
+import { eq, and, isNull, asc, or } from 'drizzle-orm';
 import { assertCanAccessCatalogItem, assertCanMutateCatalogItem, catalogVisibleToUser } from '@/lib/auth/ownership';
 import { db } from '@/lib/db/client';
-import { exercises, routineExercises, routines } from '@/lib/db/schema';
+import { exercises, routineExercises, routines, trainingPlans } from '@/lib/db/schema';
 import { isUniqueConstraintError } from '@/lib/db/unique-error';
 import { requireAccessibleExercise } from '@/lib/services/exercises';
 import { AppError } from '@/types/errors';
@@ -15,6 +15,7 @@ import type {
 
 const ROUTINE_NOT_FOUND = 'Rutina no encontrada';
 const ROUTINE_SYSTEM_FORBIDDEN = 'No puedes modificar una rutina del sistema';
+const ROUTINE_PLAN_FORBIDDEN = 'Las rutinas de un plan no se pueden modificar directamente';
 const ROUTINE_EMPTY_EXERCISES = 'La rutina debe incluir al menos un ejercicio';
 const ROUTINE_DUPLICATE_ORDER = 'El orden de los ejercicios no puede repetirse';
 
@@ -49,6 +50,20 @@ async function findRoutineById(routineId: number) {
   return db.query.routines.findFirst({
     where: eq(routines.id, routineId),
   });
+}
+
+async function assertOwnedPlanScope(userId: number, planId: number): Promise<void> {
+  const plan = await db.query.trainingPlans.findFirst({
+    where: and(
+      eq(trainingPlans.id, planId),
+      eq(trainingPlans.userId, userId),
+      isNull(trainingPlans.deletedAt),
+    ),
+    columns: { id: true },
+  });
+  if (!plan) {
+    throw new AppError('NOT_FOUND', 'Plan no encontrado');
+  }
 }
 
 function assertRoutineExerciseItems(items: RoutineExerciseWrite[]): void {
@@ -101,9 +116,26 @@ async function replaceRoutineExercises(
   );
 }
 
-export async function listRoutines(userId: number): Promise<RoutineSummary[]> {
+export async function listRoutines(
+  userId: number,
+  trainingPlanId?: number,
+): Promise<RoutineSummary[]> {
+  if (trainingPlanId !== undefined) {
+    await assertOwnedPlanScope(userId, trainingPlanId);
+  }
+
   const rows = await db.query.routines.findMany({
-    where: and(isNull(routines.deletedAt), catalogVisibleToUser(routines, userId)),
+    where: and(
+      isNull(routines.deletedAt),
+      catalogVisibleToUser(routines, userId),
+      trainingPlanId === undefined
+        ? or(routines.isSystem, isNull(routines.trainingPlanId))
+        : or(
+            routines.isSystem,
+            isNull(routines.trainingPlanId),
+            eq(routines.trainingPlanId, trainingPlanId),
+          ),
+    ),
     orderBy: [asc(routines.id)],
   });
 
@@ -117,6 +149,7 @@ export async function listRoutines(userId: number): Promise<RoutineSummary[]> {
 export async function getRoutineById(
   routineId: number,
   userId: number,
+  trainingPlanId?: number,
 ): Promise<RoutineSummary> {
   const row = await findRoutineById(routineId);
 
@@ -125,6 +158,12 @@ export async function getRoutineById(
   }
 
   assertCanAccessCatalogItem(row, userId, ROUTINE_NOT_FOUND);
+  if (trainingPlanId !== undefined) {
+    await assertOwnedPlanScope(userId, trainingPlanId);
+  }
+  if (!row.isSystem && row.trainingPlanId !== null && row.trainingPlanId !== trainingPlanId) {
+    throw new AppError('NOT_FOUND', ROUTINE_NOT_FOUND);
+  }
   return loadRoutineExercises(row);
 }
 
@@ -160,6 +199,7 @@ export async function createRoutine(
           restSeconds,
           isSystem: false,
           userId,
+          trainingPlanId: null,
         })
         .returning();
 
@@ -192,6 +232,9 @@ export async function updateRoutine(
     notFoundMessage: ROUTINE_NOT_FOUND,
     forbiddenMessage: ROUTINE_SYSTEM_FORBIDDEN,
   });
+  if (row.trainingPlanId !== null) {
+    throw new AppError('FORBIDDEN', ROUTINE_PLAN_FORBIDDEN);
+  }
 
   if (input.exercises) {
     await assertAccessibleExercises(input.exercises, userId);
@@ -259,8 +302,33 @@ export async function deleteRoutine(routineId: number, userId: number): Promise<
     notFoundMessage: ROUTINE_NOT_FOUND,
     forbiddenMessage: ROUTINE_SYSTEM_FORBIDDEN,
   });
+  if (row.trainingPlanId !== null) {
+    throw new AppError('FORBIDDEN', ROUTINE_PLAN_FORBIDDEN);
+  }
 
   await db.update(routines).set({ deletedAt: new Date() }).where(eq(routines.id, routineId));
+}
+
+/**
+ * Loads a routine for an authenticated workout, resolving plan scope from the routine's provenance.
+ *
+ * @param routineId - Routine referenced by the persisted workout.
+ * @param userId - Authenticated workout owner.
+ * @returns Routine details after confirming any plan-scoped provenance belongs to this user.
+ * @throws {AppError} NOT_FOUND when the routine or its owning plan is inaccessible.
+ */
+export async function getRoutineForWorkout(
+  routineId: number,
+  userId: number,
+): Promise<RoutineSummary> {
+  const row = await findRoutineById(routineId);
+  if (!row || row.deletedAt) {
+    throw new AppError('NOT_FOUND', ROUTINE_NOT_FOUND);
+  }
+  if (row.isSystem || row.trainingPlanId === null) {
+    return getRoutineById(routineId, userId);
+  }
+  return getRoutineById(routineId, userId, row.trainingPlanId);
 }
 
 async function loadRoutineExercises(

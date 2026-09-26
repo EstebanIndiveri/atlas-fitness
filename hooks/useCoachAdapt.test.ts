@@ -31,6 +31,7 @@ type CheckInContext = {
 type TestCoachAdaptInput = {
   routineId: number | null;
   checkInContext: CheckInContext | null;
+  trainingPlanId?: number;
 };
 
 const completeCheckIn: CheckInContext = { dailyCheckInId: 17, mood: 4, energy: 'high' };
@@ -38,8 +39,9 @@ const completeCheckIn: CheckInContext = { dailyCheckInId: 17, mood: 4, energy: '
 function coachAdaptInput(
   routineId: number | null,
   checkInContext: CheckInContext | null = completeCheckIn,
+  trainingPlanId?: number,
 ): TestCoachAdaptInput {
-  return { routineId, checkInContext };
+  return { routineId, checkInContext, ...(trainingPlanId === undefined ? {} : { trainingPlanId }) };
 }
 
 function textResponse(body: unknown, ok = true, status = 200): Response {
@@ -63,7 +65,7 @@ describe('useCoachAdapt', () => {
     const fetchMock = jest.fn<typeof fetch>().mockResolvedValue(textResponse(preview));
     global.fetch = fetchMock as unknown as typeof fetch;
     const { useCoachAdapt } = await import('./useCoachAdapt');
-    const { result } = renderHook(() => useCoachAdapt(coachAdaptInput(12)));
+    const { result } = renderHook(() => useCoachAdapt(coachAdaptInput(12, completeCheckIn, 31)));
 
     await act(async () => {
       await result.current.previewWithContext('Tengo 30 minutos');
@@ -74,6 +76,7 @@ describe('useCoachAdapt', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         routineId: 12,
+        trainingPlanId: 31,
         energy: 'high',
         mood: 4,
         freeText: 'Tengo 30 minutos',
@@ -167,7 +170,7 @@ describe('useCoachAdapt', () => {
       .mockResolvedValueOnce(textResponse({ id: 91 }, true, 201));
     global.fetch = fetchMock as unknown as typeof fetch;
     const { useCoachAdapt } = await import('./useCoachAdapt');
-    const { result } = renderHook(() => useCoachAdapt(coachAdaptInput(12)));
+    const { result } = renderHook(() => useCoachAdapt(coachAdaptInput(12, completeCheckIn, 31)));
 
     await act(async () => {
       await result.current.previewWithContext('Tengo 30 minutos');
@@ -181,6 +184,7 @@ describe('useCoachAdapt', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         routineId: 12,
+        trainingPlanId: 31,
         adaptation: {
           result: preview,
           freeText: 'Tengo 30 minutos',

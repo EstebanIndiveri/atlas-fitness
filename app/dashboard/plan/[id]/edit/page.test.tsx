@@ -79,7 +79,7 @@ describe('EditPlanPage', () => {
       error: null,
       notFound: false,
     });
-    const submit = jest.fn(async () => true);
+    const submit = jest.fn(async () => ({ plan: { id: 88 } }));
     mockUsePlanBuilder.mockReturnValue({
       name: 'Semana actual',
       goal: '',
@@ -110,16 +110,17 @@ describe('EditPlanPage', () => {
       mode: 'edit',
       initialPlan: loadedPlan,
     });
-    expect(screen.getByRole('heading', { name: 'Editar plan semanal' })).toBeTruthy();
-    expect(screen.getByText('Actualizá los días, las rutinas y el objetivo de tu semana.')).toBeTruthy();
-    expect(screen.getByTestId('plan-submit').textContent).toBe('Guardar cambios');
+    expect(screen.getByRole('heading', { name: 'Crear una nueva versión del plan' })).toBeTruthy();
+    expect(screen.getByText('La versión actual se conservará en el historial cuando confirmes el reemplazo.')).toBeTruthy();
+    expect(screen.getByTestId('plan-submit').textContent).toBe('Crear nueva versión');
     expect(screen.getByRole('link', { name: 'Volver al plan' }).getAttribute('href')).toBe(
       '/dashboard/plan/77',
     );
 
+    jest.spyOn(window, 'confirm').mockReturnValue(true);
     fireEvent.click(screen.getByTestId('plan-submit'));
 
-    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/dashboard/plan/77'));
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/dashboard/plan/88'));
   });
 
   it('treats partially numeric route params as not found', async () => {

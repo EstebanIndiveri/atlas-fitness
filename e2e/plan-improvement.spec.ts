@@ -69,9 +69,37 @@ async function registerFreshUser(page: Page): Promise<void> {
 }
 
 async function getRoutines(page: Page): Promise<RoutineSummary[]> {
-  const response = await page.request.get('/api/routines');
+  return getRoutinesForPlan(page);
+}
+
+async function getRoutinesForPlan(
+  page: Page,
+  trainingPlanId?: number,
+): Promise<RoutineSummary[]> {
+  const planContext =
+    trainingPlanId === undefined ? '' : `?trainingPlanId=${trainingPlanId}`;
+  const response = await page.request.get(`/api/routines${planContext}`);
   expect(response.status()).toBe(200);
   return (await response.json()) as RoutineSummary[];
+}
+
+async function expectPlanRoutinesVisible(
+  page: Page,
+  plan: TrainingPlanResult,
+  libraryBaselineIds: number[],
+): Promise<RoutineSummary[]> {
+  const scheduledRoutineIds = [
+    ...new Set(plan.schedule.map(({ routineId }) => routineId)),
+  ].sort((left, right) => left - right);
+  const expectedPlanContextIds = [
+    ...new Set([...libraryBaselineIds, ...scheduledRoutineIds]),
+  ].sort((left, right) => left - right);
+
+  const planRoutines = await getRoutinesForPlan(page, plan.plan.id);
+  const planRoutineIds = planRoutines.map(({ id }) => id);
+  expect(new Set(planRoutineIds).size).toBe(planRoutineIds.length);
+  expect(planRoutineIds.sort((left, right) => left - right)).toEqual(expectedPlanContextIds);
+  return planRoutines;
 }
 
 test('improves only the selected active weekly plan after review and explicit confirmation', async ({
@@ -98,8 +126,11 @@ test('improves only the selected active weekly plan after review and explicit co
   });
   expect(routineResponse.status()).toBe(201);
   const originalRoutine = (await routineResponse.json()) as RoutineSummary;
-  const originalRoutines = await getRoutines(page);
-  const ownedRoutineCount = originalRoutines.filter((routine) => !routine.isSystem).length;
+  const libraryBaseline = await getRoutines(page);
+  const libraryBaselineIds = libraryBaseline
+    .map(({ id }) => id)
+    .sort((left, right) => left - right);
+  expect(libraryBaselineIds).toContain(originalRoutine.id);
 
   const planResponse = await page.request.post('/api/training-plan', {
     data: {
@@ -150,15 +181,19 @@ test('improves only the selected active weekly plan after review and explicit co
   expect(planBeforeConfirmation.plan.isActive).toBe(true);
   expect(planBeforeConfirmation.schedule.map(({ dayOfWeek, routineId }) => [dayOfWeek, routineId]))
     .toEqual(originalPlan.schedule.map(({ dayOfWeek, routineId }) => [dayOfWeek, routineId]));
-  expect((await getRoutines(page)).filter((routine) => !routine.isSystem)).toHaveLength(
-    ownedRoutineCount,
+  expect(
+    (await getRoutines(page)).map(({ id }) => id).sort((left, right) => left - right),
+  ).toEqual(
+    libraryBaselineIds,
   );
 
   await page.getByRole('button', { name: 'Cancelar propuesta' }).click();
   await expect(page.getByRole('button', { name: 'Generar propuesta' })).toBeVisible();
   expect((await page.request.get(`/api/training-plan/${originalPlanId}`)).status()).toBe(200);
-  expect((await getRoutines(page)).filter((routine) => !routine.isSystem)).toHaveLength(
-    ownedRoutineCount,
+  expect(
+    (await getRoutines(page)).map(({ id }) => id).sort((left, right) => left - right),
+  ).toEqual(
+    libraryBaselineIds,
   );
 
   const [proposalResponse] = await Promise.all([
@@ -200,6 +235,35 @@ test('improves only the selected active weekly plan after review and explicit co
   expect(
     (await getRoutines(page)).find((routine) => routine.id === originalRoutine.id),
   ).toEqual(originalRoutine);
+  const routinesInRetiredPlan = await expectPlanRoutinesVisible(
+    page,
+    retiredPlan,
+    libraryBaselineIds,
+  );
+  expect(routinesInRetiredPlan.map(({ id }) => id)).toContain(originalRoutine.id);
+
+  const libraryAfterImprovement = await getRoutines(page);
+  expect(libraryAfterImprovement.map(({ id }) => id).sort((left, right) => left - right)).toEqual(
+    libraryBaselineIds,
+  );
+  const generatedRoutineIds = savedPlan.schedule.map(({ routineId }) => routineId);
+  expect(libraryAfterImprovement.some(({ id }) => generatedRoutineIds.includes(id))).toBe(false);
+  const routinesInNewPlan = await expectPlanRoutinesVisible(
+    page,
+    savedPlan,
+    libraryBaselineIds,
+  );
+  const routinesInRetiredPlanIds = routinesInRetiredPlan.map(({ id }) => id);
+  expect(
+    generatedRoutineIds.some((routineId) => routinesInRetiredPlanIds.includes(routineId)),
+  ).toBe(false);
+  for (const routineId of generatedRoutineIds) {
+    const detailResponse = await page.request.get(
+      `/api/routines/${routineId}?trainingPlanId=${savedPlan.plan.id}`,
+    );
+    expect(detailResponse.status()).toBe(200);
+    expect((await detailResponse.json() as RoutineSummary).id).toBe(routineId);
+  }
 
   const confirmPayload = confirmationRequest.postDataJSON() as {
     mutationId: string;
@@ -218,7 +282,21 @@ test('improves only the selected active weekly plan after review and explicit co
   expect(replayResponse.status()).toBe(200);
   const replayedPlan = (await replayResponse.json()) as TrainingPlanResult;
   expect(replayedPlan.plan.id).toBe(savedPlan.plan.id);
-  expect((await getRoutines(page)).filter((routine) => !routine.isSystem)).toHaveLength(
-    ownedRoutineCount + acceptedProposal.proposal.days.length,
+  expect(replayedPlan.schedule.map(({ dayOfWeek, routineId }) => [dayOfWeek, routineId])).toEqual(
+    savedPlan.schedule.map(({ dayOfWeek, routineId }) => [dayOfWeek, routineId]),
+  );
+  const libraryAfterReplay = await getRoutines(page);
+  expect(libraryAfterReplay.map(({ id }) => id).sort((left, right) => left - right)).toEqual(
+    libraryBaselineIds,
+  );
+  expect(libraryAfterReplay.some(({ id }) => generatedRoutineIds.includes(id))).toBe(false);
+  expect(libraryAfterReplay.map(({ id }) => id)).toContain(originalRoutine.id);
+  const routinesAfterReplay = await expectPlanRoutinesVisible(
+    page,
+    replayedPlan,
+    libraryBaselineIds,
+  );
+  expect(routinesAfterReplay.map(({ id }) => id).sort((left, right) => left - right)).toEqual(
+    routinesInNewPlan.map(({ id }) => id).sort((left, right) => left - right),
   );
 });

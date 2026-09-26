@@ -4,14 +4,17 @@
 import { describe, it, expect, beforeEach } from '@jest/globals';
 import { db } from '@/lib/db/client';
 import {
+  guidedTrainingPlanSaves,
   sessions,
   botMessages,
   dailyCheckins,
   exercises,
   routineExercises,
   routines,
+  scheduledRoutines,
   streakNudges,
   telegramLinkCodes,
+  trainingPlans,
   users,
   userStreaks,
   workouts,
@@ -30,8 +33,11 @@ import { AppError } from '@/types/errors';
 async function wipe() {
   await db.delete(workoutSets);
   await db.delete(workouts);
+  await db.delete(guidedTrainingPlanSaves);
+  await db.delete(scheduledRoutines);
   await db.delete(routineExercises);
   await db.delete(routines);
+  await db.delete(trainingPlans);
   await db.delete(dailyCheckins);
   await db.delete(streakNudges);
   await db.delete(userStreaks);
@@ -242,6 +248,75 @@ describe('Routines service', () => {
     await expect(getRoutineById(created.id, userId)).rejects.toMatchObject({ code: 'NOT_FOUND' });
     const afterDelete = await listRoutines(userId);
     expect(afterDelete.map((item) => item.id)).not.toContain(created.id);
+  });
+
+  it('creates manual routines as library routines with no Plan provenance', async () => {
+    const created = await createRoutine(userId, {
+      name: 'Biblioteca manual',
+      kind: 'gym',
+      exercises: [{ exerciseId: squatId, sortOrder: 0, targetSets: 3, targetReps: 8 }],
+    });
+
+    const scope = await db.$client.execute({
+      sql: 'SELECT training_plan_id FROM routines WHERE id = ?',
+      args: [created.id],
+    });
+    expect(scope.rows[0]?.training_plan_id).toBeNull();
+    expect((await listRoutines(userId)).map(({ id }) => id)).toContain(created.id);
+  });
+
+  it('keeps Plan-scoped routines out of the library and exposes them only in their owned Plan context', async () => {
+    const [plan] = await db
+      .insert(trainingPlans)
+      .values({ userId, name: 'Plan con rutina', isActive: true })
+      .returning();
+    const [otherPlan] = await db
+      .insert(trainingPlans)
+      .values({ userId, name: 'Otro plan histórico', isActive: false })
+      .returning();
+    const [scopedRoutine] = await db
+      .insert(routines)
+      .values({
+        slug: `plan-routine-${plan.id}`,
+        name: 'Rutina del plan',
+        kind: 'gym',
+        restSeconds: 90,
+        isSystem: false,
+        userId,
+        trainingPlanId: plan.id,
+      })
+      .returning();
+    await db.insert(routineExercises).values({
+      routineId: scopedRoutine.id,
+      exerciseId: benchId,
+      sortOrder: 0,
+      targetSets: 3,
+      targetReps: 8,
+    });
+
+    expect((await listRoutines(userId)).map(({ id }) => id)).not.toContain(scopedRoutine.id);
+    expect((await listRoutines(userId, plan.id)).map(({ id }) => id)).toContain(scopedRoutine.id);
+    await expect(getRoutineById(scopedRoutine.id, userId)).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    await expect(getRoutineById(scopedRoutine.id, userId, otherPlan.id)).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+    });
+    await expect(getRoutineById(scopedRoutine.id, userId, plan.id)).resolves.toMatchObject({
+      id: scopedRoutine.id,
+      name: 'Rutina del plan',
+    });
+    await expect(updateRoutine(scopedRoutine.id, userId, { name: 'Cambiar historia' })).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
+    await expect(deleteRoutine(scopedRoutine.id, userId)).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
+    await expect(createWorkout(userId, scopedRoutine.id)).rejects.toMatchObject({
+      code: 'VALIDATION',
+      message: 'La rutina debe iniciarse desde su plan',
+    });
+    await expect(
+      createWorkout(userId, scopedRoutine.id, { trainingPlanId: plan.id }),
+    ).resolves.toMatchObject({ routineId: scopedRoutine.id });
   });
 
   it('forbids mutating system routines and 404s foreign mutate', async () => {

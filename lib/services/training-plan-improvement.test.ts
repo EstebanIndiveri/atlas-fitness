@@ -30,9 +30,9 @@ describe('generateTrainingPlanImprovementProposal', () => {
   beforeEach(async () => {
     await db.delete(guidedTrainingPlanSaves);
     await db.delete(scheduledRoutines);
-    await db.delete(trainingPlans);
     await db.delete(routineExercises);
     await db.delete(routines);
+    await db.delete(trainingPlans);
     await db.delete(exercises);
     await db.delete(users);
     process.env.GEMINI_API_KEY = '';
@@ -324,6 +324,17 @@ describe('generateTrainingPlanImprovementProposal', () => {
       await db.select().from(trainingPlans).where(eq(trainingPlans.isActive, true)),
     ).toHaveLength(1);
     expect(await db.select().from(guidedTrainingPlanSaves)).toHaveLength(1);
+    const scopedRoutines = await db.$client.execute({
+      sql: 'SELECT training_plan_id FROM routines WHERE user_id = ? ORDER BY id',
+      args: [userId],
+    });
+    expect(scopedRoutines.rows).toHaveLength(saved.schedule.length + 1);
+    expect(scopedRoutines.rows.filter(({ training_plan_id }) => training_plan_id === null)).toHaveLength(1);
+    expect(
+      scopedRoutines.rows
+        .filter(({ training_plan_id }) => training_plan_id !== null)
+        .map(({ training_plan_id }) => training_plan_id),
+    ).toEqual(saved.schedule.map(() => saved.plan.id));
   });
 
   it('rejects an unissued confirmation and preserves the active plan and assignments', async () => {

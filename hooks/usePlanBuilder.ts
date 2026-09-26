@@ -1,12 +1,11 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   createTrainingPlan,
   getTrainingPlan,
   TrainingPlanClientError,
-  updateTrainingPlan,
 } from '@/lib/api/training-plan';
 import { PLAN_COPY, PLAN_WEEK_ORDER } from '@/lib/copy/plan';
 import type { CreateTrainingPlanResult, TrainingPlanDayOfWeek } from '@/lib/services/training-plan';
@@ -22,6 +21,7 @@ type Assignments = Record<TrainingPlanDayOfWeek, PlanDayState>;
 export interface UsePlanBuilderOptions {
   mode?: 'create' | 'edit';
   initialPlan?: CreateTrainingPlanResult | null;
+  replacementPlan?: CreateTrainingPlanResult | null;
 }
 
 export interface UseEditableTrainingPlanResult {
@@ -68,7 +68,7 @@ function assignmentsFromPlan(plan: CreateTrainingPlanResult | null | undefined):
 }
 
 function isTrainingPlanDayOfWeek(value: number): value is TrainingPlanDayOfWeek {
-  return PLAN_WEEK_ORDER.includes(value as TrainingPlanDayOfWeek);
+  return Number.isInteger(value) && value >= 0 && value <= 6;
 }
 
 /**
@@ -87,18 +87,32 @@ export function usePlanBuilder(
 ): UsePlanBuilderResult {
   const mode = options.mode ?? 'create';
   const initialPlan = options.initialPlan ?? null;
-  const [name, setName] = useState(initialPlan?.plan.name ?? '');
-  const [goal, setGoal] = useState(initialPlan?.plan.goal ?? '');
+  const [name, setNameState] = useState(initialPlan?.plan.name ?? '');
+  const [goal, setGoalState] = useState(initialPlan?.plan.goal ?? '');
   const [assignments, setAssignments] = useState<Assignments>(() => assignmentsFromPlan(initialPlan));
+  const mutationIdRef = useRef<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const setDayRoutine = useCallback((day: TrainingPlanDayOfWeek, routineId: number | null) => {
-    setAssignments((current) => ({ ...current, [day]: { ...current[day], routineId } }));
+  const invalidateMutationId = useCallback(() => {
+    mutationIdRef.current = null;
   }, []);
+  const setName = useCallback((value: string) => {
+    invalidateMutationId();
+    setNameState(value);
+  }, [invalidateMutationId]);
+  const setGoal = useCallback((value: string) => {
+    invalidateMutationId();
+    setGoalState(value);
+  }, [invalidateMutationId]);
+  const setDayRoutine = useCallback((day: TrainingPlanDayOfWeek, routineId: number | null) => {
+    invalidateMutationId();
+    setAssignments((current) => ({ ...current, [day]: { ...current[day], routineId } }));
+  }, [invalidateMutationId]);
 
   const setDayNote = useCallback((day: TrainingPlanDayOfWeek, note: string) => {
+    invalidateMutationId();
     setAssignments((current) => ({ ...current, [day]: { ...current[day], note } }));
-  }, []);
+  }, [invalidateMutationId]);
 
   const schedule = useMemo(
     () =>
@@ -128,10 +142,25 @@ export function usePlanBuilder(
         name: trimmedName,
         ...(trimmedGoal.length > 0 ? { goal: trimmedGoal } : {}),
         schedule,
+        mutationId: mutationIdRef.current ?? (mutationIdRef.current = crypto.randomUUID()),
       };
-      return mode === 'edit' && initialPlan
-        ? await updateTrainingPlan(initialPlan.plan.id, payload)
-        : await createTrainingPlan(payload);
+      const replacementPlan = mode === 'edit' ? initialPlan : options.replacementPlan ?? null;
+      if (replacementPlan?.plan.isActive) {
+        if (!replacementPlan.replacementStateHash) {
+          throw new TrainingPlanClientError(
+            'generic',
+            PLAN_COPY.genericError,
+            0,
+          );
+        }
+        return await createTrainingPlan({
+          ...payload,
+          replacePlanId: replacementPlan.plan.id,
+          replacePlanUpdatedAt: replacementPlan.plan.updatedAt.toISOString(),
+          replacePlanStateHash: replacementPlan.replacementStateHash,
+        });
+      }
+      return await createTrainingPlan(payload);
     } catch (cause) {
       setError(
         cause instanceof TrainingPlanClientError ? cause.message : PLAN_COPY.genericError,
@@ -140,7 +169,7 @@ export function usePlanBuilder(
     } finally {
       setSubmitting(false);
     }
-  }, [goal, initialPlan, mode, schedule, submitting, trimmedName]);
+  }, [goal, initialPlan, mode, options.replacementPlan, schedule, submitting, trimmedName]);
 
   return {
     name,

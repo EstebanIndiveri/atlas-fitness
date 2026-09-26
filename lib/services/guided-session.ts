@@ -7,7 +7,7 @@ import { compareMaxWeight } from '@/lib/session/compare-sets';
 import { completedExerciseIdsForRoutine } from '@/lib/session/progress';
 import { applyTargetSetsOverrides } from '@/lib/session/queue';
 import { resolveNextExerciseSuggestion } from '@/lib/session/resolve-next';
-import { getRoutineById } from '@/lib/services/routines';
+import { getRoutineForWorkout } from '@/lib/services/routines';
 import { getStreakForUser } from '@/lib/services/streaks';
 import { getWorkoutById } from '@/lib/services/workouts';
 import { AppError } from '@/types/errors';
@@ -71,7 +71,7 @@ export async function suggestNextExerciseForWorkout(
     throw new AppError('VALIDATION', 'Este entrenamiento no está vinculado a una rutina');
   }
 
-  const routine = await getRoutineById(workout.routineId, userId);
+  const routine = await getRoutineForWorkout(workout.routineId, userId);
   const adaptedRoutine = {
     ...routine,
     exercises: applyTargetSetsOverrides(

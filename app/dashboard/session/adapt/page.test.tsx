@@ -3,10 +3,10 @@
  */
 import { describe, expect, it, jest } from '@jest/globals';
 import { render, screen } from '@testing-library/react';
-import type { UseCoachAdaptResult } from '@/hooks/useCoachAdapt';
+import type { UseCoachAdaptInput, UseCoachAdaptResult } from '@/hooks/useCoachAdapt';
 
 let params = new URLSearchParams();
-const mockUseCoachAdapt = jest.fn<() => UseCoachAdaptResult>();
+const mockUseCoachAdapt = jest.fn<(input: UseCoachAdaptInput) => UseCoachAdaptResult>();
 
 jest.mock('next/navigation', () => ({
   useSearchParams: () => params,
@@ -30,7 +30,7 @@ describe('Adaptar entrenamiento page', () => {
   });
 
   it('renders the adapt shell for a valid routine query', async () => {
-    params = new URLSearchParams('routineId=12&routineName=Torso%20fuerte');
+    params = new URLSearchParams('routineId=12&trainingPlanId=31&routineName=Torso%20fuerte');
     mockUseCoachAdapt.mockReturnValue({
       step: 'comparacion',
       result: {
@@ -52,6 +52,10 @@ describe('Adaptar entrenamiento page', () => {
 
     render(<Page />);
 
+    expect(mockUseCoachAdapt).toHaveBeenCalledWith(expect.objectContaining({
+      routineId: 12,
+      trainingPlanId: 31,
+    }));
     expect(screen.getByRole('heading', { name: 'Adaptar entrenamiento' })).toBeTruthy();
     expect(screen.getByText('Coach Atlas')).toBeTruthy();
     expect(screen.getAllByText('Torso fuerte').length).toBeGreaterThan(0);

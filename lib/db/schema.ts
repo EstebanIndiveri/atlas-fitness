@@ -108,17 +108,24 @@ export const exercises = sqliteTable('exercises', {
 /**
  * Routines table — system seed and user-custom templates for guided sessions.
  */
-export const routines = sqliteTable('routines', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  slug: text('slug').notNull().unique(),
-  name: text('name').notNull(),
-  description: text('description'),
-  kind: text('kind').notNull().default('gym'),
-  restSeconds: integer('rest_seconds').notNull().default(90),
-  isSystem: integer('is_system', { mode: 'boolean' }).notNull().default(true),
-  userId: integer('user_id').references(() => users.id),
-  deletedAt: integer('deleted_at', { mode: 'timestamp' }),
-});
+export const routines = sqliteTable(
+  'routines',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    slug: text('slug').notNull().unique(),
+    name: text('name').notNull(),
+    description: text('description'),
+    kind: text('kind').notNull().default('gym'),
+    restSeconds: integer('rest_seconds').notNull().default(90),
+    isSystem: integer('is_system', { mode: 'boolean' }).notNull().default(true),
+    userId: integer('user_id').references(() => users.id),
+    trainingPlanId: integer('training_plan_id').references(() => trainingPlans.id),
+    deletedAt: integer('deleted_at', { mode: 'timestamp' }),
+  },
+  (table) => ({
+    trainingPlanIdIdx: index('routines_training_plan_id_idx').on(table.trainingPlanId),
+  }),
+);
 
 /**
  * Training plans — V1 simple weekly routine schedule.

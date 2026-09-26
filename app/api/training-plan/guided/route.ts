@@ -22,25 +22,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     } catch {
       throw new AppError('VALIDATION', 'Propuesta semanal inválida');
     }
-    if (
-      isRecord(input)
-      && ('replacePlanId' in input
-        || 'replacePlanUpdatedAt' in input
-        || 'replacePlanStateHash' in input)
-    ) {
-      throw new AppError(
-        'VALIDATION',
-        'El reemplazo del plan activo requiere la confirmación de mejora.',
-      );
-    }
-
     const result = await createGuidedTrainingPlan(session.userId, input);
     return NextResponse.json(result);
   } catch (error) {
     return handleApiError(error);
   }
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

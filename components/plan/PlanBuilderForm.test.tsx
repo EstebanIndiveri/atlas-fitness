@@ -123,6 +123,6 @@ describe('PlanBuilderForm', () => {
     props.canSubmit = true;
     render(<PlanBuilderForm {...props} mode="edit" />);
 
-    expect(screen.getByTestId(PLAN_TEST_IDS.submit).textContent).toBe('Guardar cambios');
+    expect(screen.getByTestId(PLAN_TEST_IDS.submit).textContent).toBe('Crear nueva versión');
   });
 });
