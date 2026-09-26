@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { ATLAS_SMOKE, expectCssColor } from './tailwind-smoke';
+import { registerAndCompleteTestAccount } from './helpers/auth';
 
 test.describe('Design system visual smoke', () => {
   test('home shell + brand CTA (tokens, lab() tolerant)', async ({ page }) => {
@@ -35,18 +36,7 @@ test.describe('Design system visual smoke', () => {
   });
 
   test('dashboard and settings share app shell nav', async ({ page }) => {
-    await page.goto('/login');
-    await page.fill('input[type="email"]', 'qa@atlas.test');
-    await page.fill('input[type="password"]', 'Test1234!');
-    await Promise.all([
-      page.waitForResponse(
-        (resp) => resp.url().includes('/api/auth/login') && resp.status() === 200,
-        { timeout: 10000 },
-      ),
-      page.waitForURL('/dashboard/today', { timeout: 20000 }),
-      page.click('button[type="submit"]'),
-    ]);
-    await expect(page.getByTestId('welcome-message')).toBeVisible({ timeout: 10000 });
+    await registerAndCompleteTestAccount(page, 'Style Shell E2E');
 
     await expect(page.getByRole('navigation', { name: 'Principal' })).toBeVisible();
     await expectCssColor(page.locator('main').first(), 'background-color', ATLAS_SMOKE.canvas);

@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { expectNoHorizontalOverflow } from './helpers/viewport';
+import { completeOnboardingForCurrentUser } from './helpers/auth';
 
 async function registerFreshUser(page: import('@playwright/test').Page): Promise<void> {
   const testUser = {
@@ -18,9 +19,9 @@ async function registerFreshUser(page: import('@playwright/test').Page): Promise
     page.waitForResponse(
       (resp) => resp.url().includes('/api/auth/register') && resp.status() === 201,
     ),
-    page.waitForURL('/dashboard/today', { timeout: 15000 }),
     page.locator('button[type="submit"]').click(),
   ]);
+  await completeOnboardingForCurrentUser(page);
 }
 
 test.describe('UX hábito — mobile 390px', () => {

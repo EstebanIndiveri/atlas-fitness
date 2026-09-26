@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { completeOnboardingForCurrentUser } from './helpers/auth';
 
 const CRON_SECRET = process.env.CRON_SECRET || 'test-secret-for-e2e';
 const NUDGE_CRON_URL = '/api/cron/streak-nudge';
@@ -43,9 +44,9 @@ async function registerFreshUser(page: import('@playwright/test').Page) {
     page.waitForResponse(
       (resp) => resp.url().includes('/api/auth/register') && resp.status() === 201,
     ),
-    page.waitForURL('/dashboard/today', { timeout: 15000 }),
     page.locator('button[type="submit"]').click(),
   ]);
+  await completeOnboardingForCurrentUser(page);
   await expect(page.getByTestId('streak-chip')).toBeVisible({ timeout: 10000 });
   await expect(page.getByTestId('current-streak')).toBeVisible({ timeout: 10000 });
 }
