@@ -18,8 +18,8 @@ export const PLAN_COPY = {
   backToToday: '← Volver a hoy',
   title: 'Crear mi plan',
   subtitle: 'Elegí qué días entrenás y qué rutina hacés cada día. Atlas te mostrará el entrenamiento correcto cada mañana.',
-  editTitle: 'Editar plan semanal',
-  editSubtitle: 'Actualizá los días, las rutinas y el objetivo de tu semana.',
+  editTitle: 'Crear una nueva versión del plan',
+  editSubtitle: 'La versión actual se conservará en el historial cuando confirmes el reemplazo.',
   nameLabel: 'Nombre del plan',
   namePlaceholder: 'Ej: Semana de hipertrofia',
   goalLabel: 'Objetivo (opcional)',
@@ -40,6 +40,9 @@ export const PLAN_COPY = {
   emptyRoutinesManual: 'Crear rutina manualmente',
   genericError: 'No se pudo crear el plan. Probá de nuevo.',
 } as const;
+
+export const TRAINING_PLAN_REPLACEMENT_CONFIRMATION =
+  'Al confirmar, el plan activo se archivará y esta nueva versión quedará activa. Se conservarán el plan anterior, su agenda y sus rutinas.';
 
 export const PLAN_TEST_IDS = {
   form: 'plan-builder-form',

@@ -3,8 +3,8 @@ import bcrypt from 'bcryptjs';
 import { eq } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { routines, users } from '@/lib/db/schema';
-import { createTrainingPlan } from '@/lib/services/training-plan';
+import { routines, scheduledRoutines, trainingPlans, users } from '@/lib/db/schema';
+import { archiveTrainingPlan, createTrainingPlan } from '@/lib/services/training-plan';
 import { getTrainingPlanHub } from '@/lib/services/training-plan-hub';
 
 describe('training plan hub read model', () => {
@@ -87,6 +87,10 @@ describe('training plan hub read model', () => {
       name: 'Plan anterior',
       schedule: [{ dayOfWeek: 2, routineId }],
     });
+    await archiveTrainingPlan(userId, previousPlan.plan.id, {
+      mutationId: '17dcaa2a-c8a2-4e71-96e1-16d6ba943744',
+      expectedPlanUpdatedAt: previousPlan.plan.updatedAt.toISOString(),
+    });
     await createTrainingPlan({
       userId,
       name: 'Plan nuevo',
@@ -123,5 +127,60 @@ describe('training plan hub read model', () => {
     await expect(getTrainingPlanHub(otherUser.id, plan.plan.id)).rejects.toMatchObject({
       code: 'NOT_FOUND',
     });
+  });
+
+  it('loads only a Plan-scoped routine whose provenance matches the requested owned plan', async () => {
+      const libraryRoutineId = await createRoutine('Rutina base scoped');
+      const plan = await createTrainingPlan({
+        userId,
+        name: 'Plan propietario',
+        schedule: [{ dayOfWeek: 1, routineId: libraryRoutineId }],
+      });
+      const [otherPlan] = await db
+        .insert(trainingPlans)
+        .values({ userId, name: 'Plan distinto', isActive: false })
+        .returning();
+      const [matchingRoutine] = await db
+        .insert(routines)
+        .values({
+          slug: `hub-scoped-match-${Date.now()}`,
+          name: 'Rutina propia del Plan',
+          kind: 'gym',
+          restSeconds: 90,
+          isSystem: false,
+          userId,
+          trainingPlanId: plan.plan.id,
+        })
+        .returning();
+      const [foreignScopeRoutine] = await db
+        .insert(routines)
+        .values({
+          slug: `hub-scoped-other-${Date.now()}`,
+          name: 'Rutina de otro Plan',
+          kind: 'gym',
+          restSeconds: 90,
+          isSystem: false,
+          userId,
+          trainingPlanId: otherPlan.id,
+        })
+        .returning();
+
+      await db
+        .update(scheduledRoutines)
+        .set({ routineId: matchingRoutine.id })
+        .where(eq(scheduledRoutines.trainingPlanId, plan.plan.id));
+      const matchingHub = await getTrainingPlanHub(userId, plan.plan.id);
+      expect(matchingHub.days[0]?.assignment).toMatchObject({
+        kind: 'routine',
+        routineId: matchingRoutine.id,
+        routineName: 'Rutina propia del Plan',
+      });
+
+      await db
+        .update(scheduledRoutines)
+        .set({ routineId: foreignScopeRoutine.id })
+        .where(eq(scheduledRoutines.trainingPlanId, plan.plan.id));
+      const mismatchedHub = await getTrainingPlanHub(userId, plan.plan.id);
+      expect(mismatchedHub.days[0]?.assignment).toEqual({ kind: 'unavailable' });
   });
 });

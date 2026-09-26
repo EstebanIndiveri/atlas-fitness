@@ -173,7 +173,11 @@ export function PlanBuilderForm({
         data-testid={PLAN_TEST_IDS.submit}
         disabled={!canSubmit || submitting}
       >
-        {submitting ? PLAN_COPY.submitting : mode === 'edit' ? 'Guardar cambios' : PLAN_COPY.submit}
+        {submitting
+          ? PLAN_COPY.submitting
+          : mode === 'edit'
+            ? 'Crear nueva versión'
+            : PLAN_COPY.submit}
       </Button>
     </form>
   );

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 import { PlanBuilderForm } from '@/components/plan/PlanBuilderForm';
 import { PageContainer } from '@/components/shell/PageContainer';
@@ -10,13 +11,48 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState, LoadingState } from '@/components/ui/states';
 import { usePlanBuilder } from '@/hooks/usePlanBuilder';
 import { useRoutineList } from '@/hooks/useRoutineList';
-import { PLAN_COPY } from '@/lib/copy/plan';
+import {
+  PLAN_COPY,
+  TRAINING_PLAN_REPLACEMENT_CONFIRMATION,
+} from '@/lib/copy/plan';
 import { buttonClassName } from '@/components/ui/Button';
+import { getActiveTrainingPlan, TrainingPlanClientError } from '@/lib/api/training-plan';
+import type { CreateTrainingPlanResult } from '@/lib/services/training-plan';
 
 export default function NewPlanPage() {
   const router = useRouter();
-  const { routines, loading, error } = useRoutineList();
-  const builder = usePlanBuilder(routines);
+  const [activePlan, setActivePlan] = useState<CreateTrainingPlanResult | null>(null);
+  const [activePlanLoading, setActivePlanLoading] = useState(true);
+  const [activePlanError, setActivePlanError] = useState<string | null>(null);
+  const { routines, loading, error } = useRoutineList(activePlan?.plan.id);
+  const builder = usePlanBuilder(routines, { replacementPlan: activePlan });
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadActivePlan(): Promise<void> {
+      try {
+        const result = await getActiveTrainingPlan();
+        if (!cancelled) {
+          setActivePlan(result);
+          setActivePlanError(null);
+        }
+      } catch (cause) {
+        if (!cancelled) {
+          setActivePlanError(
+            cause instanceof TrainingPlanClientError ? cause.message : PLAN_COPY.genericError,
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setActivePlanLoading(false);
+        }
+      }
+    }
+    void loadActivePlan();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <PageContainer>
@@ -35,10 +71,10 @@ export default function NewPlanPage() {
             ✦ Crear con Coach Atlas (guiado)
           </Link>
         </Card>
-        {loading ? (
+        {loading || activePlanLoading ? (
           <LoadingState />
-        ) : error ? (
-          <ErrorState message={error} />
+        ) : error || activePlanError ? (
+          <ErrorState message={error ?? activePlanError ?? PLAN_COPY.genericError} />
         ) : routines.length === 0 ? (
           <EmptyState
             title={PLAN_COPY.emptyRoutinesTitle}
@@ -59,7 +95,7 @@ export default function NewPlanPage() {
             goal={builder.goal}
             assignments={builder.assignments}
             selectedCount={builder.selectedCount}
-            canSubmit={builder.canSubmit}
+            canSubmit={builder.canSubmit && !activePlanLoading}
             submitting={builder.submitting}
             error={builder.error}
             onNameChange={builder.setName}
@@ -67,8 +103,11 @@ export default function NewPlanPage() {
             onDayRoutineChange={builder.setDayRoutine}
             onDayNoteChange={builder.setDayNote}
             onSubmit={() => {
+              if (activePlan && !window.confirm(TRAINING_PLAN_REPLACEMENT_CONFIRMATION)) {
+                return;
+              }
               void builder.submit().then((created) => {
-                if (created) router.push('/dashboard/today');
+                if (created) router.push(`/dashboard/plan/${created.plan.id}`);
               });
             }}
           />

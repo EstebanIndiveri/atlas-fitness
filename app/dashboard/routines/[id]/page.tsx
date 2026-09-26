@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { RoutineDetailTabs } from '@/components/routines/RoutineDetailTabs';
 import { RoutineExerciseSequence } from '@/components/routines/RoutineExerciseSequence';
@@ -24,6 +24,16 @@ function parseRoutineId(rawId: string | string[] | undefined): number | null {
   }
   const parsed = Number.parseInt(rawId, 10);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+function parseTrainingPlanId(rawId: string | null): number | undefined | null {
+  if (rawId === null) {
+    return undefined;
+  }
+  if (!/^[1-9]\d*$/.test(rawId)) {
+    return null;
+  }
+  return Number(rawId);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -72,7 +82,12 @@ function mapLoadError(error: unknown): RoutineDetailState {
 export default function RoutineDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const routineId = useMemo(() => parseRoutineId(params.id), [params.id]);
+  const trainingPlanId = useMemo(
+    () => parseTrainingPlanId(searchParams.get('trainingPlanId')),
+    [searchParams],
+  );
   const [state, setState] = useState<RoutineDetailState>({ status: 'loading', routine: null, message: null });
   const [starting, setStarting] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
@@ -81,14 +96,14 @@ export default function RoutineDetailPage() {
     let cancelled = false;
 
     async function loadRoutine(): Promise<void> {
-      if (routineId === null) {
+      if (routineId === null || trainingPlanId === null) {
         setState({ status: 'not_found', routine: null, message: null });
         return;
       }
 
       setState({ status: 'loading', routine: null, message: null });
       try {
-        const routine = await fetchRoutine(routineId);
+        const routine = await fetchRoutine(routineId, trainingPlanId);
         if (!cancelled) {
           setState({ status: 'ready', routine, message: null });
         }
@@ -103,7 +118,7 @@ export default function RoutineDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [routineId]);
+  }, [routineId, trainingPlanId]);
 
   const startWorkout = useCallback(async (): Promise<void> => {
     if (state.status !== 'ready') {
@@ -115,7 +130,10 @@ export default function RoutineDetailPage() {
       const response = await fetch('/api/workouts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ routineId: state.routine.id }),
+        body: JSON.stringify({
+          routineId: state.routine.id,
+          ...(trainingPlanId !== undefined ? { trainingPlanId } : {}),
+        }),
       });
       const body = await readJsonBody(response);
       if (response.status === 409) {
@@ -134,7 +152,7 @@ export default function RoutineDetailPage() {
     } finally {
       setStarting(false);
     }
-  }, [router, state]);
+  }, [router, state, trainingPlanId]);
 
   if (state.status === 'loading') {
     return <LoadingState />;

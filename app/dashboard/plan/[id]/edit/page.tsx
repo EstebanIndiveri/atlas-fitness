@@ -9,7 +9,10 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState, LoadingState } from '@/components/ui/states';
 import { useEditableTrainingPlan, usePlanBuilder } from '@/hooks/usePlanBuilder';
 import { useRoutineList } from '@/hooks/useRoutineList';
-import { PLAN_COPY } from '@/lib/copy/plan';
+import {
+  PLAN_COPY,
+  TRAINING_PLAN_REPLACEMENT_CONFIRMATION,
+} from '@/lib/copy/plan';
 import type { CreateTrainingPlanResult } from '@/lib/services/training-plan';
 
 function parsePlanRouteId(id: string | undefined): number | undefined {
@@ -57,7 +60,7 @@ export default function EditPlanPage() {
     <EditPlanForm
       planId={planId}
       initialPlan={planState.plan}
-      onSaved={() => router.push(`/dashboard/plan/${planId}`)}
+      onSaved={(saved) => router.push(`/dashboard/plan/${saved.plan.id}`)}
     />
   );
 }
@@ -69,9 +72,9 @@ function EditPlanForm({
 }: {
   planId: number;
   initialPlan: CreateTrainingPlanResult;
-  onSaved: () => void;
+  onSaved: (result: CreateTrainingPlanResult) => void;
 }) {
-  const { routines, loading: routinesLoading, error: routinesError } = useRoutineList();
+  const { routines, loading: routinesLoading, error: routinesError } = useRoutineList(planId);
   const builder = usePlanBuilder(routines, { mode: 'edit', initialPlan });
 
   if (routinesLoading) {
@@ -107,8 +110,14 @@ function EditPlanForm({
           onDayRoutineChange={builder.setDayRoutine}
           onDayNoteChange={builder.setDayNote}
           onSubmit={() => {
-            void builder.submit().then((updated) => {
-              if (updated) onSaved();
+            if (
+              initialPlan.plan.isActive
+              && !window.confirm(TRAINING_PLAN_REPLACEMENT_CONFIRMATION)
+            ) {
+              return;
+            }
+            void builder.submit().then((created) => {
+              if (created) onSaved(created);
             });
           }}
         />

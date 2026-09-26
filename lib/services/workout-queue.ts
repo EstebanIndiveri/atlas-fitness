@@ -7,7 +7,7 @@ import {
   parseStoredQueueJson,
   reconcileWorkoutQueue,
 } from '@/lib/session/queue';
-import { getRoutineById } from '@/lib/services/routines';
+import { getRoutineForWorkout } from '@/lib/services/routines';
 
 export async function resolveWorkoutQueueState(args: {
   userId: number;
@@ -21,7 +21,7 @@ export async function resolveWorkoutQueueState(args: {
   }
 
   try {
-    const routine = await getRoutineById(args.routineId, args.userId);
+    const routine = await getRoutineForWorkout(args.routineId, args.userId);
     const orderedExerciseIds = routine.exercises.map((item) => item.exerciseId);
     const adaptedRoutine = {
       ...routine,

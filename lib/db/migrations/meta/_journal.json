@@ -155,6 +155,13 @@
       "when": 1790392684698,
       "tag": "0021_user_onboarding_completion",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "6",
+      "when": 1790403391000,
+      "tag": "0022_routine_plan_scope",
+      "breakpoints": true
     }
   ]
 }

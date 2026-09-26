@@ -25,7 +25,15 @@ const createRoutineSchema = z.object({
 export async function GET(request: NextRequest) {
   try {
     const session = await requireAuth(request);
-    const routines = await listRoutines(session.userId);
+    const rawPlanId = new URL(request.url).searchParams.get('trainingPlanId');
+    let trainingPlanId: number | undefined;
+    if (rawPlanId !== null) {
+      if (!/^[1-9]\d*$/.test(rawPlanId)) {
+        throw new AppError('VALIDATION', 'ID de plan inválido');
+      }
+      trainingPlanId = Number(rawPlanId);
+    }
+    const routines = await listRoutines(session.userId, trainingPlanId);
     return NextResponse.json(routines);
   } catch (error) {
     return handleApiError(error);

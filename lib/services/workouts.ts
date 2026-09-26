@@ -4,7 +4,7 @@ import { db } from '@/lib/db/client';
 import { routines, workouts, workoutSets } from '@/lib/db/schema';
 import { isSqliteBusyError, isUniqueConstraintError } from '@/lib/db/unique-error';
 import { buildWorkoutQueue } from '@/lib/session/queue';
-import { getRoutineById } from '@/lib/services/routines';
+import { getRoutineById, getRoutineForWorkout } from '@/lib/services/routines';
 import { updateStreakFromActivity } from '@/lib/services/streaks';
 import { resolveWorkoutQueueState } from '@/lib/services/workout-queue';
 import { AppError } from '@/types/errors';
@@ -25,6 +25,7 @@ export interface UpdateWorkoutInput {
 async function resolveRoutineId(
   userId: number,
   routineId?: number | null,
+  trainingPlanId?: number,
 ): Promise<number | null> {
   if (routineId === undefined || routineId === null) {
     return null;
@@ -36,6 +37,11 @@ async function resolveRoutineId(
 
   if (!routine || routine.deletedAt || !canAccessCatalogItem(routine, userId)) {
     throw new AppError('VALIDATION', 'Rutina no válida');
+  }
+  if (trainingPlanId !== undefined) {
+    await getRoutineById(routineId, userId, trainingPlanId);
+  } else if (!routine.isSystem && routine.trainingPlanId !== null) {
+    throw new AppError('VALIDATION', 'La rutina debe iniciarse desde su plan');
   }
 
   return routineId;
@@ -62,6 +68,8 @@ export interface CreateWorkoutOptions {
   skippedExerciseIds?: readonly number[];
   /** Target set counts to apply only to this workout's queue. */
   targetSetsOverrides?: Readonly<Record<number, number>>;
+  /** Owning plan context required when starting a plan-scoped routine. */
+  trainingPlanId?: number;
 }
 
 async function buildInitialQueueJson(
@@ -75,7 +83,7 @@ async function buildInitialQueueJson(
     return null;
   }
 
-  const routine = await getRoutineById(routineId, userId);
+  const routine = await getRoutineForWorkout(routineId, userId);
   const orderedExerciseIds = routine.exercises.map((item) => item.exerciseId);
   const validTargetSetsOverrides: Record<number, number> = {};
   for (const [rawExerciseId, targetSets] of Object.entries(targetSetsOverrides)) {
@@ -119,7 +127,7 @@ export async function createWorkout(
   routineId?: number | null,
   options?: CreateWorkoutOptions,
 ): Promise<Workout> {
-  const resolvedRoutineId = await resolveRoutineId(userId, routineId);
+  const resolvedRoutineId = await resolveRoutineId(userId, routineId, options?.trainingPlanId);
   const queueJson =
     resolvedRoutineId !== null &&
     ((options?.skippedExerciseIds?.length ?? 0) > 0 ||

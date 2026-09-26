@@ -13,7 +13,11 @@ import {
   users,
 } from '@/lib/db/schema';
 import { createGuidedTrainingPlan } from '@/lib/services/guided-training-plan';
-import { createTrainingPlan } from '@/lib/services/training-plan';
+import { deleteRoutine, listRoutines, updateRoutine } from '@/lib/services/routines';
+import {
+  archiveTrainingPlan,
+  createTrainingPlan,
+} from '@/lib/services/training-plan';
 import { hashTrainingPlanImprovementValue } from '@/lib/services/training-plan-improvement-hash';
 
 const MUTATION_ID = 'a5e2cd80-5783-4aad-a2fd-cda735384a69';
@@ -25,9 +29,9 @@ describe('guided weekly plan save service', () => {
   beforeEach(async () => {
     await db.delete(guidedTrainingPlanSaves);
     await db.delete(scheduledRoutines);
-    await db.delete(trainingPlans);
     await db.delete(routineExercises);
     await db.delete(routines);
+    await db.delete(trainingPlans);
     await db.delete(exercises);
     await db.delete(users);
 
@@ -254,6 +258,48 @@ describe('guided weekly plan save service', () => {
     expect(foreignKeyViolations.rows).toHaveLength(0);
   });
 
+  it('keeps guided routines out of the library and protects them from direct mutation and reassignment', async () => {
+    const result = await createGuidedTrainingPlan(userId, payload());
+    const routineIds = result.schedule.map(({ routineId }) => routineId);
+    const library = await listRoutines(userId);
+
+    expect(library.map(({ id }) => id)).not.toEqual(
+      expect.arrayContaining(routineIds),
+    );
+    for (const routineId of routineIds) {
+      await expect(updateRoutine(routineId, userId, { name: 'Edición indebida' })).rejects.toMatchObject({
+        code: 'FORBIDDEN',
+      });
+    }
+    await expect(deleteRoutine(routineIds[0]!, userId)).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
+    await archiveTrainingPlan(userId, result.plan.id, {
+      mutationId: 'e4b8bb95-3e07-4ec2-b464-c0811c30f8c3',
+      expectedPlanUpdatedAt: result.plan.updatedAt.toISOString(),
+    });
+    await expect(
+      createTrainingPlan({
+        userId,
+        name: 'Otro plan',
+        schedule: [{ dayOfWeek: 5, routineId: routineIds[0]! }],
+      }),
+    ).rejects.toMatchObject({ code: 'VALIDATION' });
+  });
+
+  it('stores guided routine provenance as the exact created Plan id', async () => {
+    const result = await createGuidedTrainingPlan(userId, payload());
+    const scopeRows = await db.$client.execute({
+      sql: 'SELECT training_plan_id FROM routines WHERE user_id = ? ORDER BY id',
+      args: [userId],
+    });
+
+    expect(scopeRows.rows).toHaveLength(result.schedule.length);
+    expect(scopeRows.rows.map(({ training_plan_id }) => training_plan_id)).toEqual(
+      result.schedule.map(() => result.plan.id),
+    );
+  });
+
   it('accepts routine names within the guided draft title and focus limits', async () => {
     const longNamePayload = {
       ...payload(),
@@ -354,6 +400,10 @@ describe('guided weekly plan save service', () => {
 
   it('rejects a stale replacement target without changing the currently active plan or assignments', async () => {
     const stale = await createActivePlan('Plan desactualizado', 1);
+    await archiveTrainingPlan(userId, stale.plan.id, {
+      mutationId: 'e23f9aef-83e3-4c50-bced-b1d92a740cd1',
+      expectedPlanUpdatedAt: stale.plan.updatedAt.toISOString(),
+    });
     const current = await createActivePlan('Plan actual', 3);
     const currentSchedule = await db
       .select()
@@ -389,7 +439,7 @@ describe('guided weekly plan save service', () => {
     ).toEqual(currentSchedule);
     expect(await tableCount('routines')).toBe(routineCount);
     expect(await tableCount('training_plans')).toBe(planCount);
-    expect(await tableCount('guided_training_plan_saves')).toBe(0);
+    expect(await tableCount('guided_training_plan_saves')).toBe(1);
   });
 
   it('rejects a same-second schedule edit using the captured replacement schedule', async () => {

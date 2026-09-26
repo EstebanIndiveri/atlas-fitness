@@ -5,7 +5,13 @@ import { afterEach, describe, expect, it, jest } from '@jest/globals';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 const mockPush = jest.fn();
+const mockGetActiveTrainingPlan = jest.fn(async () => null);
 const originalFetch = global.fetch;
+
+jest.mock('@/lib/api/training-plan', () => ({
+  __esModule: true,
+  getActiveTrainingPlan: mockGetActiveTrainingPlan,
+}));
 
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush }),

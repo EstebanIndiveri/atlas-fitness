@@ -1,4 +1,4 @@
-import { and, asc, eq, isNull } from 'drizzle-orm';
+import { and, asc, eq, isNull, or } from 'drizzle-orm';
 
 import { catalogVisibleToUser } from '@/lib/auth/ownership';
 import { db } from '@/lib/db/client';
@@ -56,6 +56,7 @@ export async function getTrainingPlanHub(
         eq(routines.id, scheduledRoutines.routineId),
         isNull(routines.deletedAt),
         catalogVisibleToUser(routines, userId),
+        or(routines.isSystem, isNull(routines.trainingPlanId), eq(routines.trainingPlanId, planId)),
       ),
     )
     .where(

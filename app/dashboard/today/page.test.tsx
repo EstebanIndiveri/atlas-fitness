@@ -294,7 +294,7 @@ describe('TodayPage', () => {
     expect(screen.getByRole('button', { name: 'Tengo 30 min' }).hasAttribute('disabled')).toBe(true);
   });
 
-  it('starts the scheduled workout with its routineId and navigates', async () => {
+  it('starts the scheduled workout with its routine and plan context and navigates', async () => {
     mockHooks(workoutToday);
     mockFetch((url) => {
       if (url.includes('/api/auth/me')) {
@@ -322,7 +322,10 @@ describe('TodayPage', () => {
     const workoutCall = jest.mocked(global.fetch).mock.calls.find((call) =>
       String(call[0]).includes('/api/workouts'),
     );
-    expect(workoutCall?.[1]).toMatchObject({ method: 'POST', body: JSON.stringify({ routineId: 7 }) });
+    expect(workoutCall?.[1]).toMatchObject({
+      method: 'POST',
+      body: JSON.stringify({ routineId: 7, trainingPlanId: 1 }),
+    });
   });
 
   it('navigates the coach adapt action to the dedicated adaptation screen', async () => {
@@ -348,7 +351,7 @@ describe('TodayPage', () => {
     fireEvent.click(adaptButton);
 
     expect(push).toHaveBeenCalledWith(
-      '/dashboard/session/adapt?routineId=7&routineName=Push%20A&planGoal=Hipertrofia',
+      '/dashboard/session/adapt?routineId=7&routineName=Push%20A&planGoal=Hipertrofia&trainingPlanId=1',
     );
   });
 
