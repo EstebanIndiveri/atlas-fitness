@@ -19,13 +19,17 @@ Make Plan Coach generate a coherent weekly plan rather than independently genera
 ## Design
 
 1. **Weekly strategy:** Generate a structured strategy from the brief using Gemini when available. Require exact requested training-day count, unique weekdays, day-specific focus, and a weekly recovery distribution. If strategy generation fails or is incoherent, select a deterministic strategy based on the goal and requested focus; distribute training days algorithmically rather than hardcoding one split.
-2. **Routine composition:** For each strategy training day, invoke `buildRoutineDraft` with that day's focus plus the user's goal, level, duration, available equipment, location derived from the brief, and authenticated visible catalog. Preserve each routine engine result and its resolved catalog metadata.
+2. **Routine composition:** For each strategy training day, invoke `buildRoutineDraft` with that day's focus plus the user's goal, level, duration, location derived from the equipment brief, and authenticated visible catalog. The full equipment list is a structured input to weekly strategy. Do not pass it as an engine hard constraint unless the visible catalog has verified equipment metadata.
 3. **Whole-week validation:** Reject incomplete or incoherent proposals: wrong training-day count, duplicate weekdays, missing rest/recovery, insufficient goal/focus coverage, unrelated muscle groups without a justified broad focus, repeated exercise work that is unreasonable across the week, excessive overall volume, or IDs absent from the visible catalog. On weekly validation failure, compose again with the deterministic weekly strategy; never return a partial proposal. If the shared routine engine cannot produce a valid day, return its explicit domain validation error rather than fabricating a routine.
 4. **Provenance:** Keep the existing top-level `gemini`/`fallback` source shape and make attribution conservative: label the composed result as Gemini-assisted only when a Gemini-produced strategy or day routine contributed; otherwise label it fallback. Keep stored Coach Context separate from generated-proposal provenance.
 
 ## Errors and persistence
 
 Input validation, authentication, catalog visibility, and rate limiting continue to follow the current endpoint contracts. Routine Engine validation errors remain visible through the existing API error handler; Gemini outages remain recoverable through the shared engine's fallback. The composer does not call plan/routine/assignment persistence services. Rate-limit accounting is existing endpoint behavior and is not plan persistence.
+
+## Verified equipment limitation
+
+The current `ExerciseCatalogItem`, `listExercises`, and `exercises` DB table do not expose per-exercise equipment metadata. Routine Engine V2 deliberately rejects an explicit equipment filter when no catalog equipment metadata exists. Phase 7 therefore uses the full equipment brief in weekly strategy and derives the existing `home`/`gym` context, but cannot claim hard exercise-level equipment compatibility without a separate, verified catalog-data change. Keep Workstream B and catalog semantics unchanged in this implementation.
 
 ## Tests and acceptance
 
