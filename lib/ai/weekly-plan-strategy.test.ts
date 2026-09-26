@@ -2,6 +2,7 @@ import { describe, expect, it, jest } from '@jest/globals';
 
 import type { RoutineDraftCatalogItem } from './routine-draft-types';
 import {
+  collapseLowerBodyLabels,
   expandLowerBodyLabels,
   goalFocusLabels,
   inferWeeklyLocation,
@@ -9,6 +10,7 @@ import {
   listCatalogMuscleGroups,
   matchesMuscleGroup,
   normalizeFocusLabel,
+  requiredFocusCoverage,
   resolveFocusAreas,
 } from './weekly-plan-focus';
 import {
@@ -32,6 +34,45 @@ const catalog: RoutineDraftCatalogItem[] = GROUPS.map((muscleGroup, index) => ({
   isSystem: true,
 }));
 
+/** Lower body split across its own groups: without a `Piernas` group the alias expands to eight labels. */
+const SPLIT_GROUPS = [
+  'Glúteos',
+  'Isquiotibiales',
+  'Cuádriceps',
+  'Gemelos',
+  'Aductores',
+  'Abductores',
+  'Femorales',
+  'Pantorrillas',
+  'Pecho',
+  'Espalda',
+  'Hombros',
+  'Bíceps',
+  'Tríceps',
+] as const;
+
+const splitCatalog: RoutineDraftCatalogItem[] = SPLIT_GROUPS.map((muscleGroup, index) => ({
+  id: index + 1,
+  slug: `ejercicio-${index + 1}`,
+  name: `Ejercicio ${index + 1}`,
+  muscleGroup,
+  instructions: 'Instrucciones del catálogo.',
+  imageUrl: null,
+  videoUrl: null,
+  isSystem: true,
+}));
+
+const wideCatalog: RoutineDraftCatalogItem[] = Array.from({ length: 40 }, (_, index) => ({
+  id: index + 1,
+  slug: `grupo-${index + 1}`,
+  name: `Grupo ${index + 1}`,
+  muscleGroup: `Grupo ${index + 1}`,
+  instructions: 'Instrucciones del catálogo.',
+  imageUrl: null,
+  videoUrl: null,
+  isSystem: true,
+}));
+
 function strategyInput(overrides: Partial<WeeklyPlanStrategyInput> = {}): WeeklyPlanStrategyInput {
   return {
     goal: 'ganar fuerza',
@@ -43,6 +84,13 @@ function strategyInput(overrides: Partial<WeeklyPlanStrategyInput> = {}): Weekly
     catalog,
     ...overrides,
   };
+}
+
+function briefForCoverage(
+  focusAreas: readonly string[],
+  sourceCatalog: readonly RoutineDraftCatalogItem[] = catalog,
+): WeeklyPlanStrategyInput {
+  return strategyInput({ focusAreas, catalog: sourceCatalog });
 }
 
 function geminiStrategyResponse(payload: unknown, ok = true): ReturnType<typeof jest.fn<typeof fetch>> {
@@ -110,6 +158,37 @@ describe('weekly plan focus helpers', () => {
     expect(expandLowerBodyLabels(['Piernas'], engineCatalog)).toEqual(engineGroups);
     expect(matchesMuscleGroup('Piernas', 'Femorales')).toBe(true);
   });
+
+  it('collapses the expanded lower body labels into the single alias the brief asked for', () => {
+    expect(collapseLowerBodyLabels(['Piernas', 'Glúteos', 'Pecho'])).toEqual(['Piernas', 'Pecho']);
+    expect(collapseLowerBodyLabels(['Cuádriceps', 'Pecho', 'Gemelos'])).toEqual(['Cuádriceps', 'Pecho']);
+    expect(collapseLowerBodyLabels(['Pecho', 'Espalda'])).toEqual(['Pecho', 'Espalda']);
+    expect(collapseLowerBodyLabels([])).toEqual([]);
+  });
+
+  it('requires the requested labels once per day the engine can schedule them', () => {
+    const requested = briefForCoverage(['Piernas', 'Pecho', 'Espalda', 'Hombros', 'Bíceps', 'Tríceps']);
+    const singleDay = requiredFocusCoverage({ ...requested, daysPerWeek: 1 });
+    const sixDays = requiredFocusCoverage({ ...requested, daysPerWeek: 6 });
+
+    expect(singleDay.labels).toEqual(['Piernas', 'Pecho', 'Espalda', 'Hombros', 'Bíceps', 'Tríceps']);
+    expect(singleDay.coverageThreshold).toBe(6);
+    expect(singleDay.uncoveredNote).toBe('');
+    expect(sixDays.coverageThreshold).toBe(6);
+  });
+
+  it('reports the labels beyond the engine session capacity instead of requiring them', () => {
+    const requested = briefForCoverage(
+      Array.from({ length: 10 }, (_, index) => `Grupo ${index + 1}`),
+      wideCatalog,
+    );
+    const coverage = requiredFocusCoverage({ ...requested, daysPerWeek: 1 });
+
+    expect(coverage.labels).toHaveLength(10);
+    expect(coverage.coverageThreshold).toBe(6);
+    expect(coverage.uncoveredNote).toMatch(/hasta 6 áreas de enfoque por sesión/);
+    expect(requiredFocusCoverage({ ...requested, daysPerWeek: 2 }).coverageThreshold).toBe(10);
+  });
 });
 
 describe('buildDeterministicWeeklyStrategy', () => {
@@ -168,7 +247,7 @@ describe('buildDeterministicWeeklyStrategy', () => {
   it('derives a goal aware distribution when the brief has no focus areas', () => {
     const legs = buildDeterministicWeeklyStrategy(strategyInput({ daysPerWeek: 3, goal: 'hipertrofia de piernas' }));
 
-    expect(legs.days.map((day) => day.focus)).toEqual(['Piernas', 'Glúteos', 'Piernas']);
+    expect(legs.days.map((day) => day.focus)).toEqual(['Piernas', 'Piernas', 'Piernas']);
     expect(legs.days.every((day) => day.focusAreas.length > 0)).toBe(true);
 
     const upper = buildDeterministicWeeklyStrategy(
@@ -269,12 +348,54 @@ describe('buildDeterministicWeeklyStrategy', () => {
       strategyInput({ daysPerWeek: 2, focusAreas: ['Crossfit'], goal: 'hipertrofia de piernas' }),
     );
 
-    expect(strategy.days.map((day) => day.focus)).toEqual(['Piernas', 'Glúteos']);
+    expect(strategy.days.map((day) => day.focus)).toEqual(['Piernas', 'Piernas']);
   });
 
   it('stays deterministic for the same brief', () => {
     const brief = strategyInput({ daysPerWeek: 4, focusAreas: ['Piernas'] });
     expect(buildDeterministicWeeklyStrategy(brief)).toEqual(buildDeterministicWeeklyStrategy(brief));
+  });
+
+  it('covers the requested areas up to the engine session capacity', () => {
+    const singleDay = strategyInput({
+      goal: 'ganar fuerza general',
+      daysPerWeek: 1,
+      focusAreas: ['Piernas', 'Pecho', 'Espalda', 'Hombros', 'Bíceps', 'Tríceps'],
+      catalog: splitCatalog,
+    });
+    const week = buildDeterministicWeeklyStrategy(singleDay);
+
+    expect(week.days).toHaveLength(1);
+    expect(week.days[0]?.focusAreas).toEqual(['Piernas', 'Pecho', 'Espalda', 'Hombros', 'Bíceps', 'Tríceps']);
+    expect(isCoherentWeeklyStrategy(week, singleDay)).toBe(true);
+
+    const twoDays = strategyInput({ ...singleDay, daysPerWeek: 2 });
+    const split = buildDeterministicWeeklyStrategy(twoDays);
+    const covered = (label: string): boolean =>
+      split.days.some((day) => day.focusAreas.some((area) => matchesMuscleGroup(area, label)));
+
+    expect(split.days.map((day) => day.focusAreas)).toEqual([
+      ['Piernas', 'Pecho', 'Espalda'],
+      ['Hombros', 'Bíceps', 'Tríceps'],
+    ]);
+    expect(['Piernas', 'Pecho', 'Espalda', 'Hombros', 'Bíceps', 'Tríceps'].every(covered)).toBe(true);
+    expect(isCoherentWeeklyStrategy(split, twoDays)).toBe(true);
+  });
+
+  it('declares only the labels a single session can schedule when the brief requests more', () => {
+    const requested = Array.from({ length: 10 }, (_, index) => `Grupo ${index + 1}`);
+    const brief = strategyInput({
+      goal: 'ganar fuerza general',
+      daysPerWeek: 1,
+      focusAreas: requested,
+      catalog: wideCatalog,
+    });
+    const week = buildDeterministicWeeklyStrategy(brief);
+    const declared = week.days.flatMap((day) => day.focusAreas);
+
+    expect(declared).toEqual(['Grupo 1', 'Grupo 2', 'Grupo 3', 'Grupo 4', 'Grupo 5', 'Grupo 6']);
+    expect(declared.length).toBeLessThan(requested.length);
+    expect(isCoherentWeeklyStrategy(week, brief)).toBe(true);
   });
 });
 

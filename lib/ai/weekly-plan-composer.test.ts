@@ -5,6 +5,7 @@ import { guidedTrainingPlanSaves, routines, scheduledRoutines, trainingPlans } f
 import { AppError } from '@/types/errors';
 
 import { matchesMuscleGroup, normalizeFocusLabel } from './weekly-plan-focus';
+import { buildDeterministicWeeklyStrategy, isCoherentWeeklyStrategy } from './weekly-plan-strategy';
 import { composeWeeklyPlanProposal } from './weekly-plan-composer';
 import type { RoutineDraft, RoutineDraftCatalogItem, RoutineDraftContext } from './routine-draft-types';
 import type { WeeklyPlanComposerInput, WeeklyPlanComposerDraft, WeeklyPlanRoutineEngine } from './weekly-plan-week-types';
@@ -12,17 +13,43 @@ import type { WeeklyPlanComposerInput, WeeklyPlanComposerDraft, WeeklyPlanRoutin
 const GROUPS = ['Pecho', 'Espalda', 'Hombros', 'Piernas', 'Glúteos', 'Bíceps', 'Tríceps', 'Core'] as const;
 const UPPER_BODY = new Set(['pecho', 'espalda', 'hombros', 'biceps', 'triceps']);
 
-const catalog: RoutineDraftCatalogItem[] = GROUPS.flatMap((muscleGroup, groupIndex) =>
-  [0, 1, 2].map((offset) => ({
-    id: groupIndex * 3 + offset + 1,
-    slug: `ejercicio-${groupIndex * 3 + offset + 1}`,
-    name: `Ejercicio ${groupIndex * 3 + offset + 1}`,
-    muscleGroup,
-    instructions: 'Instrucciones del catálogo.',
-    imageUrl: null,
-    videoUrl: null,
-    isSystem: true,
-  })),
+/** Lower body split across its own groups: without a `Piernas` group the alias expands to eight labels. */
+const SPLIT_GROUPS = [
+  'Glúteos',
+  'Isquiotibiales',
+  'Cuádriceps',
+  'Gemelos',
+  'Aductores',
+  'Abductores',
+  'Femorales',
+  'Pantorrillas',
+  'Pecho',
+  'Espalda',
+  'Hombros',
+  'Bíceps',
+  'Tríceps',
+] as const;
+
+function catalogOf(groups: readonly string[], perGroup: number): RoutineDraftCatalogItem[] {
+  return groups.flatMap((muscleGroup, groupIndex) =>
+    Array.from({ length: perGroup }, (_, offset) => ({
+      id: groupIndex * perGroup + offset + 1,
+      slug: `ejercicio-${groupIndex * perGroup + offset + 1}`,
+      name: `Ejercicio ${groupIndex * perGroup + offset + 1}`,
+      muscleGroup,
+      instructions: 'Instrucciones del catálogo.',
+      imageUrl: null,
+      videoUrl: null,
+      isSystem: true,
+    })),
+  );
+}
+
+const catalog = catalogOf(GROUPS, 3);
+const splitCatalog = catalogOf(SPLIT_GROUPS, 3);
+const wideCatalog = catalogOf(
+  Array.from({ length: 40 }, (_, index) => `Grupo ${index + 1}`),
+  3,
 );
 
 function brief(overrides: Partial<WeeklyPlanComposerInput> = {}): WeeklyPlanComposerInput {
@@ -241,7 +268,7 @@ describe('composeWeeklyPlanProposal', () => {
   it('derives the week from the goal when the brief has no focus areas', async () => {
     const draft = await composeWeeklyPlanProposal(brief({ goal: 'hipertrofia de piernas', daysPerWeek: 3 }));
 
-    expect(draft.days.map((day) => normalizeFocusLabel(day.focus))).toEqual(['piernas', 'gluteos', 'piernas']);
+    expect(draft.days.map((day) => normalizeFocusLabel(day.focus))).toEqual(['piernas', 'piernas', 'piernas']);
     expect(
       draft.days
         .flatMap((day) => day.exercises.map((item) => normalizeFocusLabel(item.muscleGroup)))
@@ -462,5 +489,108 @@ describe('composeWeeklyPlanProposal', () => {
 
     expect(draft.days.length).toBeGreaterThan(0);
     expect(await countRows()).toEqual(before);
+  });
+
+  it('covers the requested areas of a single day week up to the engine session capacity', async () => {
+    const request = brief({
+      goal: 'ganar fuerza general',
+      daysPerWeek: 1,
+      focusAreas: ['Piernas', 'Pecho', 'Espalda', 'Hombros', 'Bíceps', 'Tríceps'],
+      catalog: splitCatalog,
+    });
+
+    const draft = await composeWeeklyPlanProposal(request, { env: {} });
+    const focus = normalizeFocusLabel(draft.days.map((day) => day.focus).join(' | '));
+
+    expect(draft.days).toHaveLength(1);
+    expect(draft.source).toBe('fallback');
+    expect(draft.days[0]?.exercises.length).toBeGreaterThan(0);
+    for (const label of ['piernas', 'pecho', 'espalda', 'hombros', 'biceps']) {
+      expect(focus).toContain(label);
+    }
+  });
+
+  it('covers every requested area of a two day week when the lower body expands to eight labels', async () => {
+    const request = brief({
+      goal: 'ganar fuerza general',
+      daysPerWeek: 2,
+      focusAreas: ['Piernas', 'Pecho', 'Espalda', 'Hombros', 'Bíceps', 'Tríceps'],
+      catalog: splitCatalog,
+    });
+
+    const draft = await composeWeeklyPlanProposal(request, { env: {} });
+    const focus = normalizeFocusLabel(draft.days.map((day) => day.focus).join(' | '));
+    const trainedGroups = draft.days.flatMap((day) =>
+      day.exercises.map((item) => normalizeFocusLabel(item.muscleGroup)),
+    );
+
+    expect(draft.days).toHaveLength(2);
+    expect(new Set(weekdaysOf(draft)).size).toBe(2);
+    expect(draft.days.every((day) => day.exercises.length > 0)).toBe(true);
+    for (const label of ['piernas', 'pecho', 'espalda', 'hombros', 'biceps', 'triceps']) {
+      expect(focus).toContain(label);
+    }
+    expect(trainedGroups.some((group) => group === 'gluteos')).toBe(true);
+  });
+
+  it('composes a single day week from a catalog of forty groups without a focus brief', async () => {
+    const draft = await composeWeeklyPlanProposal(
+      brief({ goal: 'ganar fuerza general', daysPerWeek: 1, catalog: wideCatalog }),
+      { env: {} },
+    );
+
+    expect(draft.days).toHaveLength(1);
+    expect(draft.days[0]?.exercises.length).toBeGreaterThan(0);
+  });
+
+  it('composes every accepted brief of the schedule matrix without failing weekly validation', async () => {
+    const catalogs = [
+      { name: 'split inferior sin Piernas', items: splitCatalog },
+      { name: 'catálogo con Piernas', items: catalog },
+      { name: 'cuarenta grupos', items: wideCatalog },
+    ];
+    const focusSets: readonly (readonly string[])[] = [
+      [],
+      ['Piernas'],
+      ['Piernas', 'Pecho', 'Core'],
+      ['Piernas', 'Pecho', 'Espalda', 'Hombros', 'Bíceps', 'Tríceps'],
+    ];
+    const goals = ['ganar fuerza general', 'hipertrofia de pecho y espalda'];
+    const results: {
+      context: string;
+      daysPerWeek: number;
+      composed: number;
+      coherent: boolean;
+      withinEngineCapacity: boolean;
+    }[] = [];
+
+    for (const { name, items } of catalogs) {
+      for (const goal of goals) {
+        for (const focusAreas of focusSets) {
+          for (let daysPerWeek = 1; daysPerWeek <= 6; daysPerWeek += 1) {
+            const request = brief({ goal, daysPerWeek, focusAreas, catalog: items });
+            const strategy = buildDeterministicWeeklyStrategy(request);
+            const draft = await composeWeeklyPlanProposal(request, { env: {} });
+
+            results.push({
+              context: `${name} · ${goal} · ${daysPerWeek} días · ${focusAreas.length} focos`,
+              daysPerWeek,
+              composed: draft.days.length,
+              coherent: isCoherentWeeklyStrategy(strategy, request),
+              withinEngineCapacity: strategy.days.every(
+                (day) => day.focusAreas.length > 0 && day.focusAreas.length <= 6,
+              ),
+            });
+          }
+        }
+      }
+    }
+
+    expect(results).toHaveLength(144);
+    expect(
+      results.filter(
+        (entry) => !entry.coherent || !entry.withinEngineCapacity || entry.composed !== entry.daysPerWeek,
+      ),
+    ).toEqual([]);
   });
 });

@@ -311,6 +311,75 @@ describe('validateWeeklyProposal', () => {
     expect(result.failures).toContain('unknown-exercise');
   });
 
+  it('requires only the labels a single session can schedule', () => {
+    const requested = ['Piernas', 'Pecho', 'Espalda', 'Hombros', 'Bíceps', 'Tríceps'] as const;
+    const covered = proposal([
+      day(1, 'Piernas y Pecho y Espalda', [...requested], [
+        exercise(7, 'Piernas', { targetSets: 2 }),
+        exercise(1, 'Pecho', { targetSets: 2 }),
+        exercise(3, 'Espalda', { targetSets: 2 }),
+        exercise(5, 'Hombros', { targetSets: 2 }),
+        exercise(11, 'Bíceps', { targetSets: 2 }),
+        exercise(13, 'Tríceps', { targetSets: 2 }),
+      ]),
+    ]);
+    const missingTriceps = proposal([
+      day(1, 'Piernas y Pecho y Espalda', ['Piernas', 'Pecho', 'Espalda', 'Hombros', 'Bíceps'], [
+        exercise(7, 'Piernas', { targetSets: 2 }),
+        exercise(1, 'Pecho', { targetSets: 2 }),
+        exercise(3, 'Espalda', { targetSets: 2 }),
+        exercise(5, 'Hombros', { targetSets: 2 }),
+        exercise(11, 'Bíceps', { targetSets: 2 }),
+      ]),
+    ]);
+
+    const accepted = validateWeeklyProposal(covered, validationInput({ daysPerWeek: 1, focusAreas: [...requested] }));
+    const rejected = validateWeeklyProposal(
+      missingTriceps,
+      validationInput({ daysPerWeek: 1, focusAreas: [...requested] }),
+    );
+
+    expect(accepted.valid).toBe(true);
+    expect(rejected.valid).toBe(false);
+    expect(rejected.failures).toContain('focus-coverage');
+  });
+
+  it('reports the capacity bound instead of demanding the labels beyond it', () => {
+    const requested = Array.from({ length: 10 }, (_, index) => `Grupo ${index + 1}`);
+    const tenGroupCatalog: RoutineDraftCatalogItem[] = requested.map((muscleGroup, index) => ({
+      id: 100 + index,
+      slug: `grupo-${index + 1}`,
+      name: `Ejercicio grupo ${index + 1}`,
+      muscleGroup,
+      instructions: 'Instrucciones del catálogo.',
+      imageUrl: null,
+      videoUrl: null,
+      isSystem: true,
+    }));
+    const week = proposal([
+      day(
+        1,
+        'Grupo 1 a 5',
+        requested.slice(0, 5),
+        requested.slice(0, 5).map((muscleGroup, index) =>
+          exercise(100 + index, muscleGroup, { targetSets: 2 }),
+        ),
+      ),
+    ]);
+
+    const result = validateWeeklyProposal(
+      week,
+      validationInput({ daysPerWeek: 1, focusAreas: requested, catalog: tenGroupCatalog }),
+    );
+    const coverageReason = result.reasons.find((reason) => reason.includes('foco pedido'));
+
+    expect(result.valid).toBe(false);
+    expect(result.failures).toContain('focus-coverage');
+    expect(coverageReason).toContain('Grupo 6');
+    expect(coverageReason).toContain('primeros 6 de 10');
+    expect(coverageReason).not.toContain('Grupo 7');
+  });
+
   it('reports every problem found in one pass instead of the first one', () => {
     const broken = proposal([
       day(1, 'Empuje', ['Pecho'], [exercise(1, 'Pecho')]),
