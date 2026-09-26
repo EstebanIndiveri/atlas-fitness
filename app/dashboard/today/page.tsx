@@ -12,10 +12,11 @@ import { TodayHabitsCard } from '@/components/today/TodayHabitsCard';
 import { TodayHeader } from '@/components/today/TodayHeader';
 import { TodayWeekCard } from '@/components/today/TodayWeekCard';
 import { TodayWorkoutHero } from '@/components/today/TodayWorkoutHero';
-import { LoadingState } from '@/components/ui/states';
+import { Button } from '@/components/ui/Button';
+import { ErrorState, LoadingState } from '@/components/ui/states';
 import { useToday } from '@/hooks/useToday';
 import { isCheckInEnergy, isCheckInMood } from '@/lib/api/checkin';
-import { isOnboardingDone } from '@/lib/onboarding/state';
+import { getServerOnboardingState } from '@/lib/onboarding/client';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
@@ -40,22 +41,41 @@ export default function TodayPage() {
   const { today, loading: todayLoading, error: todayError } = useToday();
   const [userName, setUserName] = useState<string | null>(null);
   const [userLoading, setUserLoading] = useState(true);
+  const [onboardingCompleted, setOnboardingCompleted] = useState<boolean | null>(null);
+  const [onboardingError, setOnboardingError] = useState<string | null>(null);
+  const [onboardingRetry, setOnboardingRetry] = useState(0);
   const [checkInState, setCheckInState] = useState<MoodEnergyCheckInState>({
     checkin: null,
     loading: true,
     saving: false,
     error: null,
   });
-  const [onboardingDone] = useState(() => isOnboardingDone() || isOnboardingDone());
-
   useEffect(() => {
-    // Read the live store value (not the hydration snapshot) so already-onboarded
-    // users are never bounced to the wizard on a hard load/refresh, where the
-    // server snapshot (false) briefly precedes the client snapshot (true).
-    if (!isOnboardingDone()) {
-      router.replace('/onboarding');
+    const controller = new AbortController();
+
+    async function loadOnboardingState(): Promise<void> {
+      setOnboardingError(null);
+      try {
+        const state = await getServerOnboardingState(controller.signal);
+        if (controller.signal.aborted) {
+          return;
+        }
+        setOnboardingCompleted(state.completed);
+        if (!state.completed) {
+          router.replace('/onboarding');
+        }
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          setOnboardingError(
+            error instanceof Error ? error.message : 'No se pudo cargar el onboarding.',
+          );
+        }
+      }
     }
-  }, [router]);
+
+    void loadOnboardingState();
+    return () => controller.abort();
+  }, [onboardingRetry, router]);
 
   useEffect(() => {
     let cancelled = false;
@@ -150,7 +170,18 @@ export default function TodayPage() {
     router.push('/dashboard/plan/new');
   }, [router]);
 
-  if (!onboardingDone || userLoading) {
+  if (onboardingError) {
+    return (
+      <PageContainer className="space-y-4">
+        <ErrorState message={onboardingError} />
+        <Button onClick={() => setOnboardingRetry((retry) => retry + 1)}>
+          Reintentar
+        </Button>
+      </PageContainer>
+    );
+  }
+
+  if (onboardingCompleted !== true || userLoading) {
     return <LoadingState />;
   }
 

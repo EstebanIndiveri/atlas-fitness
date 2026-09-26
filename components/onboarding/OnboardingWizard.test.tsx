@@ -10,6 +10,7 @@ import { OnboardingWizard } from './OnboardingWizard';
 
 const [goalStep, paceStep, equipmentStep] = ONBOARDING_COPY.steps;
 const noopFinish: (answers: OnboardingAnswers) => void = () => undefined;
+const noopSkip: () => void = () => undefined;
 
 function selectFirstOptionAndContinue(): void {
   const options = screen.getAllByTestId(ONBOARDING_TEST_IDS.option);
@@ -23,7 +24,7 @@ describe('OnboardingWizard', () => {
   });
 
   it('renders the goal step with its options and a disabled continue until a choice is made', () => {
-    render(<OnboardingWizard onFinish={noopFinish} onSkip={jest.fn()} />);
+    render(<OnboardingWizard onFinish={noopFinish} onSkip={noopSkip} />);
 
     expect(screen.getByRole('heading', { level: 1, name: goalStep.title })).toBeTruthy();
     expect(screen.getByText(goalStep.badge)).toBeTruthy();
@@ -38,7 +39,7 @@ describe('OnboardingWizard', () => {
   });
 
   it('renders the Figma step chrome with a dark active chip and segmented progress', () => {
-    render(<OnboardingWizard onFinish={noopFinish} onSkip={jest.fn()} />);
+    render(<OnboardingWizard onFinish={noopFinish} onSkip={noopSkip} />);
 
     const activeChip = screen.getByRole('listitem', { name: '1. Objetivo' });
     expect(activeChip.className).toContain('bg-ink');
@@ -63,7 +64,7 @@ describe('OnboardingWizard', () => {
   });
 
   it('uses selectable option cards with radio semantics, a leading icon, and a checked state', () => {
-    render(<OnboardingWizard onFinish={noopFinish} onSkip={jest.fn()} />);
+    render(<OnboardingWizard onFinish={noopFinish} onSkip={noopSkip} />);
 
     const radioOptions = screen.getAllByRole('radio');
     expect(radioOptions).toHaveLength(goalStep.options.length);
@@ -78,7 +79,7 @@ describe('OnboardingWizard', () => {
   });
 
   it('supports arrow-key selection inside the custom radio group', () => {
-    render(<OnboardingWizard onFinish={noopFinish} onSkip={jest.fn()} />);
+    render(<OnboardingWizard onFinish={noopFinish} onSkip={noopSkip} />);
 
     const radioOptions = screen.getAllByRole('radio');
     (radioOptions[0] as HTMLElement).focus();
@@ -90,7 +91,7 @@ describe('OnboardingWizard', () => {
 
   it('advances through every step and finishes with the selected answers', () => {
     const onFinish = jest.fn<(answers: OnboardingAnswers) => void>();
-    render(<OnboardingWizard onFinish={onFinish} onSkip={jest.fn()} />);
+    render(<OnboardingWizard onFinish={onFinish} onSkip={noopSkip} />);
 
     expect(screen.getByRole('heading', { level: 1, name: goalStep.title })).toBeTruthy();
     selectFirstOptionAndContinue();
@@ -118,7 +119,7 @@ describe('OnboardingWizard', () => {
   });
 
   it('lets the user go back to a previous step keeping the selection', () => {
-    render(<OnboardingWizard onFinish={noopFinish} onSkip={jest.fn()} />);
+    render(<OnboardingWizard onFinish={noopFinish} onSkip={noopSkip} />);
 
     selectFirstOptionAndContinue();
     expect(screen.getByRole('heading', { level: 1, name: paceStep.title })).toBeTruthy();
@@ -129,7 +130,7 @@ describe('OnboardingWizard', () => {
   });
 
   it('calls onSkip when the skip control is used', () => {
-    const onSkip = jest.fn();
+    const onSkip = jest.fn<() => void>();
     render(<OnboardingWizard onFinish={noopFinish} onSkip={onSkip} />);
 
     fireEvent.click(screen.getByTestId(ONBOARDING_TEST_IDS.skip));
@@ -137,7 +138,7 @@ describe('OnboardingWizard', () => {
   });
 
   it('exits via onSkip when backing out of the first step', () => {
-    const onSkip = jest.fn();
+    const onSkip = jest.fn<() => void>();
     render(<OnboardingWizard onFinish={noopFinish} onSkip={onSkip} />);
 
     fireEvent.click(screen.getByTestId(ONBOARDING_TEST_IDS.back));

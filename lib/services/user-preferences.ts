@@ -55,7 +55,15 @@ function parseUserId(userId: number): number {
   return parsed.data;
 }
 
-function parseUserPreferences(input: unknown): UserPreferencesDto {
+/**
+ * Validates the three preference values submitted for an account.
+ *
+ * @param input - Untrusted preference values.
+ * @returns The validated preference values.
+ * @throws {AppError} VALIDATION when the preference values are invalid.
+ * @example parseUserPreferences({ goal: 'strength', pace: 'days-3', equipment: 'gym' });
+ */
+export function parseUserPreferences(input: unknown): UserPreferencesDto {
   const parsed = userPreferencesSchema.safeParse(input);
   if (!parsed.success) {
     throw new AppError('VALIDATION', 'Preferencias del perfil inválidas');

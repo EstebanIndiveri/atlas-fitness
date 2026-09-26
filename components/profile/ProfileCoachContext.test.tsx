@@ -4,7 +4,7 @@
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 
-import { saveOnboardingAnswers } from '@/lib/onboarding/state';
+import { readOnboardingAnswers, saveOnboardingAnswers } from '@/lib/onboarding/state';
 import type { UserPreferences } from '@/types/user-preferences';
 
 import { ProfileCoachContext } from './ProfileCoachContext';
@@ -146,6 +146,7 @@ describe('ProfileCoachContext', () => {
 
     await screen.findByText('Las respuestas anteriores ya están guardadas en tu cuenta.');
     expect(await screen.findByText('Ganar músculo')).toBeTruthy();
+    expect(readOnboardingAnswers()).toBeNull();
     const putRequest = fetchMock.mock.calls.find(([, init]) => init?.method === 'PUT');
     expect(putRequest?.[1]?.headers).toMatchObject({ 'If-None-Match': '*' });
   });
@@ -210,6 +211,30 @@ describe('ProfileCoachContext', () => {
     expect(screen.getByText('Bandas elásticas')).toBeTruthy();
     expect(await screen.findByText('Ya hay preferencias guardadas en tu cuenta. No se reemplazaron con estas respuestas.')).toBeTruthy();
     expect(fetchMock.mock.calls).toHaveLength(4);
+    expect(readOnboardingAnswers()).toEqual({
+      goal: 'muscle',
+      pace: 'days-3',
+      equipment: 'dumbbells',
+    });
+  });
+
+  it('retains browser answers when a confirmed import fails', async () => {
+    const answers = { goal: 'muscle', pace: 'days-3', equipment: 'dumbbells' } as const;
+    saveOnboardingAnswers(answers);
+    setFetchResponses(
+      jsonResponse(preferencesResponse(false)),
+      jsonResponse(preferencesResponse(false)),
+      jsonResponse({ code: 'SERVICE_UNAVAILABLE' }, 503),
+    );
+
+    render(<ProfileCoachContext />);
+    await screen.findByText('Todavía no guardaste preferencias de Coach.');
+    fireEvent.click(screen.getByRole('button', { name: 'Revisar respuestas anteriores' }));
+    await screen.findByText('Respuestas anteriores de este navegador');
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar importación' }));
+
+    expect(await screen.findByRole('alert')).toBeTruthy();
+    expect(readOnboardingAnswers()).toEqual(answers);
   });
 
   it('saves explicit edits with the normal authenticated PUT contract', async () => {

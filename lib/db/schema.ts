@@ -15,6 +15,7 @@ export const users = sqliteTable('users', {
   email: text('email').notNull().unique(),
   passwordHash: text('password_hash').notNull(),
   telegramUserId: text('telegram_user_id').unique(),
+  onboardingCompletedAt: integer('onboarding_completed_at', { mode: 'timestamp' }),
   createdAt: integer('created_at', { mode: 'timestamp' })
     .notNull()
     .default(sql`(unixepoch())`),

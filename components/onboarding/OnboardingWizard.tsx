@@ -22,7 +22,7 @@ type OnboardingWizardProps = {
   /** Called with the collected answers when the user starts (finishes the wizard). */
   onFinish: (answers: OnboardingAnswers) => void | Promise<void>;
   /** Called when the user skips onboarding or backs out of the first step. */
-  onSkip: () => void;
+  onSkip: () => void | Promise<void>;
 };
 
 function optionTitle(step: OnboardingSelectableStep, optionId: string | null): string {
@@ -162,7 +162,9 @@ export function OnboardingWizard({ onFinish, onSkip }: OnboardingWizardProps) {
   const [stepIndex, setStepIndex] = useState(0);
   const [answers, setAnswers] = useState<OnboardingAnswers>(EMPTY_ANSWERS);
   const [isFinishing, setIsFinishing] = useState(false);
+  const [isSkipping, setIsSkipping] = useState(false);
   const [finishError, setFinishError] = useState<string | null>(null);
+  const [skipError, setSkipError] = useState<string | null>(null);
 
   const currentStep = stepIndex < PROPOSAL_INDEX ? SELECTABLE_STEPS[stepIndex] : null;
   const currentSelection = currentStep ? answers[currentStep.id] : null;
@@ -175,28 +177,46 @@ export function OnboardingWizard({ onFinish, onSkip }: OnboardingWizardProps) {
         return;
       }
       setFinishError(null);
+      setSkipError(null);
       setAnswers((prev) => ({ ...prev, [currentStep.id]: optionId }));
     },
     [currentStep],
   );
 
+  const handleSkip = useCallback(async () => {
+    if (isFinishing || isSkipping) {
+      return;
+    }
+    setIsSkipping(true);
+    setFinishError(null);
+    setSkipError(null);
+    try {
+      await onSkip();
+    } catch (error) {
+      setSkipError(
+        error instanceof Error ? error.message : ONBOARDING_COPY.sync.skipFailure,
+      );
+    } finally {
+      setIsSkipping(false);
+    }
+  }, [isFinishing, isSkipping, onSkip]);
+
   const handleBack = useCallback(() => {
-    setStepIndex((index) => {
-      if (index === 0) {
-        onSkip();
-        return index;
-      }
-      return index - 1;
-    });
-  }, [onSkip]);
+    if (stepIndex === 0) {
+      void handleSkip();
+      return;
+    }
+    setStepIndex((index) => Math.max(index - 1, 0));
+  }, [handleSkip, stepIndex]);
 
   const handlePrimary = useCallback(async () => {
     if (isProposal) {
-      if (isFinishing) {
+      if (isFinishing || isSkipping) {
         return;
       }
       setIsFinishing(true);
       setFinishError(null);
+      setSkipError(null);
       try {
         await onFinish(answers);
       } catch (error) {
@@ -208,8 +228,10 @@ export function OnboardingWizard({ onFinish, onSkip }: OnboardingWizardProps) {
       }
       return;
     }
+    setFinishError(null);
+    setSkipError(null);
     setStepIndex((index) => Math.min(index + 1, PROPOSAL_INDEX));
-  }, [answers, isFinishing, isProposal, onFinish]);
+  }, [answers, isFinishing, isProposal, isSkipping, onFinish]);
 
   const primaryLabel = useMemo(
     () =>
@@ -228,7 +250,12 @@ export function OnboardingWizard({ onFinish, onSkip }: OnboardingWizardProps) {
       className="mx-auto flex min-h-dvh w-full max-w-md flex-col bg-canvas"
       data-testid={ONBOARDING_TEST_IDS.wizard}
     >
-      <OnboardingHeader activeIndex={stepIndex} onBack={handleBack} onSkip={onSkip} />
+      <OnboardingHeader
+        activeIndex={stepIndex}
+        onBack={handleBack}
+        onSkip={() => void handleSkip()}
+        disableNavigation={isFinishing || isSkipping}
+      />
 
       <div className="flex-1 overflow-y-auto px-4 py-6">
         {currentStep ? (
@@ -246,15 +273,15 @@ export function OnboardingWizard({ onFinish, onSkip }: OnboardingWizardProps) {
       </div>
 
       <div className="sticky bottom-0 border-t border-line bg-surface/95 px-4 py-4 backdrop-blur">
-        {finishError ? (
+        {finishError || skipError ? (
           <p role="alert" className="mb-3 text-sm text-danger">
-            {finishError}
+            {finishError ?? skipError}
           </p>
         ) : null}
         <Button
           className="min-h-12 w-full rounded-full bg-ink text-base text-surface hover:bg-ink/90"
           onClick={handlePrimary}
-          disabled={!canContinue || isFinishing}
+          disabled={!canContinue || isFinishing || isSkipping}
           data-testid={ONBOARDING_TEST_IDS.continue}
         >
           {primaryLabel}

@@ -5,17 +5,16 @@ import { useRouter } from 'next/navigation';
 
 import { OnboardingWizard } from '@/components/onboarding/OnboardingWizard';
 import {
-  markOnboardingDone,
   saveOnboardingAnswers,
   type OnboardingAnswers,
 } from '@/lib/onboarding/state';
-import { syncOnboardingPreferences } from '@/lib/onboarding/preferences-sync';
+import { finishOnboarding, skipOnboarding } from '@/lib/onboarding/client';
 
 const HOME_ROUTE = '/dashboard/today';
 
 /**
  * First-run onboarding route (`/onboarding`): full-screen goal/pace/equipment wizard.
- * Persists answers and the completion marker, then routes to Hoy.
+ * Persists the account's preferences and completion before routing to Hoy.
  * @returns The onboarding wizard page.
  */
 export default function OnboardingPage() {
@@ -24,15 +23,14 @@ export default function OnboardingPage() {
   const finish = useCallback(
     async (answers: OnboardingAnswers): Promise<void> => {
       saveOnboardingAnswers(answers);
-      await syncOnboardingPreferences(answers);
-      markOnboardingDone();
+      await finishOnboarding(answers);
       router.replace(HOME_ROUTE);
     },
     [router],
   );
 
-  const skip = useCallback((): void => {
-    markOnboardingDone();
+  const skip = useCallback(async (): Promise<void> => {
+    await skipOnboarding();
     router.replace(HOME_ROUTE);
   }, [router]);
 
