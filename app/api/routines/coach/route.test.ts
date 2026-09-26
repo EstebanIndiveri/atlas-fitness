@@ -11,10 +11,12 @@ import type { ExerciseCatalogItem } from '@/types/exercise';
 type RequireAuth = typeof import('@/lib/auth/middleware')['requireAuth'];
 type ListExercises = typeof import('@/lib/services/exercises')['listExercises'];
 type GenerateRoutineDraft = typeof import('@/lib/ai/routine-draft')['generateRoutineDraft'];
+type BuildRoutineDraft = typeof import('@/lib/ai/routine-draft')['buildRoutineDraft'];
 
 const mockRequireAuth = jest.fn<RequireAuth>();
 const mockListExercises = jest.fn<ListExercises>();
 const mockGenerateRoutineDraft = jest.fn<GenerateRoutineDraft>();
+const mockBuildRoutineDraft = jest.fn<BuildRoutineDraft>();
 
 jest.mock('@/lib/auth/middleware', () => {
   const actual = jest.requireActual<typeof import('@/lib/auth/middleware')>('@/lib/auth/middleware');
@@ -25,9 +27,14 @@ jest.mock('@/lib/services/exercises', () => ({
   listExercises: mockListExercises,
 }));
 
-jest.mock('@/lib/ai/routine-draft', () => ({
-  generateRoutineDraft: mockGenerateRoutineDraft,
-}));
+jest.mock('@/lib/ai/routine-draft', () => {
+  const actual = jest.requireActual<typeof import('@/lib/ai/routine-draft')>('@/lib/ai/routine-draft');
+  return {
+    ...actual,
+    generateRoutineDraft: mockGenerateRoutineDraft,
+    buildRoutineDraft: mockBuildRoutineDraft,
+  };
+});
 
 let POST: typeof import('./route')['POST'];
 
@@ -66,6 +73,7 @@ describe('POST /api/routines/coach', () => {
     mockRequireAuth.mockResolvedValue({ userId: 7, sessionId: 's1', iat: 1, exp: 9999999999 });
     mockListExercises.mockResolvedValue(catalog);
     mockGenerateRoutineDraft.mockResolvedValue(draft);
+    mockBuildRoutineDraft.mockResolvedValue(draft);
   });
 
   it('returns a typed validation error for an invalid brief', async () => {
@@ -92,7 +100,40 @@ describe('POST /api/routines/coach', () => {
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual(draft);
     expect(mockListExercises).toHaveBeenCalledWith(7);
-    expect(mockGenerateRoutineDraft).toHaveBeenCalledWith(body, catalog);
+    expect(mockBuildRoutineDraft).toHaveBeenCalledWith({
+      goal: body.goal,
+      focusAreas: [],
+      availableEquipment: undefined,
+      location: body.location,
+      level: body.level,
+      sessionLengthMinutes: 45,
+      catalog,
+    });
+    expect(mockGenerateRoutineDraft).not.toHaveBeenCalled();
+  });
+
+  it('uses the reusable-session contract when a session duration is provided', async () => {
+    const response = await POST(request({
+      goal: 'ganar fuerza',
+      focusAreas: ['piernas'],
+      location: 'gym',
+      level: 'intermediate',
+      sessionLengthMinutes: 45,
+      availableEquipment: ['mancuernas'],
+    }));
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual(draft);
+    expect(mockBuildRoutineDraft).toHaveBeenCalledWith({
+      goal: 'ganar fuerza',
+      focusAreas: ['piernas'],
+      location: 'gym',
+      level: 'intermediate',
+      sessionLengthMinutes: 45,
+      availableEquipment: ['mancuernas'],
+      catalog,
+    });
+    expect(mockGenerateRoutineDraft).not.toHaveBeenCalled();
   });
 
   it('returns typed errors from authentication and catalog access', async () => {
