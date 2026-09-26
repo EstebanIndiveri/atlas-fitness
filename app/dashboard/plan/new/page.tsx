@@ -26,6 +26,10 @@ export default function NewPlanPage() {
   const [activePlanError, setActivePlanError] = useState<string | null>(null);
   const { routines, loading, error } = useRoutineList(activePlan?.plan.id);
   const builder = usePlanBuilder(routines, { replacementPlan: activePlan });
+  // RoutineSummary carries no plan provenance, so a plan-scoped list offers no editable routine.
+  const mutableRoutineIds = activePlan
+    ? []
+    : routines.filter((routine) => !routine.isSystem).map((routine) => routine.id);
 
   useEffect(() => {
     let cancelled = false;
@@ -90,6 +94,8 @@ export default function NewPlanPage() {
           />
         ) : (
           <PlanBuilderForm
+            planId={activePlan?.plan.id}
+            mutableRoutineIds={mutableRoutineIds}
             routines={routines}
             name={builder.name}
             goal={builder.goal}
