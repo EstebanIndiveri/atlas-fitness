@@ -1,16 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
-import { generateRoutineDraft } from '@/lib/ai/routine-draft';
+import { buildRoutineDraft } from '@/lib/ai/routine-draft';
 import { handleApiError, requireAuth } from '@/lib/auth/middleware';
 import { listExercises } from '@/lib/services/exercises';
 import { AppError } from '@/types/errors';
 
 const routineBriefSchema = z.object({
   goal: z.string().trim().min(2).max(160),
-  daysPerWeek: z.number().int().min(1).max(7),
+  focusAreas: z.array(z.string().trim().min(1).max(40)).max(6).optional(),
+  availableEquipment: z.array(z.string().trim().min(1).max(40)).max(12).optional(),
+  sessionLengthMinutes: z.number().int().min(15).max(180).optional(),
+  // @deprecated Compatibility input; new clients must submit sessionLengthMinutes.
+  daysPerWeek: z.number().int().min(1).max(7).optional(),
   location: z.enum(['gym', 'home']),
   level: z.enum(['beginner', 'intermediate', 'advanced']),
+}).superRefine((brief, context) => {
+  if (brief.sessionLengthMinutes === undefined && brief.daysPerWeek === undefined) {
+    context.addIssue({
+      code: 'custom',
+      message: 'La duración de la sesión es obligatoria',
+      path: ['sessionLengthMinutes'],
+    });
+  }
 });
 
 async function readJsonBody(request: NextRequest): Promise<unknown> {
@@ -21,10 +33,15 @@ async function readJsonBody(request: NextRequest): Promise<unknown> {
   }
 }
 
+/** @deprecated Old clients omit duration; frequency is validated but not used to infer session length. */
+function legacyCoachSessionLengthMinutes(): number {
+  return 45;
+}
+
 /**
- * POST /api/routines/coach — generate an authenticated Coach Atlas routine draft.
+ * POST /api/routines/coach — generate an authenticated Coach Atlas session draft.
  *
- * @param request Incoming Next.js request with goal, daysPerWeek, location, and level.
+ * @param request Incoming request with goal, focus areas, location, level, and session duration; legacy daysPerWeek uses a fixed default duration.
  * @returns A routine draft whose exercise ids are validated against the user's visible catalog.
  * @throws {AppError} UNAUTHORIZED or VALIDATION through the shared API handler.
  * @example
@@ -43,7 +60,17 @@ export async function POST(request: NextRequest) {
       throw new AppError('VALIDATION', 'No hay ejercicios disponibles para armar una rutina.');
     }
 
-    const draft = await generateRoutineDraft(parsed.data, catalog);
+    const { goal, focusAreas, availableEquipment, location, level } = parsed.data;
+    const sessionLengthMinutes = parsed.data.sessionLengthMinutes ?? legacyCoachSessionLengthMinutes();
+    const draft = await buildRoutineDraft({
+      goal,
+      focusAreas: focusAreas ?? [],
+      availableEquipment,
+      location,
+      level,
+      sessionLengthMinutes,
+      catalog,
+    });
     return NextResponse.json(draft);
   } catch (error) {
     return handleApiError(error);
