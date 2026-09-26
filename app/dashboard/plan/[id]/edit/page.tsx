@@ -29,13 +29,13 @@ export default function EditPlanPage() {
     return <LoadingState />;
   }
 
-  if (planState.notFound) {
+  if (planState.notFound || planId === undefined) {
     return (
       <PageContainer>
         <EmptyState
           title="Plan no encontrado"
           description="No existe o no está disponible para tu cuenta."
-          actions={[{ label: 'Volver a rutinas', href: '/dashboard/routines' }]}
+          actions={[{ label: 'Crear un plan', href: '/dashboard/plan/new' }]}
         />
       </PageContainer>
     );
@@ -54,14 +54,20 @@ export default function EditPlanPage() {
   }
 
   return (
-    <EditPlanForm initialPlan={planState.plan} onSaved={() => router.push('/dashboard/today')} />
+    <EditPlanForm
+      planId={planId}
+      initialPlan={planState.plan}
+      onSaved={() => router.push(`/dashboard/plan/${planId}`)}
+    />
   );
 }
 
 function EditPlanForm({
+  planId,
   initialPlan,
   onSaved,
 }: {
+  planId: number;
   initialPlan: CreateTrainingPlanResult;
   onSaved: () => void;
 }) {
@@ -82,8 +88,8 @@ function EditPlanForm({
 
   return (
     <PageContainer>
-      <Link href="/dashboard/routines" className="text-sm font-medium text-brand hover:underline">
-        Volver a rutinas
+      <Link href={`/dashboard/plan/${planId}`} className="text-sm font-medium text-brand hover:underline">
+        Volver al plan
       </Link>
       <div className="mt-4">
         <PlanBuilderForm
