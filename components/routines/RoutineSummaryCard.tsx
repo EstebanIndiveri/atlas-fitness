@@ -6,6 +6,7 @@ import type { RoutineSummary } from '@/types/routine';
 
 type RoutineSummaryCardProps = {
   routine: RoutineSummary;
+  canEdit: boolean;
   starting: boolean;
   error: string | null;
   onStart: () => void;
@@ -43,10 +44,10 @@ function uniqueMuscleGroups(routine: RoutineSummary): string[] {
 /**
  * Shows honest routine metadata and primary actions for the read-only detail screen.
  *
- * @param props - Routine data, start state, and start action handler.
+ * @param props - Routine data, edit permission, start state, and start action handler.
  * @returns The summary card with counts, muscle emphasis, and CTAs.
  */
-export function RoutineSummaryCard({ routine, starting, error, onStart }: RoutineSummaryCardProps) {
+export function RoutineSummaryCard({ routine, canEdit, starting, error, onStart }: RoutineSummaryCardProps) {
   const sets = totalSets(routine);
   const muscles = uniqueMuscleGroups(routine);
   const countChip = `◎ ${formatCount(routine.exercises.length, 'ejercicio', 'ejercicios')} · ${formatCount(
@@ -106,16 +107,18 @@ export function RoutineSummaryCard({ routine, starting, error, onStart }: Routin
         >
           {starting ? ROUTINE_COPY.startWorkoutBusy : ROUTINE_COPY.startWorkout}
         </Button>
-        <Link
-          href={`/dashboard/routines/${routine.id}/edit`}
-          className={buttonClassName({
-            variant: 'secondary',
-            size: 'lg',
-            className: 'rounded-2xl bg-transparent text-ink',
-          })}
-        >
-          ⚏ {ROUTINE_COPY.editRoutine}
-        </Link>
+        {canEdit ? (
+          <Link
+            href={`/dashboard/routines/${routine.id}/edit`}
+            className={buttonClassName({
+              variant: 'secondary',
+              size: 'lg',
+              className: 'rounded-2xl bg-transparent text-ink',
+            })}
+          >
+            ⚏ {ROUTINE_COPY.editRoutine}
+          </Link>
+        ) : null}
       </div>
     </Card>
   );

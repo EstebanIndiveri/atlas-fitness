@@ -184,6 +184,9 @@ export default function RoutineDetailPage() {
     );
   }
 
+  // System and plan-scoped routines are read-only; only own, stand-alone routines are editable.
+  const canEdit = !state.routine.isSystem && trainingPlanId === undefined;
+
   return (
     <PageContainer>
       <div className="space-y-4" data-testid={ROUTINE_TEST_IDS.detail}>
@@ -200,9 +203,10 @@ export default function RoutineDetailPage() {
           </div>
         </header>
 
-        <RoutineDetailTabs routineId={state.routine.id} />
+        {canEdit ? <RoutineDetailTabs routineId={state.routine.id} /> : null}
         <RoutineSummaryCard
           routine={state.routine}
+          canEdit={canEdit}
           starting={starting}
           error={startError}
           onStart={() => void startWorkout()}
