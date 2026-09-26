@@ -93,9 +93,10 @@ describe('RoutinesPage', () => {
     render(<RoutinesPage />);
 
     await waitFor(() => {
-      const link = screen.getByText('Gestionar plan semanal');
+      const link = screen.getByRole('link', { name: 'Gestionar plan semanal' });
       expect(link.getAttribute('href')).toBe('/dashboard/plan/77');
     });
+    expect(screen.queryByRole('link', { name: 'Gestionar plan' })).toBeNull();
   });
 
   it('routes plan management to new-plan creation when there is no active plan', async () => {
@@ -143,6 +144,7 @@ describe('RoutinesPage', () => {
 
     expect(await screen.findByRole('alert')).toBeTruthy();
     expect(screen.queryByRole('link', { name: 'Crear plan semanal' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Gestionar plan semanal' })).toBeNull();
     expect(screen.queryByRole('link', { name: 'Gestionar plan' })).toBeNull();
   });
 });

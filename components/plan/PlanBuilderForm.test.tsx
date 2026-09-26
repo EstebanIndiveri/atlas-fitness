@@ -152,6 +152,24 @@ describe('PlanBuilderForm', () => {
     render(<PlanBuilderForm {...props} mode="edit" />);
 
     expect(screen.getByRole('heading', { name: 'Editar plan semanal' })).toBeTruthy();
+    expect(
+      screen.getByText(
+        'Guardar crea una versión nueva del plan y conserva la anterior en el historial.',
+      ),
+    ).toBeTruthy();
+    expect(screen.getByTestId(PLAN_TEST_IDS.submit).textContent).toBe('Guardar cambios');
+  });
+
+  it('pins the exact submit label of each mode', () => {
+    const props = baseProps();
+    props.canSubmit = true;
+    const { unmount } = render(<PlanBuilderForm {...props} />);
+
+    expect(screen.getByTestId(PLAN_TEST_IDS.submit).textContent).toBe('Guardar plan');
+
+    unmount();
+    render(<PlanBuilderForm {...props} mode="edit" />);
+
     expect(screen.getByTestId(PLAN_TEST_IDS.submit).textContent).toBe('Guardar cambios');
   });
 });

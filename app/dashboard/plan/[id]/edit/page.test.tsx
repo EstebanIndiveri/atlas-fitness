@@ -111,6 +111,11 @@ describe('EditPlanPage', () => {
       initialPlan: loadedPlan,
     });
     expect(screen.getByRole('heading', { name: 'Editar plan semanal' })).toBeTruthy();
+    expect(
+      screen.getByText(
+        'Guardar crea una versión nueva del plan y conserva la anterior en el historial.',
+      ),
+    ).toBeTruthy();
     expect(screen.getByTestId('plan-submit').textContent).toBe('Guardar cambios');
     expect(screen.getByRole('link', { name: 'Volver al plan' }).getAttribute('href')).toBe(
       '/dashboard/plan/77',
