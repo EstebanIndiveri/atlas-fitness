@@ -26,7 +26,7 @@ export interface RoutineDraftProposalProps {
  * @param props Draft, submitted brief summary, and creation callbacks.
  * @returns Coach Atlas proposal, reason card, exercise detail list, and CTAs.
  * @example
- * <RoutineDraftProposal draft={draft} daysPerWeek={3} busy={false} onAccept={save} onAdjust={reset} />
+ * <RoutineDraftProposal draft={draft} sessionLengthMinutes={45} busy={false} onDraftChange={setDraft} onLoadCandidates={loadCandidates} onAccept={save} onAdjust={reset} />
  */
 export function RoutineDraftProposal({
   draft,
