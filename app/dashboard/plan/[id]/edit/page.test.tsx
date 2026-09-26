@@ -2,7 +2,7 @@
  * @jest-environment jsdom
  */
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 const mockPush = jest.fn();
 let mockParamsId = '77';
@@ -54,6 +54,9 @@ describe('EditPlanPage', () => {
 
     expect(screen.getByText('Plan no encontrado')).toBeTruthy();
     expect(screen.getByText('No existe o no está disponible para tu cuenta.')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Crear un plan' }).getAttribute('href')).toBe(
+      '/dashboard/plan/new',
+    );
   });
 
   it('loads the plan and renders the builder in edit mode', async () => {
@@ -76,6 +79,7 @@ describe('EditPlanPage', () => {
       error: null,
       notFound: false,
     });
+    const submit = jest.fn(async () => true);
     mockUsePlanBuilder.mockReturnValue({
       name: 'Semana actual',
       goal: '',
@@ -89,14 +93,14 @@ describe('EditPlanPage', () => {
         6: { routineId: null, note: '' },
       },
       selectedCount: 0,
-      canSubmit: false,
+      canSubmit: true,
       submitting: false,
       error: null,
       setName: jest.fn(),
       setGoal: jest.fn(),
       setDayRoutine: jest.fn(),
       setDayNote: jest.fn(),
-      submit: jest.fn(),
+      submit,
     });
     const { default: EditPlanPage } = await import('./page');
 
@@ -109,6 +113,13 @@ describe('EditPlanPage', () => {
     expect(screen.getByRole('heading', { name: 'Editar plan semanal' })).toBeTruthy();
     expect(screen.getByText('Actualizá los días, las rutinas y el objetivo de tu semana.')).toBeTruthy();
     expect(screen.getByTestId('plan-submit').textContent).toBe('Guardar cambios');
+    expect(screen.getByRole('link', { name: 'Volver al plan' }).getAttribute('href')).toBe(
+      '/dashboard/plan/77',
+    );
+
+    fireEvent.click(screen.getByTestId('plan-submit'));
+
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/dashboard/plan/77'));
   });
 
   it('treats partially numeric route params as not found', async () => {
@@ -121,5 +132,8 @@ describe('EditPlanPage', () => {
 
     expect(mockUseEditableTrainingPlan).toHaveBeenCalledWith(undefined);
     expect(screen.getByText('Plan no encontrado')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Crear un plan' }).getAttribute('href')).toBe(
+      '/dashboard/plan/new',
+    );
   });
 });
