@@ -2,7 +2,7 @@
 
 Asistente de fitness personal para registrar entrenamientos, pesos, consejos, media de ejercicios y motivación — vía **web app** y **bot de Telegram** (misma lógica de producto que Hermes Finance: un dominio, dos canales).
 
-> **Publicación v0.7.1 (snapshot 2026-09-25):** el PR de release #138 ya se fusionó en `main` como `ba0857c5c42f730263e2d735ff57e69f6b0d42ea`, con `package.json` y `package-lock.json` en 0.7.1. Esta actualización de metadatos dejó listos los docs, y el tag anotado `v0.7.1` quedó creado y publicado sobre `e1a592cb1aa9d26205933e2301b9926b9b834aa0`, el commit final de `main` resultante de ese PR. (Al snapshot 2026-09-25 el tag aún no existía; se creó después.) Este repo publica mediante tag anotado, no mediante GitHub Releases. Ver [`docs/backlog/handoff-2026-09.md`](./docs/backlog/handoff-2026-09.md) para CI y smoke de producción.
+> **Publicación v0.7.1 (snapshot 2026-09-25):** el PR de release #138 ya se fusionó en `main` como `ba0857c5c42f730263e2d735ff57e69f6b0d42ea`, con `package.json` y `package-lock.json` en 0.7.1. Esta actualización de metadatos dejó listos los docs, y el tag anotado `v0.7.1` quedó creado y publicado sobre `e1a592cb1aa9d26205933e2301b9926b9b834aa0`, el commit final de `main` de ese PR de metadata (#139). (Al snapshot 2026-09-25 el tag aún no existía; se creó después.) Este repo publica mediante tag anotado, no mediante GitHub Releases. Ver [`docs/backlog/handoff-2026-09.md`](./docs/backlog/handoff-2026-09.md) para CI y smoke de producción.
 
 ## Visión (borrador)
 
