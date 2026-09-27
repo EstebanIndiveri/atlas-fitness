@@ -7,18 +7,18 @@ import { eq } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { rateLimitBuckets } from '@/lib/db/schema';
-import type { WeeklyPlanDraft, WeeklyPlanDraftInput } from '@/lib/ai/weekly-plan-draft';
+import type { WeeklyPlanComposerDraft, WeeklyPlanComposerInput } from '@/lib/ai/weekly-plan-week-types';
 import type { SessionData } from '@/types/auth';
 import type { ExerciseCatalogItem } from '@/types/exercise';
 import { AppError } from '@/types/errors';
 
 type RequireAuth = typeof import('@/lib/auth/middleware')['requireAuth'];
 type ListExercises = typeof import('@/lib/services/exercises')['listExercises'];
-type GenerateWeeklyPlanDraft = typeof import('@/lib/ai/weekly-plan-draft')['generateWeeklyPlanDraft'];
+type ComposeWeeklyPlanProposal = typeof import('@/lib/ai/weekly-plan-composer')['composeWeeklyPlanProposal'];
 
 const mockRequireAuth = jest.fn<RequireAuth>();
 const mockListExercises = jest.fn<ListExercises>();
-const mockGenerateWeeklyPlanDraft = jest.fn<GenerateWeeklyPlanDraft>();
+const mockComposeWeeklyPlanProposal = jest.fn<ComposeWeeklyPlanProposal>();
 
 jest.mock('@/lib/auth/middleware', () => {
   const actual = jest.requireActual<typeof import('@/lib/auth/middleware')>('@/lib/auth/middleware');
@@ -29,8 +29,8 @@ jest.mock('@/lib/services/exercises', () => ({
   listExercises: mockListExercises,
 }));
 
-jest.mock('@/lib/ai/weekly-plan-draft', () => ({
-  generateWeeklyPlanDraft: mockGenerateWeeklyPlanDraft,
+jest.mock('@/lib/ai/weekly-plan-composer', () => ({
+  composeWeeklyPlanProposal: mockComposeWeeklyPlanProposal,
 }));
 
 let POST: typeof import('./route')['POST'];
@@ -55,9 +55,9 @@ const validBrief = {
   availableEquipment: ['gimnasio'],
   sessionLengthMinutes: 55,
   focusAreas: ['piernas'],
-} satisfies Omit<WeeklyPlanDraftInput, 'catalog'>;
+} satisfies Omit<WeeklyPlanComposerInput, 'catalog'>;
 
-const generatedDraft: WeeklyPlanDraft = {
+const generatedDraft: WeeklyPlanComposerDraft = {
   source: 'gemini',
   name: 'Semana de fuerza',
   goal: validBrief.goal,
@@ -105,7 +105,7 @@ describe('POST /api/training-plan/generate', () => {
     jest.clearAllMocks();
     mockRequireAuth.mockResolvedValue(session(42));
     mockListExercises.mockResolvedValue(catalog);
-    mockGenerateWeeklyPlanDraft.mockResolvedValue(generatedDraft);
+    mockComposeWeeklyPlanProposal.mockResolvedValue(generatedDraft);
   });
 
   beforeEach(async () => {
@@ -119,7 +119,7 @@ describe('POST /api/training-plan/generate', () => {
 
     expect(response.status).toBe(401);
     expect(mockListExercises).not.toHaveBeenCalled();
-    expect(mockGenerateWeeklyPlanDraft).not.toHaveBeenCalled();
+    expect(mockComposeWeeklyPlanProposal).not.toHaveBeenCalled();
   });
 
   it('rejects malformed JSON with the shared validation response', async () => {
@@ -148,7 +148,7 @@ describe('POST /api/training-plan/generate', () => {
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toMatchObject({ code: 'VALIDATION' });
     expect(mockListExercises).not.toHaveBeenCalled();
-    expect(mockGenerateWeeklyPlanDraft).not.toHaveBeenCalled();
+    expect(mockComposeWeeklyPlanProposal).not.toHaveBeenCalled();
   });
 
   it('generates from the authenticated user catalog and returns the generator source', async () => {
@@ -163,7 +163,7 @@ describe('POST /api/training-plan/generate', () => {
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual(generatedDraft);
     expect(mockListExercises).toHaveBeenCalledWith(42);
-    expect(mockGenerateWeeklyPlanDraft).toHaveBeenCalledWith(
+    expect(mockComposeWeeklyPlanProposal).toHaveBeenCalledWith(
       { ...validBrief, catalog },
     );
   });
@@ -174,7 +174,7 @@ describe('POST /api/training-plan/generate', () => {
     const response = await POST(request(validBrief));
 
     expect(response.status).toBe(400);
-    expect(mockGenerateWeeklyPlanDraft).not.toHaveBeenCalled();
+    expect(mockComposeWeeklyPlanProposal).not.toHaveBeenCalled();
   });
 
   it('uses a durable per-user/IP quota and returns typed 429 before generating another draft', async () => {
@@ -192,7 +192,7 @@ describe('POST /api/training-plan/generate', () => {
         code: 'RATE_LIMIT',
         message: 'Se alcanzó el límite de propuestas. Probá de nuevo en un minuto.',
       });
-      expect(mockGenerateWeeklyPlanDraft).toHaveBeenCalledTimes(1);
+      expect(mockComposeWeeklyPlanProposal).toHaveBeenCalledTimes(1);
       expect(mockListExercises).toHaveBeenCalledTimes(1);
 
       const [bucket] = await db

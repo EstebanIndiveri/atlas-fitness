@@ -352,11 +352,13 @@ test.describe('Coach Context', () => {
       await expect(card.getByRole('heading', { name: day.title, exact: true })).toBeVisible();
       await expect(card).toContainText(day.focus);
       await expect(card).toContainText(WEEKDAY_LABELS[day.dayOfWeek] ?? 'Día desconocido');
-      await expect(card.getByRole('listitem')).toHaveCount(day.exercises.length);
-      for (const exercise of day.exercises) {
-        await expect(card.getByText(exercise.exerciseName, { exact: true })).toBeVisible();
+      const exerciseItems = card.getByRole('listitem');
+      await expect(exerciseItems).toHaveCount(day.exercises.length);
+      for (const [index, exercise] of day.exercises.entries()) {
+        const item = exerciseItems.nth(index);
+        await expect(item.getByText(exercise.exerciseName, { exact: true })).toBeVisible();
         await expect(
-          card.getByText(
+          item.getByText(
             `${exercise.muscleGroup} · ${exercise.targetSets}×${exercise.targetReps}`,
             { exact: true },
           ),
