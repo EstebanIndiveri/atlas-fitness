@@ -234,13 +234,23 @@ test('golden path: onboarding answers drive the Coach brief, the draft stays pre
   await expect(page.locator('#guided-equipment')).toHaveValue(EQUIPMENT_TITLE.dumbbells);
 
   const draft = await generateWeek(page, { goal: GOAL_TITLE.strength, minutes: 45 });
-  expect(draft.source).toBe('fallback');
   expect(draft.name).toBe(`Coach Atlas · ${GOAL_TITLE.strength}`);
   expect(draft.goal).toBe(GOAL_TITLE.strength);
-  expect(draft.days.map((day) => day.dayOfWeek)).toEqual([1, 4]);
+  expect(draft.days).toHaveLength(2);
   await expect(page.getByText('Objetivo indicado: Ganar fuerza.')).toBeVisible();
-  await expect(page.getByText(FALLBACK_PROVENANCE)).toBeVisible();
-  await expect(page.getByText(GEMINI_PROVENANCE)).toHaveCount(0);
+  if (process.env.CI) {
+    expect(draft.source).toBe('fallback');
+  }
+  // Provenance and the weekday set are source-dependent: CI pins GEMINI_API_KEY to ''
+  // so generation always falls back, but a locally started server carrying a real key
+  // legitimately returns a coherent Gemini week instead.
+  if (draft.source === 'fallback') {
+    expect(draft.days.map((day) => day.dayOfWeek)).toEqual([1, 4]);
+    await expect(page.getByText(FALLBACK_PROVENANCE)).toBeVisible();
+  } else {
+    expect(new Set(draft.days.map((day) => day.dayOfWeek)).size).toBe(2);
+    await expect(page.getByText(GEMINI_PROVENANCE)).toBeVisible();
+  }
 
   // Preview-only: nothing is written until the user explicitly saves.
   await expectNoActivePlan(page);
@@ -286,16 +296,27 @@ test('preferences edited after a plan is saved drive the next Coach generation',
 
   const draft = await generateWeek(page, { goal: GOAL_TITLE.fitness, days: 5 });
   expect(draft.goal).toBe(GOAL_TITLE.fitness);
-  expect(draft.days.map((day) => day.dayOfWeek)).toEqual([1, 2, 3, 4, 5]);
-  // The orchestrator owns the week: one scheduled day per requested day, each
-  // titled from its weekday and carrying at least one exercise.
-  for (const day of draft.days) {
-    expect(day.title.startsWith(`Día ${day.dayOfWeek} · `)).toBe(true);
+  expect(draft.days).toHaveLength(5);
+  // The orchestrator owns the week: one entry per requested day, titled by the day's
+  // POSITION in the week (`Día 1 · …`) — the ordinal is not the weekday — and each
+  // carrying a focus plus at least one exercise.
+  for (const [index, day] of draft.days.entries()) {
+    expect(day.title.startsWith(`Día ${index + 1} · `)).toBe(true);
+    expect(day.title.endsWith(` · ${day.focus}`)).toBe(true);
     expect(day.focus.length).toBeGreaterThan(0);
     expect(day.exercises.length).toBeGreaterThan(0);
   }
   await expect(page.getByText('Objetivo indicado: Mejorar condición física.')).toBeVisible();
-  await expect(page.getByText(FALLBACK_PROVENANCE)).toBeVisible();
+  if (process.env.CI) {
+    expect(draft.source).toBe('fallback');
+  }
+  if (draft.source === 'fallback') {
+    expect(draft.days.map((day) => day.dayOfWeek)).toEqual([1, 2, 3, 4, 5]);
+    await expect(page.getByText(FALLBACK_PROVENANCE)).toBeVisible();
+  } else {
+    expect(new Set(draft.days.map((day) => day.dayOfWeek)).size).toBe(5);
+    await expect(page.getByText(GEMINI_PROVENANCE)).toBeVisible();
+  }
 
   // The previously saved plan is still the active one — the new draft replaced nothing yet.
   const stillActive = await readActivePlan(page);
@@ -367,6 +388,14 @@ test('cross-user ownership isolation: another account cannot read the plan or it
   const planId = body.plan.id;
   const routineId = (body.schedule ?? []).find((day) => day.routineId !== null)?.routineId;
   expect(routineId).toBeDefined();
+
+  // Positive control on the owner's own session: the same ids resolve here, so the 404s
+  // asserted for the intruder below are identity-scoped rather than a blanket 404.
+  expect((await page.request.get(`/api/training-plan/${String(planId)}`)).status()).toBe(200);
+  expect(
+    (await page.request.get(`/api/routines/${String(routineId)}?trainingPlanId=${String(planId)}`))
+      .status(),
+  ).toBe(200);
 
   const intruderContext = await browser.newContext({
     storageState: './e2e/storage/onboarded.json',
