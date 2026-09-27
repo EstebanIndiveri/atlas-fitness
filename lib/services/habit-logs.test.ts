@@ -241,6 +241,7 @@ describe('loadHabitActivityInWindow', () => {
     expect(sql).toMatch(/"habit_logs"\."user_id" = \?/);
     expect(sql).toMatch(/"habit_logs"\."local_date" >= \?/);
     expect(sql).toMatch(/"habit_logs"\."local_date" <= \?/);
+    expect(sql).toMatch(/order by "habit_logs"\."local_date" asc/);
     expect(args).toEqual([userId, WINDOW_START, WINDOW_END]);
   });
 
