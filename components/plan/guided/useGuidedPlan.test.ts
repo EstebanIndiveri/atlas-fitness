@@ -14,6 +14,7 @@ function jsonResponse(body: unknown, status = 200): Response {
   return {
     ok: status >= 200 && status < 300,
     status,
+    text: async () => JSON.stringify(body),
     json: async () => body,
   } as Response;
 }
@@ -77,6 +78,7 @@ describe('useGuidedPlan', () => {
     const fetchMock = jest
       .fn<typeof fetch>()
       .mockResolvedValueOnce(jsonResponse(noSavedPreferences))
+      .mockResolvedValueOnce(jsonResponse(null))
       .mockResolvedValueOnce(jsonResponse(generatedPlan('hipertrofia con técnica', 3)))
       .mockResolvedValueOnce(jsonResponse({ plan: { id: 55 }, schedule: [] }));
     global.fetch = fetchMock;
@@ -96,9 +98,9 @@ describe('useGuidedPlan', () => {
     });
 
     await waitFor(() => expect(onSaved).toHaveBeenCalledWith('/dashboard/today'));
-    expect(fetchMock).toHaveBeenCalledTimes(3);
-    expect(fetchMock.mock.calls[1]?.[0]).toBe('/api/training-plan/generate');
-    const generationPayload = JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body)) as Record<string, unknown>;
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    expect(fetchMock.mock.calls[2]?.[0]).toBe('/api/training-plan/generate');
+    const generationPayload = JSON.parse(String(fetchMock.mock.calls[2]?.[1]?.body)) as Record<string, unknown>;
     expect(generationPayload).toEqual({
       goal: '  hipertrofia con técnica  ',
       daysPerWeek: 3,
@@ -109,8 +111,8 @@ describe('useGuidedPlan', () => {
     });
     expect(generationPayload).not.toHaveProperty('catalog');
     expect(generationPayload).not.toHaveProperty('apiKey');
-    expect(fetchMock.mock.calls[2]?.[0]).toBe('/api/training-plan/guided');
-    const savePayload = JSON.parse(String(fetchMock.mock.calls[2]?.[1]?.body)) as {
+    expect(fetchMock.mock.calls[3]?.[0]).toBe('/api/training-plan/guided');
+    const savePayload = JSON.parse(String(fetchMock.mock.calls[3]?.[1]?.body)) as {
       mutationId: string;
       name: string;
       goal: string;
@@ -136,6 +138,7 @@ describe('useGuidedPlan', () => {
     const fetchMock = jest
       .fn<typeof fetch>()
       .mockResolvedValueOnce(jsonResponse(noSavedPreferences))
+      .mockResolvedValueOnce(jsonResponse(null))
       .mockResolvedValueOnce(jsonResponse(generatedPlan('fuerza', 3)))
       .mockResolvedValueOnce(jsonResponse({ message: 'Rutina inválida' }, 400));
     global.fetch = fetchMock;
@@ -152,8 +155,8 @@ describe('useGuidedPlan', () => {
       message: 'Rutina inválida',
       status: 400,
     });
-    expect(fetchMock).toHaveBeenCalledTimes(3);
-    expect(fetchMock.mock.calls[2]?.[0]).toBe('/api/training-plan/guided');
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    expect(fetchMock.mock.calls[3]?.[0]).toBe('/api/training-plan/guided');
     expect(result.current.saving).toBe(false);
   });
 
@@ -161,6 +164,7 @@ describe('useGuidedPlan', () => {
     const fetchMock = jest
       .fn<typeof fetch>()
       .mockResolvedValueOnce(jsonResponse(noSavedPreferences))
+      .mockResolvedValueOnce(jsonResponse(null))
       .mockResolvedValueOnce(jsonResponse(generatedPlan('fuerza', 2)))
       .mockRejectedValueOnce(new TypeError('Failed to fetch'))
       .mockResolvedValueOnce(jsonResponse({ plan: { id: 55 }, schedule: [] }));
@@ -176,9 +180,9 @@ describe('useGuidedPlan', () => {
     });
 
     expect(result.current.step).toBe('success');
-    expect(fetchMock).toHaveBeenCalledTimes(4);
-    const firstSave = fetchMock.mock.calls[2];
-    const retrySave = fetchMock.mock.calls[3];
+    expect(fetchMock).toHaveBeenCalledTimes(5);
+    const firstSave = fetchMock.mock.calls[3];
+    const retrySave = fetchMock.mock.calls[4];
     expect(firstSave?.[0]).toBe('/api/training-plan/guided');
     expect(retrySave?.[0]).toBe('/api/training-plan/guided');
     expect(retrySave?.[1]?.body).toBe(firstSave?.[1]?.body);
@@ -189,6 +193,7 @@ describe('useGuidedPlan', () => {
     const fetchMock = jest
       .fn<typeof fetch>()
       .mockResolvedValueOnce(jsonResponse(noSavedPreferences))
+      .mockResolvedValueOnce(jsonResponse(null))
       .mockResolvedValueOnce(jsonResponse(generatedPlan('fuerza', 1)))
       .mockResolvedValue(jsonResponse({ id: 101 }));
     global.fetch = fetchMock;
@@ -203,12 +208,13 @@ describe('useGuidedPlan', () => {
     });
 
     expect(result.current.step).toBe('success');
-    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock).toHaveBeenCalledTimes(4);
   });
 
   it('keeps draft generation non-persistent until the explicit save action', async () => {
     const fetchMock = jest.fn<typeof fetch>()
       .mockResolvedValueOnce(jsonResponse(noSavedPreferences))
+      .mockResolvedValueOnce(jsonResponse(null))
       .mockResolvedValueOnce(jsonResponse(generatedPlan('fuerza', 3)));
     global.fetch = fetchMock;
     const { result } = renderHook(() => useGuidedPlan({ catalog }));
@@ -219,8 +225,8 @@ describe('useGuidedPlan', () => {
     });
 
     expect(result.current.step).toBe('review');
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(fetchMock.mock.calls[1]?.[0]).toBe('/api/training-plan/generate');
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock.mock.calls[2]?.[0]).toBe('/api/training-plan/generate');
     expect(fetchMock).toHaveBeenCalledWith('/api/training-plan/generate', expect.any(Object));
   });
 
@@ -229,6 +235,7 @@ describe('useGuidedPlan', () => {
     invalidDraft.days[1] = { ...invalidDraft.days[1]!, dayOfWeek: invalidDraft.days[0]!.dayOfWeek };
     const fetchMock = jest.fn<typeof fetch>()
       .mockResolvedValueOnce(jsonResponse(noSavedPreferences))
+      .mockResolvedValueOnce(jsonResponse(null))
       .mockResolvedValueOnce(jsonResponse(invalidDraft));
     global.fetch = fetchMock;
     const { result } = renderHook(() => useGuidedPlan({ catalog }));
@@ -253,6 +260,7 @@ describe('useGuidedPlan', () => {
     };
     const fetchMock = jest.fn<typeof fetch>()
       .mockResolvedValueOnce(jsonResponse(noSavedPreferences))
+      .mockResolvedValueOnce(jsonResponse(null))
       .mockResolvedValueOnce(jsonResponse(longDraft))
       .mockResolvedValueOnce(jsonResponse({ plan: { id: 55 }, schedule: [] }));
     global.fetch = fetchMock;
@@ -265,7 +273,7 @@ describe('useGuidedPlan', () => {
       await result.current.confirmDraft();
     });
 
-    const savedPlan = JSON.parse(String(fetchMock.mock.calls[2]?.[1]?.body)) as {
+    const savedPlan = JSON.parse(String(fetchMock.mock.calls[3]?.[1]?.body)) as {
       days: Array<{ note: string }>;
     };
     expect(savedPlan.days[0]?.note).toHaveLength(140);

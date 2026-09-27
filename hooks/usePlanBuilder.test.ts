@@ -109,14 +109,15 @@ describe('usePlanBuilder', () => {
 
     expect(outcome).not.toBeNull();
     expect(createTrainingPlanMock).toHaveBeenCalledTimes(1);
-    expect(createTrainingPlanMock).toHaveBeenCalledWith({
+    expect(createTrainingPlanMock).toHaveBeenCalledWith(expect.objectContaining({
       name: 'Semana base',
       goal: 'Hipertrofia',
+      mutationId: expect.stringMatching(/^[0-9a-f-]{36}$/),
       schedule: [
         { dayOfWeek: 1, routineId: 10, note: 'Empuje técnico' },
         { dayOfWeek: 3, routineId: 20, note: undefined },
       ],
-    });
+    }));
   });
 
   it('clears a day when set back to rest and omits empty goal', async () => {
@@ -136,10 +137,11 @@ describe('usePlanBuilder', () => {
       await result.current.submit();
     });
 
-    expect(createTrainingPlanMock).toHaveBeenCalledWith({
+    expect(createTrainingPlanMock).toHaveBeenCalledWith(expect.objectContaining({
       name: 'Semana',
+      mutationId: expect.stringMatching(/^[0-9a-f-]{36}$/),
       schedule: [{ dayOfWeek: 5, routineId: 20, note: undefined }],
-    });
+    }));
   });
 
   it('does not call the API when it cannot submit', async () => {
@@ -190,13 +192,41 @@ describe('usePlanBuilder', () => {
     expect(result.current.submitting).toBe(false);
   });
 
-  it('initializes edit mode from an existing plan and patches the same id', async () => {
-    updateTrainingPlanMock.mockResolvedValue(planResult);
+  it('reuses one idempotency key on unchanged retries and rotates it after payload edits', async () => {
+    createTrainingPlanMock
+      .mockRejectedValueOnce(new Error('network timeout'))
+      .mockResolvedValue(planResult);
+    const { result } = renderHook(() => usePlanBuilder(routines));
+    act(() => {
+      result.current.setName('Semana');
+      result.current.setDayRoutine(1, 10);
+    });
+
+    await act(async () => {
+      await result.current.submit();
+    });
+    const firstMutationId = createTrainingPlanMock.mock.calls[0]?.[0].mutationId;
+    await act(async () => {
+      await result.current.submit();
+    });
+    const retryMutationId = createTrainingPlanMock.mock.calls[1]?.[0].mutationId;
+    expect(retryMutationId).toBe(firstMutationId);
+
+    act(() => result.current.setGoal('Fuerza'));
+    await act(async () => {
+      await result.current.submit();
+    });
+    expect(createTrainingPlanMock.mock.calls[2]?.[0].mutationId).not.toBe(firstMutationId);
+  });
+
+  it('initializes edit mode and submits a confirmed replacement with the captured source state', async () => {
+    createTrainingPlanMock.mockResolvedValue(planResult);
     const { result } = renderHook(() =>
       usePlanBuilder(routines, {
         mode: 'edit',
         initialPlan: {
           plan: { ...planResult.plan, id: 77, name: 'Semana actual', goal: 'Fuerza' },
+          replacementStateHash: 'a'.repeat(64),
           schedule: [
             {
               id: 21,
@@ -222,11 +252,15 @@ describe('usePlanBuilder', () => {
       await result.current.submit();
     });
 
-    expect(createTrainingPlanMock).not.toHaveBeenCalled();
-    expect(updateTrainingPlanMock).toHaveBeenCalledWith(77, {
+    expect(updateTrainingPlanMock).not.toHaveBeenCalled();
+    expect(createTrainingPlanMock).toHaveBeenCalledWith(expect.objectContaining({
       name: 'Semana actual',
       goal: 'Fuerza',
+      mutationId: expect.stringMatching(/^[0-9a-f-]{36}$/),
+      replacePlanId: 77,
+      replacePlanUpdatedAt: new Date(0).toISOString(),
+      replacePlanStateHash: 'a'.repeat(64),
       schedule: [{ dayOfWeek: 2, routineId: 10, note: 'Fuerza' }],
-    });
+    }));
   });
 });

@@ -1,12 +1,24 @@
-import { and, asc, eq, gte, isNotNull, isNull, lt } from 'drizzle-orm';
+import { createHash } from 'node:crypto';
+import { and, asc, eq, gte, inArray, isNotNull, isNull, lt } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { catalogVisibleToUser } from '@/lib/auth/ownership';
 import { db } from '@/lib/db/client';
-import { routines, scheduledRoutines, trainingPlans, workouts } from '@/lib/db/schema';
+import { isSqliteBusyError, isUniqueConstraintError } from '@/lib/db/unique-error';
+import {
+  guidedTrainingPlanSaves,
+  routineExercises,
+  routines,
+  scheduledRoutines,
+  trainingPlans,
+  workouts,
+} from '@/lib/db/schema';
 import { buildDayReason, type DayReasonEnergy } from '@/lib/services/day-reason';
 import { getTodayCheckIn } from '@/lib/services/daily-checkin';
 import { getTodayRoutineCompletion, type RoutineCompletion } from '@/lib/services/routine-completion';
+import { hashTrainingPlanImprovementValue } from '@/lib/services/training-plan-improvement-hash';
+import { loadTrainingPlanReplacementState } from '@/lib/services/training-plan-improvement-state';
+import { assertTrainingPlanTransactionState } from '@/lib/services/training-plan-transaction-state';
 import { addLocalDateDays, cordobaLocalDate, cordobaLocalDateToUtcRange } from '@/lib/time/cordoba';
 import { AppError } from '@/types/errors';
 import type { ScheduledRoutine, TrainingPlan } from '@/lib/db/schema';
@@ -48,6 +60,46 @@ export type TodayScheduledRoutineResult =
 export interface CreateTrainingPlanResult {
   plan: TrainingPlan;
   schedule: ScheduledRoutine[];
+  replacementStateHash?: string;
+}
+
+const MAX_PLAN_WRITE_ATTEMPTS = 3;
+const trainingPlanWriteLocks = new Map<number, Promise<void>>();
+
+async function withUserTrainingPlanWriteLock<T>(
+  userId: number,
+  operation: () => Promise<T>,
+): Promise<T> {
+  const previous = trainingPlanWriteLocks.get(userId) ?? Promise.resolve();
+  const run = previous.catch(() => undefined).then(operation);
+  const lock = run.then(
+    () => undefined,
+    () => undefined,
+  );
+  trainingPlanWriteLocks.set(userId, lock);
+  try {
+    return await run;
+  } finally {
+    if (trainingPlanWriteLocks.get(userId) === lock) {
+      trainingPlanWriteLocks.delete(userId);
+    }
+  }
+}
+
+async function withPlanWriteRetries<T>(operation: () => Promise<T>): Promise<T> {
+  for (let attempt = 0; attempt < MAX_PLAN_WRITE_ATTEMPTS; attempt += 1) {
+    try {
+      return await operation();
+    } catch (error) {
+      if (isUniqueConstraintError(error)) {
+        throw new AppError('CONFLICT', 'El estado activo del plan cambió. Volvé a intentarlo.');
+      }
+      if (!isSqliteBusyError(error) || attempt === MAX_PLAN_WRITE_ATTEMPTS - 1) {
+        throw error;
+      }
+    }
+  }
+  throw new AppError('CONFLICT', 'No se pudo guardar el plan. Volvé a intentarlo.');
 }
 
 const dayOfWeekSchema = z.union([
@@ -60,10 +112,14 @@ const dayOfWeekSchema = z.union([
   z.literal(6),
 ]);
 
-const createTrainingPlanSchema = z.object({
+const createTrainingPlanBaseSchema = z.object({
   userId: z.number().int().positive(),
   name: z.string().trim().min(1).max(120),
   goal: z.string().trim().min(1).max(60).optional(),
+  mutationId: z.string().uuid().optional(),
+  replacePlanId: z.number().int().positive().optional(),
+  replacePlanUpdatedAt: z.string().datetime().optional(),
+  replacePlanStateHash: z.string().regex(/^[0-9a-f]{64}$/).optional(),
   schedule: z
     .array(
       z.object({
@@ -75,6 +131,16 @@ const createTrainingPlanSchema = z.object({
     .min(1)
     .max(7),
 });
+
+const createTrainingPlanSchema = createTrainingPlanBaseSchema.refine((value) => {
+  const replacementFields = [
+    value.replacePlanId,
+    value.replacePlanUpdatedAt,
+    value.replacePlanStateHash,
+  ];
+  const providedFields = replacementFields.filter((field) => field !== undefined).length;
+  return providedFields === 0 || providedFields === replacementFields.length;
+}, { message: 'La versión del plan a reemplazar es inválida' });
 
 type ValidCreateTrainingPlanInput = z.infer<typeof createTrainingPlanSchema>;
 type ValidTrainingPlanWriteInput = Omit<ValidCreateTrainingPlanInput, 'userId'>;
@@ -100,12 +166,18 @@ function parseCreateTrainingPlanInput(input: unknown): ValidCreateTrainingPlanIn
   if (uniqueDays.size !== parsed.data.schedule.length) {
     throw new AppError('VALIDATION', 'El plan no puede repetir días');
   }
+  if (
+    parsed.data.replacePlanId !== undefined
+    && parsed.data.mutationId === undefined
+  ) {
+    throw new AppError('VALIDATION', 'El reemplazo requiere un ID de mutación');
+  }
 
   return parsed.data;
 }
 
 function parseTrainingPlanWriteInput(input: unknown): ValidTrainingPlanWriteInput {
-  const parsed = createTrainingPlanSchema.omit({ userId: true }).safeParse(input);
+  const parsed = createTrainingPlanBaseSchema.omit({ userId: true }).safeParse(input);
 
   if (!parsed.success) {
     const invalidDay = parsed.error.issues.some((issue) => issue.path.includes('dayOfWeek'));
@@ -151,18 +223,158 @@ function getDayOfWeekFromLocalDate(localDate: string): TrainingPlanDayOfWeek {
   }
 }
 
-async function assertAccessibleRoutine(routineId: number, userId: number): Promise<void> {
-  const row = await db.query.routines.findFirst({
-    where: and(
-      eq(routines.id, routineId),
-      isNull(routines.deletedAt),
-      catalogVisibleToUser(routines, userId),
-    ),
-  });
+function hashCreateTrainingPlanPayload(input: ValidCreateTrainingPlanInput): string {
+  const payload = {
+    userId: input.userId,
+    name: input.name,
+    goal: input.goal ?? null,
+    schedule: input.schedule.map(({ dayOfWeek, routineId, note }) => ({
+      dayOfWeek,
+      routineId,
+      note: note ?? null,
+    })),
+    replacePlanId: input.replacePlanId ?? null,
+    replacePlanUpdatedAt: input.replacePlanUpdatedAt ?? null,
+    replacePlanStateHash: input.replacePlanStateHash ?? null,
+  };
+  return createHash('sha256').update(JSON.stringify(payload)).digest('hex');
+}
 
-  if (!row) {
+async function loadPlanSaveReceipt(
+  tx: Pick<typeof db, 'select'>,
+  userId: number,
+  mutationId: string,
+  payloadHash: string,
+): Promise<CreateTrainingPlanResult | null> {
+  const [existing] = await tx
+    .select()
+    .from(guidedTrainingPlanSaves)
+    .where(
+      and(
+        eq(guidedTrainingPlanSaves.userId, userId),
+        eq(guidedTrainingPlanSaves.clientMutationId, mutationId),
+      ),
+    )
+    .limit(1);
+  if (!existing) {
+    return null;
+  }
+  if (existing.payloadHash !== payloadHash || existing.trainingPlanId === null) {
+    throw new AppError('CONFLICT', 'El ID de mutación ya fue utilizado con otra propuesta');
+  }
+  const [plan] = await tx
+    .select()
+    .from(trainingPlans)
+    .where(and(eq(trainingPlans.id, existing.trainingPlanId), eq(trainingPlans.userId, userId)))
+    .limit(1);
+  if (!plan) {
+    throw new AppError('CONFLICT', 'No se pudo recuperar el plan guardado');
+  }
+  const schedule = await tx
+    .select()
+    .from(scheduledRoutines)
+    .where(eq(scheduledRoutines.trainingPlanId, plan.id))
+    .orderBy(asc(scheduledRoutines.dayOfWeek));
+  return { plan, schedule };
+}
+
+async function assertRoutinesAssignable(
+  tx: Pick<typeof db, 'select'>,
+  assignments: ValidTrainingPlanWriteInput['schedule'],
+  userId: number,
+  sourcePlanId: number | null,
+): Promise<void> {
+  const routineIds = [...new Set(assignments.map(({ routineId }) => routineId))];
+  const rows = await tx
+    .select({
+      id: routines.id,
+      userId: routines.userId,
+      isSystem: routines.isSystem,
+      trainingPlanId: routines.trainingPlanId,
+    })
+    .from(routines)
+    .where(
+      and(
+        inArray(routines.id, routineIds),
+        isNull(routines.deletedAt),
+        catalogVisibleToUser(routines, userId),
+      ),
+    );
+  const assignableIds = new Set(
+    rows
+      .filter((routine) =>
+        routine.isSystem
+        || routine.trainingPlanId === null
+        || (
+          sourcePlanId !== null
+          && routine.trainingPlanId === sourcePlanId
+          && routine.userId === userId
+        ),
+      )
+      .map(({ id }) => id),
+  );
+  if (assignableIds.size !== routineIds.length) {
     throw new AppError('VALIDATION', 'Rutina no disponible');
   }
+}
+
+async function cloneAssignedPlanRoutines(
+  tx: Pick<typeof db, 'select' | 'insert'>,
+  assignments: ValidTrainingPlanWriteInput['schedule'],
+  userId: number,
+  sourcePlanId: number | null,
+  targetPlanId: number,
+): Promise<Map<number, number>> {
+  const sourceRoutineIds = [...new Set(assignments.map(({ routineId }) => routineId))];
+  if (sourcePlanId === null || sourceRoutineIds.length === 0) {
+    return new Map();
+  }
+  const sourceRoutines = await tx
+    .select()
+    .from(routines)
+    .where(
+      and(
+        inArray(routines.id, sourceRoutineIds),
+        eq(routines.userId, userId),
+        eq(routines.trainingPlanId, sourcePlanId),
+        isNull(routines.deletedAt),
+      ),
+    );
+  const clones = new Map<number, number>();
+  for (const source of sourceRoutines) {
+    const [clone] = await tx
+      .insert(routines)
+      .values({
+        slug: `plan-${targetPlanId}-routine-${source.id}`,
+        name: source.name,
+        description: source.description,
+        kind: source.kind,
+        restSeconds: source.restSeconds,
+        isSystem: false,
+        userId,
+        trainingPlanId: targetPlanId,
+      })
+      .returning({ id: routines.id });
+    const exercises = await tx
+      .select({
+        exerciseId: routineExercises.exerciseId,
+        sortOrder: routineExercises.sortOrder,
+        targetSets: routineExercises.targetSets,
+        targetReps: routineExercises.targetReps,
+      })
+      .from(routineExercises)
+      .where(eq(routineExercises.routineId, source.id));
+    if (exercises.length > 0) {
+      await tx.insert(routineExercises).values(
+        exercises.map((exercise) => ({
+          routineId: clone.id,
+          ...exercise,
+        })),
+      );
+    }
+    clones.set(source.id, clone.id);
+  }
+  return clones;
 }
 
 async function findActiveTrainingPlan(userId: number): Promise<TrainingPlan | null> {
@@ -188,6 +400,19 @@ async function findActiveTrainingPlan(userId: number): Promise<TrainingPlan | nu
 export async function getActiveTrainingPlanId(userId: number): Promise<number | null> {
   const plan = await findActiveTrainingPlan(userId);
   return plan?.id ?? null;
+}
+
+/**
+ * Loads the authenticated user's active plan and its replacement snapshot, if one exists.
+ *
+ * @param userId - Authenticated owner whose active plan should be loaded.
+ * @returns The active plan with its schedule and replacement hash, or null.
+ */
+export async function getActiveTrainingPlan(
+  userId: number,
+): Promise<CreateTrainingPlanResult | null> {
+  const plan = await findActiveTrainingPlan(userId);
+  return plan ? getTrainingPlanById(userId, plan.id) : null;
 }
 
 async function findOwnedTrainingPlan(userId: number, planId: number): Promise<TrainingPlan> {
@@ -255,26 +480,81 @@ async function buildTodayTrainingPlanDayReason(
 }
 
 /**
- * Creates a V1 weekly TrainingPlan and makes it the user's only active plan.
+ * Creates a V1 weekly TrainingPlan draft and atomically activates it after any confirmed replacement.
  *
  * @param input - Unknown boundary payload validated with Zod before persistence.
  * @returns The active plan and its weekday schedule. Weekday is 0=Sunday through 6=Saturday.
- * @throws {AppError} VALIDATION when input or referenced routines are invalid.
+ * @throws {AppError} VALIDATION when input or referenced routines are invalid, or CONFLICT when a replacement is unconfirmed/stale.
  * @example
  * await createTrainingPlan({ userId: 1, name: 'Semana', schedule: [{ dayOfWeek: 1, routineId: 10 }] });
  */
 export async function createTrainingPlan(input: unknown): Promise<CreateTrainingPlanResult> {
   const validInput = parseCreateTrainingPlanInput(input);
-  for (const assignment of validInput.schedule) {
-    await assertAccessibleRoutine(assignment.routineId, validInput.userId);
-  }
-
+  const payloadHash = hashCreateTrainingPlanPayload(validInput);
   const now = new Date();
-  return db.transaction(async (tx) => {
-    await tx
-      .update(trainingPlans)
-      .set({ isActive: false, updatedAt: now })
-      .where(and(eq(trainingPlans.userId, validInput.userId), eq(trainingPlans.isActive, true)));
+  return withUserTrainingPlanWriteLock(
+    validInput.userId,
+    () => withPlanWriteRetries(() => db.transaction(async (tx) => {
+    if (validInput.mutationId) {
+      const [claim] = await tx
+        .insert(guidedTrainingPlanSaves)
+        .values({
+          userId: validInput.userId,
+          clientMutationId: validInput.mutationId,
+          payloadHash,
+        })
+        .onConflictDoNothing({
+          target: [
+            guidedTrainingPlanSaves.userId,
+            guidedTrainingPlanSaves.clientMutationId,
+          ],
+        })
+        .returning({ id: guidedTrainingPlanSaves.id });
+      if (!claim) {
+        const receipt = await loadPlanSaveReceipt(
+          tx,
+          validInput.userId,
+          validInput.mutationId,
+          payloadHash,
+        );
+        if (receipt) {
+          return receipt;
+        }
+      }
+    }
+
+    if (validInput.replacePlanId !== undefined) {
+      await assertTrainingPlanTransactionState(
+        tx,
+        validInput.userId,
+        validInput.replacePlanId,
+        new Date(validInput.replacePlanUpdatedAt ?? ''),
+        validInput.replacePlanStateHash ?? '',
+        true,
+      );
+    } else {
+      const [activePlan] = await tx
+        .select({ id: trainingPlans.id })
+        .from(trainingPlans)
+        .where(
+          and(
+            eq(trainingPlans.userId, validInput.userId),
+            eq(trainingPlans.isActive, true),
+            isNull(trainingPlans.deletedAt),
+          ),
+        )
+        .limit(1);
+      if (activePlan) {
+        throw new AppError('CONFLICT', 'Confirmá el reemplazo del plan activo antes de guardar.');
+      }
+    }
+
+    await assertRoutinesAssignable(
+      tx,
+      validInput.schedule,
+      validInput.userId,
+      validInput.replacePlanId ?? null,
+    );
 
     const [plan] = await tx
       .insert(trainingPlans)
@@ -282,25 +562,188 @@ export async function createTrainingPlan(input: unknown): Promise<CreateTraining
         userId: validInput.userId,
         name: validInput.name,
         goal: validInput.goal ?? null,
-        isActive: true,
+        isActive: false,
         updatedAt: now,
       })
       .returning();
 
+    const clonedRoutineIds = await cloneAssignedPlanRoutines(
+      tx,
+      validInput.schedule,
+      validInput.userId,
+      validInput.replacePlanId ?? null,
+      plan.id,
+    );
     const schedule = await tx
       .insert(scheduledRoutines)
       .values(
         validInput.schedule.map((assignment) => ({
           trainingPlanId: plan.id,
           dayOfWeek: assignment.dayOfWeek,
-          routineId: assignment.routineId,
+          routineId: clonedRoutineIds.get(assignment.routineId) ?? assignment.routineId,
           note: assignment.note ?? null,
         })),
       )
       .returning();
 
-    return { plan, schedule };
-  });
+    if (validInput.replacePlanId !== undefined) {
+      await assertTrainingPlanTransactionState(
+        tx,
+        validInput.userId,
+        validInput.replacePlanId,
+        new Date(validInput.replacePlanUpdatedAt ?? ''),
+        validInput.replacePlanStateHash ?? '',
+        true,
+      );
+      const [replaced] = await tx
+        .update(trainingPlans)
+        .set({ isActive: false, updatedAt: now })
+        .where(
+          and(
+            eq(trainingPlans.id, validInput.replacePlanId),
+            eq(trainingPlans.userId, validInput.userId),
+            eq(trainingPlans.isActive, true),
+            isNull(trainingPlans.deletedAt),
+            eq(trainingPlans.updatedAt, new Date(validInput.replacePlanUpdatedAt ?? '')),
+          ),
+        )
+        .returning({ id: trainingPlans.id });
+      if (!replaced) {
+        throw new AppError('CONFLICT', 'El plan cambió desde la confirmación. Volvé a intentarlo.');
+      }
+    }
+
+    const [activePlan] = await tx
+      .update(trainingPlans)
+      .set({ isActive: true, updatedAt: now })
+      .where(
+        and(
+          eq(trainingPlans.id, plan.id),
+          eq(trainingPlans.userId, validInput.userId),
+          eq(trainingPlans.isActive, false),
+          isNull(trainingPlans.deletedAt),
+        ),
+      )
+      .returning();
+    if (!activePlan) {
+      throw new AppError('CONFLICT', 'No se pudo activar el plan nuevo. Volvé a intentarlo.');
+    }
+
+    if (validInput.mutationId) {
+      await tx
+        .update(guidedTrainingPlanSaves)
+        .set({ trainingPlanId: plan.id })
+        .where(
+          and(
+            eq(guidedTrainingPlanSaves.userId, validInput.userId),
+            eq(guidedTrainingPlanSaves.clientMutationId, validInput.mutationId),
+          ),
+        );
+    }
+
+      return { plan: activePlan, schedule };
+    })),
+  );
+}
+
+/**
+ * Archives the authenticated user's active plan without deleting its schedule or routines.
+ *
+ * @param userId - Authenticated owner of the plan.
+ * @param planId - Active plan id to finalize.
+ * @param input - Mutation id and expected plan version captured before confirmation.
+ * @returns The same archived plan and schedule on an identical retry.
+ * @throws {AppError} NOT_FOUND for foreign plans, VALIDATION for malformed input, or CONFLICT for stale state or key reuse.
+ */
+export async function archiveTrainingPlan(
+  userId: number,
+  planId: number,
+  input: unknown,
+): Promise<CreateTrainingPlanResult> {
+  const parsed = z.object({
+    mutationId: z.string().uuid(),
+    expectedPlanUpdatedAt: z.string().datetime(),
+  }).safeParse(input);
+  if (!parsed.success) {
+    throw new AppError('VALIDATION', 'La confirmación para archivar el plan no es válida.');
+  }
+  const payloadHash = createHash('sha256')
+    .update(JSON.stringify({
+      action: 'archive',
+      planId,
+      expectedPlanUpdatedAt: parsed.data.expectedPlanUpdatedAt,
+    }))
+    .digest('hex');
+
+  return withUserTrainingPlanWriteLock(
+    userId,
+    () => withPlanWriteRetries(() => db.transaction(async (tx) => {
+    const [claim] = await tx
+      .insert(guidedTrainingPlanSaves)
+      .values({
+        userId,
+        clientMutationId: parsed.data.mutationId,
+        payloadHash,
+      })
+      .onConflictDoNothing({
+        target: [guidedTrainingPlanSaves.userId, guidedTrainingPlanSaves.clientMutationId],
+      })
+      .returning({ id: guidedTrainingPlanSaves.id });
+    if (!claim) {
+      const receipt = await loadPlanSaveReceipt(
+        tx,
+        userId,
+        parsed.data.mutationId,
+        payloadHash,
+      );
+      if (receipt) {
+        return receipt;
+      }
+    }
+
+    const [archived] = await tx
+      .update(trainingPlans)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(
+        and(
+          eq(trainingPlans.id, planId),
+          eq(trainingPlans.userId, userId),
+          eq(trainingPlans.isActive, true),
+          isNull(trainingPlans.deletedAt),
+          eq(trainingPlans.updatedAt, new Date(parsed.data.expectedPlanUpdatedAt)),
+        ),
+      )
+      .returning();
+    if (!archived) {
+      const ownedPlan = await tx
+        .select({ id: trainingPlans.id })
+        .from(trainingPlans)
+        .where(
+          and(
+            eq(trainingPlans.id, planId),
+            eq(trainingPlans.userId, userId),
+            isNull(trainingPlans.deletedAt),
+          ),
+        )
+        .limit(1);
+      if (ownedPlan.length === 0) {
+        throw new AppError('NOT_FOUND', 'Plan no encontrado');
+      }
+      throw new AppError('CONFLICT', 'El plan cambió antes de archivarse. Volvé a intentarlo.');
+    }
+
+    const schedule = await tx
+      .select()
+      .from(scheduledRoutines)
+      .where(eq(scheduledRoutines.trainingPlanId, archived.id))
+      .orderBy(asc(scheduledRoutines.dayOfWeek));
+    await tx
+      .update(guidedTrainingPlanSaves)
+      .set({ trainingPlanId: archived.id })
+      .where(eq(guidedTrainingPlanSaves.id, claim.id));
+      return { plan: archived, schedule };
+    })),
+  );
 }
 
 
@@ -320,8 +763,13 @@ export async function getTrainingPlanById(
 ): Promise<CreateTrainingPlanResult> {
   const plan = await findOwnedTrainingPlan(userId, planId);
   const schedule = await loadPlanSchedule(plan.id);
+  const replacementState = await loadTrainingPlanReplacementState(userId, planId);
 
-  return { plan, schedule };
+  return {
+    plan,
+    schedule,
+    replacementStateHash: hashTrainingPlanImprovementValue(replacementState.replacementState),
+  };
 }
 
 /**
@@ -343,37 +791,27 @@ export async function updateTrainingPlan(
 ): Promise<CreateTrainingPlanResult> {
   const validInput = parseTrainingPlanWriteInput(input);
   const existingPlan = await findOwnedTrainingPlan(userId, planId);
-  for (const assignment of validInput.schedule) {
-    await assertAccessibleRoutine(assignment.routineId, userId);
+  if (
+    !existingPlan.isActive
+    || validInput.replacePlanId !== planId
+    || validInput.replacePlanUpdatedAt === undefined
+    || validInput.replacePlanStateHash === undefined
+    || validInput.mutationId === undefined
+  ) {
+    throw new AppError(
+      'CONFLICT',
+      'Editar el plan requiere confirmar una nueva versión desde el Plan Hub.',
+    );
   }
-
-  const now = new Date();
-  return db.transaction(async (tx) => {
-    const [plan] = await tx
-      .update(trainingPlans)
-      .set({
-        name: validInput.name,
-        goal: validInput.goal ?? null,
-        updatedAt: now,
-      })
-      .where(eq(trainingPlans.id, existingPlan.id))
-      .returning();
-
-    await tx.delete(scheduledRoutines).where(eq(scheduledRoutines.trainingPlanId, existingPlan.id));
-
-    const schedule = await tx
-      .insert(scheduledRoutines)
-      .values(
-        validInput.schedule.map((assignment) => ({
-          trainingPlanId: plan.id,
-          dayOfWeek: assignment.dayOfWeek,
-          routineId: assignment.routineId,
-          note: assignment.note ?? null,
-        })),
-      )
-      .returning();
-
-    return { plan, schedule };
+  return createTrainingPlan({
+    userId,
+    name: validInput.name,
+    goal: validInput.goal,
+    schedule: validInput.schedule,
+    mutationId: validInput.mutationId,
+    replacePlanId: validInput.replacePlanId,
+    replacePlanUpdatedAt: validInput.replacePlanUpdatedAt,
+    replacePlanStateHash: validInput.replacePlanStateHash,
   });
 }
 

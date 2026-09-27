@@ -4,7 +4,12 @@
 
 import { describe, expect, it } from '@jest/globals';
 
-import { isBrowserEnvironment, isOnboardingDone, markOnboardingDone } from './state';
+import {
+  clearOnboardingAnswers,
+  isBrowserEnvironment,
+  readOnboardingAnswers,
+  saveOnboardingAnswers,
+} from './state';
 
 describe('onboarding storage state without a browser', () => {
   it('detects the absence of a browser window so storage access is skipped', () => {
@@ -12,7 +17,8 @@ describe('onboarding storage state without a browser', () => {
   });
 
   it('is safe when rendered without a browser window', () => {
-    expect(isOnboardingDone()).toBe(false);
-    expect(() => markOnboardingDone()).not.toThrow();
+    expect(readOnboardingAnswers()).toBeNull();
+    expect(() => saveOnboardingAnswers({ goal: null, pace: null, equipment: null })).not.toThrow();
+    expect(() => clearOnboardingAnswers()).not.toThrow();
   });
 });

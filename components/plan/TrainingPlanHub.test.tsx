@@ -7,9 +7,14 @@ import { render, screen } from '@testing-library/react';
 import type { TrainingPlanHubDto } from '@/types/training-plan-hub';
 
 const mockUseTrainingPlanHub = jest.fn();
+const mockPush = jest.fn();
 
 jest.mock('@/hooks/useTrainingPlanHub', () => ({
   useTrainingPlanHub: (planId: number) => mockUseTrainingPlanHub(planId),
+}));
+
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({ push: mockPush }),
 }));
 
 const days: TrainingPlanHubDto['days'] = [
@@ -58,8 +63,12 @@ describe('TrainingPlanHub', () => {
     expect(screen.getByRole('link', { name: 'Mejorar plan con Coach Atlas' }).getAttribute('href')).toBe(
       '/dashboard/plan/77/improve',
     );
+    expect(screen.getByRole('link', { name: 'Crear nuevo plan' }).getAttribute('href')).toBe(
+      '/dashboard/plan/new',
+    );
+    expect(screen.getByRole('button', { name: 'Finalizar / Archivar plan' })).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Ver rutina Empuje' }).getAttribute('href')).toBe(
-      '/dashboard/routines/10',
+      '/dashboard/routines/10?trainingPlanId=77',
     );
     expect(screen.queryByRole('link', { name: /Rutina no disponible/ })).toBeNull();
   });

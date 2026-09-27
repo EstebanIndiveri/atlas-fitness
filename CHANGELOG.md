@@ -4,6 +4,20 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Este
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-09-27
+
+### Added
+- Creación de rutinas a partir de propuestas de Routine Coach: la propuesta se arma y se valida como borrador editable antes de crear cualquier rutina.
+- Ciclo de vida del plan con scoping de rutinas: las rutinas quedan acotadas al plan al que pertenecen, tanto en el listado como en la lectura individual.
+- Onboarding persistido por cuenta: completar el recorrido queda registrado en el servidor para la cuenta autenticada.
+
+### Changed
+- Plan semanal: nueva capa de estrategia que compone la propuesta como un conjunto coherente, en lugar de resolver cada día por separado.
+- Editor de plan manual: alcance y navegación de rutinas más claros y acotados al plan editado.
+
+### Fixed
+- El reemplazo de un plan guiado ya confirmado vuelve a permitirse.
+
 ## [0.7.1] - 2026-09-25
 
 ### Added

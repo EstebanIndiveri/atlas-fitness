@@ -20,11 +20,20 @@ const updateRoutineSchema = z.object({
 });
 
 function parseRoutineId(id: string): number {
-  const routineId = parseInt(id, 10);
-  if (Number.isNaN(routineId)) {
+  if (!/^[1-9]\d*$/.test(id)) {
     throw new AppError('VALIDATION', 'ID de rutina inválido');
   }
-  return routineId;
+  return Number(id);
+}
+
+function parseTrainingPlanId(value: string | null): number | undefined {
+  if (value === null) {
+    return undefined;
+  }
+  if (!/^[1-9]\d*$/.test(value)) {
+    throw new AppError('VALIDATION', 'ID de plan inválido');
+  }
+  return Number(value);
 }
 
 /**
@@ -37,7 +46,8 @@ export async function GET(
   try {
     const session = await requireAuth(request);
     const { id } = await params;
-    const routine = await getRoutineById(parseRoutineId(id), session.userId);
+    const trainingPlanId = parseTrainingPlanId(new URL(request.url).searchParams.get('trainingPlanId'));
+    const routine = await getRoutineById(parseRoutineId(id), session.userId, trainingPlanId);
     return NextResponse.json(routine);
   } catch (error) {
     return handleApiError(error);

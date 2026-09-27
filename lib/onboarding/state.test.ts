@@ -1,13 +1,11 @@
 import { afterEach, describe, expect, it, jest } from '@jest/globals';
 
 import {
-  isOnboardingDone,
-  markOnboardingDone,
+  clearOnboardingAnswers,
   readOnboardingAnswers,
   saveOnboardingAnswers,
 } from './state';
 
-const STORAGE_KEY = 'atlas:onboarding:welcome-done';
 const ANSWERS_KEY = 'atlas:onboarding:answers';
 
 describe('onboarding storage state', () => {
@@ -16,16 +14,7 @@ describe('onboarding storage state', () => {
     jest.restoreAllMocks();
   });
 
-  it('returns false before completion and true after marking done', () => {
-    expect(isOnboardingDone()).toBe(false);
-
-    markOnboardingDone();
-
-    expect(window.localStorage.getItem(STORAGE_KEY)).toBe('true');
-    expect(isOnboardingDone()).toBe(true);
-  });
-
-  it('is safe when accessing localStorage itself throws', () => {
+  it('is safe when clearing answers while accessing localStorage itself throws', () => {
     const storageDescriptor = Object.getOwnPropertyDescriptor(window, 'localStorage');
     Object.defineProperty(window, 'localStorage', {
       configurable: true,
@@ -35,8 +24,8 @@ describe('onboarding storage state', () => {
     });
 
     try {
-      expect(isOnboardingDone()).toBe(false);
-      expect(() => markOnboardingDone()).not.toThrow();
+      expect(readOnboardingAnswers()).toBeNull();
+      expect(() => clearOnboardingAnswers()).not.toThrow();
     } finally {
       if (storageDescriptor) {
         Object.defineProperty(window, 'localStorage', storageDescriptor);
@@ -44,16 +33,22 @@ describe('onboarding storage state', () => {
     }
   });
 
-  it('is safe when localStorage throws', () => {
+  it('is safe when localStorage methods throw', () => {
     jest.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
       throw new Error('storage unavailable');
     });
     jest.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new Error('storage unavailable');
     });
+    jest.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
+      throw new Error('storage unavailable');
+    });
 
-    expect(isOnboardingDone()).toBe(false);
-    expect(() => markOnboardingDone()).not.toThrow();
+    expect(readOnboardingAnswers()).toBeNull();
+    expect(() => clearOnboardingAnswers()).not.toThrow();
+    expect(() =>
+      saveOnboardingAnswers({ goal: 'muscle', pace: null, equipment: null }),
+    ).not.toThrow();
   });
 
   it('round-trips onboarding answers through storage', () => {
@@ -84,5 +79,13 @@ describe('onboarding storage state', () => {
     expect(() =>
       saveOnboardingAnswers({ goal: 'muscle', pace: null, equipment: null }),
     ).not.toThrow();
+  });
+
+  it('clears saved answers after a successful explicit import', () => {
+    saveOnboardingAnswers({ goal: 'muscle', pace: 'days-3', equipment: 'gym' });
+
+    clearOnboardingAnswers();
+
+    expect(readOnboardingAnswers()).toBeNull();
   });
 });

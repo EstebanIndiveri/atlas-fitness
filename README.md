@@ -2,7 +2,7 @@
 
 Asistente de fitness personal para registrar entrenamientos, pesos, consejos, media de ejercicios y motivación — vía **web app** y **bot de Telegram** (misma lógica de producto que Hermes Finance: un dominio, dos canales).
 
-> **Publicación v0.7.1 (snapshot 2026-09-25):** el PR de release #138 ya se fusionó en `main` como `ba0857c5c42f730263e2d735ff57e69f6b0d42ea`, con `package.json` y `package-lock.json` en 0.7.1. Esta actualización de metadatos deja listos los docs; una vez mergeada, el tag `v0.7.1` debe crearse sobre el commit final de `main` resultante de este PR. A la fecha de este snapshot, el tag y GitHub Release todavía no existen; no se considera publicada v0.7.1 hasta crear el tag. Ver [`docs/backlog/handoff-2026-09.md`](./docs/backlog/handoff-2026-09.md) para CI y smoke de producción.
+> **Publicación v0.7.1 (snapshot 2026-09-25):** el PR de release #138 ya se fusionó en `main` como `ba0857c5c42f730263e2d735ff57e69f6b0d42ea`, con `package.json` y `package-lock.json` en 0.7.1. Esta actualización de metadatos dejó listos los docs, y el tag anotado `v0.7.1` quedó creado y publicado sobre `e1a592cb1aa9d26205933e2301b9926b9b834aa0`, el commit final de `main` de ese PR de metadata (#139). (Al snapshot 2026-09-25 el tag aún no existía; se creó después.) Este repo publica mediante tag anotado, no mediante GitHub Releases. Ver [`docs/backlog/handoff-2026-09.md`](./docs/backlog/handoff-2026-09.md) para CI y smoke de producción.
 
 ## Visión (borrador)
 
@@ -180,7 +180,7 @@ Ver [`AGENTS.md`](./AGENTS.md) §3–5 para el branching model completo.
 
 ## Estado Actual (snapshot 2026-09-25)
 
-v0.7.0 (tag `v0.7.0`, commit `dae2bc949538f9cb9fa02faf8db0712d04b9d9f9`) fue la versión publicada antes de esta finalización. El PR #138 integró en `main` los cambios v0.7.1: la pantalla dedicada de Hábitos, el hub y la mejora confirmada del plan semanal activo, persistencia de sesiones adaptadas y datos reales de Perfil. La publicación se completa con el tag `v0.7.1` sobre el commit final de `main` después de mergear este PR de metadatos; al snapshot indicado arriba ese tag aún no existe.
+v0.7.0 (tag `v0.7.0`, commit `dae2bc949538f9cb9fa02faf8db0712d04b9d9f9`) fue la versión publicada anterior a v0.7.1. El PR #138 integró en `main` los cambios v0.7.1: la pantalla dedicada de Hábitos, el hub y la mejora confirmada del plan semanal activo, persistencia de sesiones adaptadas y datos reales de Perfil. La publicación se completó con el tag anotado `v0.7.1` sobre `e1a592cb1aa9d26205933e2301b9926b9b834aa0`.
 
 ✅ **Completado / usable:**
 - Auth + sesiones HMAC revocables, link Telegram y webhooks modulares
@@ -190,8 +190,8 @@ v0.7.0 (tag `v0.7.0`, commit `dae2bc949538f9cb9fa02faf8db0712d04b9d9f9`) fue la 
 - Coach Context en Perfil: preferencias persistidas y editables; valores explícitos no modifican el plan activo. Respuestas antiguas del navegador solo se importan tras vista previa y confirmación, y nunca sobre una fila existente.
 - Hoy con check-in ánimo/energía, hero de entrenamiento, motivo honesto y acciones Empezar/Adaptar (convergencia Figma released en v0.6.0, regresiones de dispositivo corregidas en v0.6.1)
 - Plan semanal manual + edición (`/dashboard/plan/[id]/edit`)
-- Hub del plan semanal activo, mejora con propuesta y confirmación explícita, y persistencia al reanudar entrenamientos adaptados (incluido en v0.7.1; tag pendiente al snapshot de arriba)
-- Pantalla dedicada de Hábitos y Perfil basado en datos guardados del servidor (incluido en v0.7.1; tag pendiente al snapshot de arriba)
+- Hub del plan semanal activo, mejora con propuesta y confirmación explícita, y persistencia al reanudar entrenamientos adaptados (incluido en v0.7.1, publicado)
+- Pantalla dedicada de Hábitos y Perfil basado en datos guardados del servidor (incluido en v0.7.1, publicado)
 - Plan guiado “Crear con Coach Atlas” sobre catálogo real; guardar crea el plan y sus rutinas de forma explícita, atómica e idempotente
 - Coach AI weekly-plan: el brief del plan guiado precarga las preferencias guardadas como campos editables; generar solo devuelve un borrador. La revisión identifica Gemini o fallback y muestra el objetivo, los focos y ejercicios/series/repeticiones propuestos; guardar es explícito, atómico e idempotente.
 - Entrenar hub, rutinas, detalle de rutina y sesión guiada responsive (player pulido en v0.6.1: CTA verde+check, timer de descanso siempre visible, "Añadir serie")

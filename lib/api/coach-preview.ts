@@ -11,6 +11,7 @@ import type {
 
 export type CoachPreviewClientInput = {
   routineId: number;
+  trainingPlanId?: number;
   energy?: CoachAdaptationContext['energy'];
   mood?: CoachAdaptationContext['mood'];
   freeText?: string;

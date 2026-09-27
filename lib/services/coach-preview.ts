@@ -28,6 +28,7 @@ const moodSchema = z.union([
 
 const previewCoachAdaptationSchema = z.object({
   routineId: z.number().int().positive(),
+  trainingPlanId: z.number().int().positive().optional(),
   userId: z.number().int().positive(),
   energy: z.enum(['low', 'medium', 'high']).optional(),
   mood: moodSchema.optional(),
@@ -57,7 +58,13 @@ export async function previewCoachAdaptation(
   deps?: CoachGeminiAdaptationDeps,
 ): Promise<CoachAdaptationResult> {
   const validInput = parseInput(input);
-  const routine = await getRoutineById(validInput.routineId, validInput.userId);
+  const routine = validInput.trainingPlanId === undefined
+    ? await getRoutineById(validInput.routineId, validInput.userId)
+    : await getRoutineById(
+        validInput.routineId,
+        validInput.userId,
+        validInput.trainingPlanId,
+      );
   const energyAndMood = await resolveEnergyAndMood(validInput);
 
   const context: CoachAdaptationContext = {

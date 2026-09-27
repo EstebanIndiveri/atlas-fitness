@@ -19,7 +19,7 @@ export const PLAN_COPY = {
   title: 'Crear mi plan',
   subtitle: 'Elegí qué días entrenás y qué rutina hacés cada día. Atlas te mostrará el entrenamiento correcto cada mañana.',
   editTitle: 'Editar plan semanal',
-  editSubtitle: 'Actualizá los días, las rutinas y el objetivo de tu semana.',
+  editSubtitle: 'Guardar crea una versión nueva del plan y conserva la anterior en el historial.',
   nameLabel: 'Nombre del plan',
   namePlaceholder: 'Ej: Semana de hipertrofia',
   goalLabel: 'Objetivo (opcional)',
@@ -28,10 +28,15 @@ export const PLAN_COPY = {
   daysHint: 'Dejá un día en «Descanso» para marcarlo como pausa.',
   restOption: 'Descanso',
   routineSelectLabel: (day: string): string => `Rutina para ${day}`,
-  noteLabel: 'Por qué hoy (opcional)',
+  noteLabel: (day: string): string => `Nota o foco de ${day}`,
   notePlaceholder: 'Ej: Foco técnico en empuje',
+  viewRoutine: (name: string): string => `Ver rutina ${name}`,
+  editRoutine: (name: string): string => `Editar rutina ${name}`,
   submit: 'Guardar plan',
+  editSubmit: 'Guardar cambios',
   submitting: 'Guardando…',
+  managePlan: 'Gestionar plan semanal',
+  createPlan: 'Crear plan semanal',
   summary: (count: number): string =>
     count === 1 ? '1 día de entrenamiento asignado' : `${count} días de entrenamiento asignados`,
   emptyRoutinesTitle: 'Primero creá una rutina',
@@ -40,6 +45,9 @@ export const PLAN_COPY = {
   emptyRoutinesManual: 'Crear rutina manualmente',
   genericError: 'No se pudo crear el plan. Probá de nuevo.',
 } as const;
+
+export const TRAINING_PLAN_REPLACEMENT_CONFIRMATION =
+  'Al confirmar, el plan activo se archivará y esta nueva versión quedará activa. Se conservarán el plan anterior, su agenda y sus rutinas.';
 
 export const PLAN_TEST_IDS = {
   form: 'plan-builder-form',

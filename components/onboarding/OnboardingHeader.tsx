@@ -14,6 +14,8 @@ type OnboardingHeaderProps = {
   onBack: () => void;
   /** Skips the whole onboarding flow. */
   onSkip: () => void;
+  /** Prevents navigation while an account action is being saved. */
+  disableNavigation?: boolean;
 };
 
 /**
@@ -22,7 +24,12 @@ type OnboardingHeaderProps = {
  * @returns The onboarding header region.
  * @example <OnboardingHeader activeIndex={0} onBack={goBack} onSkip={skip} />
  */
-export function OnboardingHeader({ activeIndex, onBack, onSkip }: OnboardingHeaderProps) {
+export function OnboardingHeader({
+  activeIndex,
+  onBack,
+  onSkip,
+  disableNavigation = false,
+}: OnboardingHeaderProps) {
   return (
     <header
       className="space-y-4 border-b border-line bg-canvas/95 px-4 pb-4 pt-3 backdrop-blur"
@@ -35,6 +42,7 @@ export function OnboardingHeader({ activeIndex, onBack, onSkip }: OnboardingHead
           type="button"
           className="inline-flex min-h-11 items-center gap-1 font-medium text-ink-muted hover:text-ink"
           onClick={onBack}
+          disabled={disableNavigation}
           data-testid={ONBOARDING_TEST_IDS.back}
         >
           <span aria-hidden="true">←</span>
@@ -47,6 +55,7 @@ export function OnboardingHeader({ activeIndex, onBack, onSkip }: OnboardingHead
           type="button"
           className="inline-flex min-h-11 items-center font-medium text-ink-muted hover:text-ink"
           onClick={onSkip}
+          disabled={disableNavigation}
           data-testid={ONBOARDING_TEST_IDS.skip}
         >
           {ONBOARDING_COPY.header.skip}

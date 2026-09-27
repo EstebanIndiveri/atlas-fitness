@@ -13,7 +13,13 @@ import { CoachRoutineStepIndicator } from '@/app/dashboard/routines/coach/CoachR
 import { RoutineDraftProposal } from '@/app/dashboard/routines/coach/RoutineDraftProposal';
 import { UI_COPY } from '@/lib/copy/ui';
 import type { CoachRoutineStep } from '@/app/dashboard/routines/coach/CoachRoutineStepIndicator';
-import type { RoutineDraft, RoutineDraftLevel, RoutineDraftLocation } from '@/lib/ai/routine-draft';
+import type {
+  RoutineDraft,
+  RoutineDraftCatalogItem,
+  RoutineDraftContext,
+  RoutineDraftLevel,
+  RoutineDraftLocation,
+} from '@/lib/ai/routine-draft';
 import type { ApiError } from '@/types/errors';
 import type { ExerciseCatalogItem } from '@/types/exercise';
 
@@ -22,12 +28,23 @@ const COPY = UI_COPY.training.coachRoutine;
 type Status = 'loading' | 'ready' | 'empty' | 'error';
 type BriefState = {
   goal: string;
-  daysPerWeek: string;
+  focusAreas: string;
+  availableEquipment: string;
   location: RoutineDraftLocation;
   level: RoutineDraftLevel;
+  sessionLengthMinutes: string;
 };
 
-const initialBrief: BriefState = { goal: '', daysPerWeek: '3', location: 'gym', level: 'intermediate' };
+type RoutineProposalContext = Omit<RoutineDraftContext, 'catalog'>;
+
+const initialBrief: BriefState = {
+  goal: '',
+  focusAreas: '',
+  availableEquipment: '',
+  location: 'gym',
+  level: 'intermediate',
+  sessionLengthMinutes: '45',
+};
 
 async function readApiError(response: Response, fallback: string): Promise<string> {
   try {
@@ -53,13 +70,51 @@ function toCreatePayload(draft: RoutineDraft) {
   };
 }
 
+function splitBriefList(value: string): string[] {
+  return value.split(',').map((item) => item.trim()).filter(Boolean);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isRoutineDraftCatalogItem(value: unknown): value is RoutineDraftCatalogItem {
+  if (!isRecord(value)) return false;
+  const item = value;
+  return Number.isInteger(item.id)
+    && typeof item.slug === 'string'
+    && typeof item.name === 'string'
+    && typeof item.muscleGroup === 'string'
+    && typeof item.instructions === 'string'
+    && (typeof item.imageUrl === 'string' || item.imageUrl === null)
+    && (typeof item.videoUrl === 'string' || item.videoUrl === null)
+    && typeof item.isSystem === 'boolean'
+    && (item.equipment === undefined
+      || (Array.isArray(item.equipment) && item.equipment.every((equipment) => typeof equipment === 'string')))
+    && (item.availableLocations === undefined
+      || (Array.isArray(item.availableLocations)
+        && item.availableLocations.every((location) => location === 'gym' || location === 'home')));
+}
+
+function toProposalContext(brief: BriefState): RoutineProposalContext {
+  const availableEquipment = splitBriefList(brief.availableEquipment);
+  return {
+    goal: brief.goal.trim(),
+    focusAreas: splitBriefList(brief.focusAreas),
+    location: brief.location,
+    ...(availableEquipment.length > 0 ? { availableEquipment } : {}),
+    level: brief.level,
+    sessionLengthMinutes: Number(brief.sessionLengthMinutes),
+  };
+}
+
 export default function CoachRoutinePage() {
   const router = useRouter();
   const [brief, setBrief] = useState<BriefState>(initialBrief);
   const [status, setStatus] = useState<Status>('loading');
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState<RoutineDraft | null>(null);
-  const [proposalDays, setProposalDays] = useState(3);
+  const [proposalContext, setProposalContext] = useState<RoutineProposalContext | null>(null);
   const [created, setCreated] = useState(false);
   const [busy, setBusy] = useState(false);
   const step: CoachRoutineStep = created ? 'created' : draft ? 'proposal' : 'brief';
@@ -85,7 +140,7 @@ export default function CoachRoutinePage() {
   }, []);
 
   async function generateDraft(): Promise<void> {
-    const daysPerWeek = Number.parseInt(brief.daysPerWeek, 10);
+    const context = toProposalContext(brief);
     setBusy(true);
     setError(null);
     setDraft(null);
@@ -94,16 +149,31 @@ export default function CoachRoutinePage() {
       const response = await fetch('/api/routines/coach', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ goal: brief.goal.trim(), daysPerWeek, location: brief.location, level: brief.level }),
+        body: JSON.stringify(context),
       });
       if (!response.ok) throw new Error(await readApiError(response, COPY.generateError));
-      setProposalDays(daysPerWeek);
+      setProposalContext(context);
       setDraft((await response.json()) as RoutineDraft);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : COPY.generateError);
     } finally {
       setBusy(false);
     }
+  }
+
+  async function loadCandidates(): Promise<RoutineDraftCatalogItem[]> {
+    if (!proposalContext) throw new Error(COPY.candidatesError);
+    const response = await fetch('/api/routines/coach?mode=candidates', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(proposalContext),
+    });
+    if (!response.ok) throw new Error(await readApiError(response, COPY.candidatesError));
+    const candidates: unknown = await response.json();
+    if (!Array.isArray(candidates) || !candidates.every(isRoutineDraftCatalogItem)) {
+      throw new Error(COPY.candidatesError);
+    }
+    return candidates;
   }
 
   async function acceptDraft(): Promise<void> {
@@ -142,16 +212,21 @@ export default function CoachRoutinePage() {
           </div>
           {status === 'empty' ? <EmptyState title={COPY.emptyTitle} description={COPY.emptyBody} /> : null}
           {status === 'error' && error ? <ErrorState message={error} compact={false} /> : null}
-          {status === 'ready' ? <BriefForm brief={brief} busy={busy} setBrief={setBrief} onSubmit={generateDraft} /> : null}
+          {status === 'ready' && !draft ? <BriefForm brief={brief} busy={busy} setBrief={setBrief} onSubmit={generateDraft} /> : null}
         </Card>
         {error && status === 'ready' ? <ErrorState message={error} /> : null}
-        {draft ? (
+        {draft && proposalContext ? (
           <RoutineDraftProposal
             draft={draft}
-            daysPerWeek={proposalDays}
+            sessionLengthMinutes={proposalContext.sessionLengthMinutes}
             busy={busy}
+            onDraftChange={setDraft}
+            onLoadCandidates={loadCandidates}
             onAccept={() => void acceptDraft()}
-            onAdjust={() => setDraft(null)}
+            onAdjust={() => {
+              setDraft(null);
+              setProposalContext(null);
+            }}
           />
         ) : null}
       </div>
@@ -172,8 +247,10 @@ function BriefForm({
 }) {
   return (
     <form className="space-y-4" onSubmit={(event) => { event.preventDefault(); void onSubmit(); }}>
-      <TextArea id="goal" label={COPY.goalLabel} rows={3} value={brief.goal} placeholder={COPY.goalPlaceholder} onChange={(event) => setBrief({ ...brief, goal: event.target.value })} />
-      <Input id="daysPerWeek" label={COPY.daysLabel} type="number" min={1} max={7} value={brief.daysPerWeek} onChange={(event) => setBrief({ ...brief, daysPerWeek: event.target.value })} />
+      <TextArea id="goal" label={COPY.goalLabel} rows={3} maxLength={160} value={brief.goal} placeholder={COPY.goalPlaceholder} onChange={(event) => setBrief({ ...brief, goal: event.target.value })} />
+      <TextArea id="focusAreas" label={COPY.focusAreasLabel} rows={2} value={brief.focusAreas} placeholder={COPY.focusAreasPlaceholder} onChange={(event) => setBrief({ ...brief, focusAreas: event.target.value })} />
+      <TextArea id="availableEquipment" label={COPY.equipmentLabel} rows={2} value={brief.availableEquipment} placeholder={COPY.equipmentPlaceholder} onChange={(event) => setBrief({ ...brief, availableEquipment: event.target.value })} />
+      <Input id="sessionLengthMinutes" label={COPY.sessionLengthLabel} type="number" min={15} max={180} step={1} required value={brief.sessionLengthMinutes} onChange={(event) => setBrief({ ...brief, sessionLengthMinutes: event.target.value })} />
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="text-sm font-medium text-ink">{COPY.locationLabel}<select className="mt-1 w-full rounded-md border border-line bg-surface px-4 py-2" value={brief.location} onChange={(event) => setBrief({ ...brief, location: event.target.value as RoutineDraftLocation })}><option value="gym">{COPY.gym}</option><option value="home">{COPY.home}</option></select></label>
         <label className="text-sm font-medium text-ink">{COPY.levelLabel}<select className="mt-1 w-full rounded-md border border-line bg-surface px-4 py-2" value={brief.level} onChange={(event) => setBrief({ ...brief, level: event.target.value as RoutineDraftLevel })}><option value="beginner">{COPY.beginner}</option><option value="intermediate">{COPY.intermediate}</option><option value="advanced">{COPY.advanced}</option></select></label>

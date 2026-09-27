@@ -10,6 +10,7 @@ import type { CoachAdaptationResult } from '@/types/coach';
 export interface StartAdaptedWorkoutInput {
   userId: number;
   routineId: number;
+  trainingPlanId?: number;
   result: CoachAdaptationResult;
   contextSnapshot?: unknown;
   dailyCheckInId?: number;
@@ -59,11 +60,12 @@ function reducedTargetSetsOverrides(
 export async function startAdaptedWorkout(
   input: StartAdaptedWorkoutInput,
 ): Promise<StartAdaptedWorkoutResult> {
-  const { userId, routineId, result, contextSnapshot, dailyCheckInId } = input;
+  const { userId, routineId, trainingPlanId, result, contextSnapshot, dailyCheckInId } = input;
 
   const workout = await createWorkout(userId, routineId, {
     skippedExerciseIds: removedExerciseIds(result),
     targetSetsOverrides: reducedTargetSetsOverrides(result),
+    ...(trainingPlanId !== undefined ? { trainingPlanId } : {}),
   });
 
   try {

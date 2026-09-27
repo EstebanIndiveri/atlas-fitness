@@ -5,7 +5,7 @@ import { isSqliteBusyError, isUniqueConstraintError } from '@/lib/db/unique-erro
 import { completedExerciseIdsForRoutine } from '@/lib/session/progress';
 import { applyHold, applySkip, applyTargetSetsOverrides } from '@/lib/session/queue';
 import { suggestNextExerciseFromRemaining } from '@/lib/services/guided-session';
-import { getRoutineById } from '@/lib/services/routines';
+import { getRoutineForWorkout } from '@/lib/services/routines';
 import { parseStoredActionResponse } from '@/lib/services/session-queue-response';
 import { getWorkoutById } from '@/lib/services/workouts';
 import { AppError } from '@/types/errors';
@@ -110,7 +110,7 @@ async function loadActionContext(input: ApplyWorkoutQueueActionInput): Promise<{
     throw new AppError('VALIDATION', EXERCISE_NOT_PENDING_MESSAGE);
   }
 
-  const routine = await getRoutineById(workout.routineId, input.userId);
+  const routine = await getRoutineForWorkout(workout.routineId, input.userId);
   return { workout, routine };
 }
 

@@ -16,6 +16,12 @@ Media: URL preview + empty placeholder. **https-only** client scheme gate (`isHt
 
 Ownership: `RoutineSummary.isSystem` required. System → read-only. Foreign GET/PATCH/DELETE → 404. VALIDATION → API message.
 
+## Routine Coach proposal
+
+`/dashboard/routines/coach` creates a single-session proposal from the Routine Engine V2 context: goal, optional focus areas and available equipment, location, level, and explicit session duration. The review shows the proposal source (Gemini or fallback), its short reason, exercise instructions, catalog media, and editable sets/reps; exercises can also be removed or replaced.
+
+Review remains client-side. No routine is persisted until **Crear esta rutina** calls the existing `POST /api/routines` contract with the edited proposal. Replacement candidates are returned by `POST /api/routines/coach?mode=candidates`, using the same authenticated catalog and canonical eligibility filter as generation; compatibility rules are not repeated in the client.
+
 ## BE contract
 
 | Method | Path | FE |

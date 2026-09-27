@@ -9,6 +9,7 @@ import { buttonClassName } from '@/components/ui/Button';
 import { ErrorState, LoadingState } from '@/components/ui/states';
 import { useRoutineList } from '@/hooks/useRoutineList';
 import { fetchToday } from '@/lib/api/today';
+import { PLAN_COPY } from '@/lib/copy/plan';
 import { ROUTINE_COPY, ROUTINE_TEST_IDS } from '@/lib/copy/routines';
 
 export default function RoutinesPage() {
@@ -87,7 +88,7 @@ export default function RoutinesPage() {
               }
               className={buttonClassName({ variant: 'secondary', size: 'lg', className: 'min-h-11 sm:w-auto' })}
             >
-              {planNavigation.status === 'active' ? 'Gestionar plan' : 'Crear plan semanal'}
+              {planNavigation.status === 'active' ? PLAN_COPY.managePlan : PLAN_COPY.createPlan}
             </Link>
           ) : null}
         </div>

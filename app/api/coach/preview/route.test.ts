@@ -88,12 +88,18 @@ describe('POST /api/coach/preview', () => {
   });
 
   it('returns the preview JSON for a valid authenticated request', async () => {
-    const response = await POST(request({ routineId: 10, energy: 'high', mood: 4 }));
+    const response = await POST(request({
+      routineId: 10,
+      trainingPlanId: 31,
+      energy: 'high',
+      mood: 4,
+    }));
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual(result);
     expect(mockPreviewCoachAdaptation).toHaveBeenCalledWith({
       routineId: 10,
+      trainingPlanId: 31,
       energy: 'high',
       mood: 4,
       userId: 7,

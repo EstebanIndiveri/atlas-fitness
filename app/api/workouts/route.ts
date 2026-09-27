@@ -21,6 +21,7 @@ const coachCheckInContextSchema = z
 
 const createWorkoutSchema = z.object({
   routineId: z.number().int().positive().optional(),
+  trainingPlanId: z.number().int().positive().optional(),
   adaptation: z
     .object({
       result: coachAdaptationResultSchema,
@@ -69,6 +70,9 @@ export async function POST(request: NextRequest) {
       const { workout } = await startAdaptedWorkout({
         userId: session.userId,
         routineId: parsed.data.routineId,
+        ...(parsed.data.trainingPlanId !== undefined
+          ? { trainingPlanId: parsed.data.trainingPlanId }
+          : {}),
         result,
         ...(contextSnapshot !== undefined ? { contextSnapshot } : {}),
         ...(dailyCheckInId !== undefined ? { dailyCheckInId } : {}),
@@ -76,7 +80,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(workout, { status: 201 });
     }
 
-    const workout = await workoutsService.createWorkout(session.userId, parsed.data.routineId);
+    const workout = parsed.data.trainingPlanId === undefined
+      ? await workoutsService.createWorkout(session.userId, parsed.data.routineId)
+      : await workoutsService.createWorkout(session.userId, parsed.data.routineId, {
+          trainingPlanId: parsed.data.trainingPlanId,
+        });
 
     return NextResponse.json(workout, { status: 201 });
   } catch (error) {

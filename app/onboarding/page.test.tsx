@@ -7,7 +7,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 declare const jest: typeof import('@jest/globals').jest;
 
 import { ONBOARDING_COPY, ONBOARDING_TEST_IDS } from '@/lib/copy/onboarding';
-import { isOnboardingDone, readOnboardingAnswers } from '@/lib/onboarding/state';
+import { readOnboardingAnswers } from '@/lib/onboarding/state';
 
 const replace = jest.fn();
 const originalFetch = globalThis.fetch;
@@ -77,17 +77,8 @@ describe('OnboardingPage', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('syncs answers after explicit Finish, then routes to Hoy', async () => {
-    fetchMock.mockResolvedValueOnce(
-      jsonResponse({
-        hasSavedPreferences: true,
-        preferences: {
-          goal: goalStep.options[0].id,
-          pace: paceStep.options[0].id,
-          equipment: equipmentStep.options[0].id,
-        },
-      }),
-    );
+  it('persists answers and completion after explicit Finish, then routes to Hoy', async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ completed: true }));
     render(<OnboardingPage />);
 
     finishWizard();
@@ -98,49 +89,60 @@ describe('OnboardingPage', () => {
       equipment: equipmentStep.options[0].id,
     });
     await waitFor(() => expect(replace).toHaveBeenCalledWith('/dashboard/today'));
-    expect(isOnboardingDone()).toBe(true);
+    expect(window.localStorage.getItem('atlas:onboarding:welcome-done')).toBeNull();
     expect(fetchMock).toHaveBeenCalledWith(
-      '/api/profile/preferences',
+      '/api/profile/onboarding',
       expect.objectContaining({
-        method: 'PUT',
+        method: 'POST',
         body: JSON.stringify({
-          goal: goalStep.options[0].id,
-          pace: paceStep.options[0].id,
-          equipment: equipmentStep.options[0].id,
-        }),
-      }),
-    );
-  });
-
-  it('keeps anonymous onboarding local after the preferences endpoint returns 401', async () => {
-    fetchMock.mockResolvedValueOnce(jsonResponse({ code: 'UNAUTHORIZED' }, 401));
-    render(<OnboardingPage />);
-
-    finishWizard();
-
-    await waitFor(() => expect(replace).toHaveBeenCalledWith('/dashboard/today'));
-    expect(readOnboardingAnswers()).toEqual({
-      goal: goalStep.options[0].id,
-      pace: paceStep.options[0].id,
-      equipment: equipmentStep.options[0].id,
-    });
-    expect(isOnboardingDone()).toBe(true);
-    expect(screen.queryByRole('alert')).toBeNull();
-  });
-
-  it('preserves answers and offers retry when authenticated preference sync fails', async () => {
-    fetchMock
-      .mockResolvedValueOnce(jsonResponse({ code: 'SERVICE_UNAVAILABLE' }, 503))
-      .mockResolvedValueOnce(
-        jsonResponse({
-          hasSavedPreferences: true,
-          preferences: {
+          action: 'finish',
+          answers: {
             goal: goalStep.options[0].id,
             pace: paceStep.options[0].id,
             equipment: equipmentStep.options[0].id,
           },
         }),
-      );
+      }),
+    );
+  });
+
+  it('does not complete onboarding locally when the server rejects Finish', async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ code: 'UNAUTHORIZED' }, 401));
+    render(<OnboardingPage />);
+
+    finishWizard();
+
+    expect(await screen.findByRole('alert')).toBeTruthy();
+    expect(readOnboardingAnswers()).toEqual({
+      goal: goalStep.options[0].id,
+      pace: paceStep.options[0].id,
+      equipment: equipmentStep.options[0].id,
+    });
+    expect(window.localStorage.getItem('atlas:onboarding:welcome-done')).toBeNull();
+    expect(replace).not.toHaveBeenCalled();
+  });
+
+  it('shows a retryable Skip error without completing locally', async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ code: 'SERVICE_UNAVAILABLE' }, 503))
+      .mockResolvedValueOnce(jsonResponse({ completed: true }));
+    render(<OnboardingPage />);
+
+    fireEvent.click(screen.getByTestId(ONBOARDING_TEST_IDS.skip));
+
+    expect(await screen.findByRole('alert')).toBeTruthy();
+    expect(replace).not.toHaveBeenCalled();
+    expect(window.localStorage.getItem('atlas:onboarding:welcome-done')).toBeNull();
+
+    fireEvent.click(screen.getByTestId(ONBOARDING_TEST_IDS.skip));
+    await waitFor(() => expect(replace).toHaveBeenCalledWith('/dashboard/today'));
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('preserves answers and offers retry when authenticated preference sync fails', async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ code: 'SERVICE_UNAVAILABLE' }, 503))
+      .mockResolvedValueOnce(jsonResponse({ completed: true }));
     render(<OnboardingPage />);
 
     finishWizard();
@@ -152,7 +154,7 @@ describe('OnboardingPage', () => {
       pace: paceStep.options[0].id,
       equipment: equipmentStep.options[0].id,
     });
-    expect(isOnboardingDone()).toBe(false);
+    expect(window.localStorage.getItem('atlas:onboarding:welcome-done')).toBeNull();
     expect(replace).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole('button', { name: /reintentar sincronización/i }));
@@ -200,6 +202,7 @@ describe('OnboardingPage', () => {
         body: JSON.stringify(legacyAnswers),
       }),
     );
+    expect(readOnboardingAnswers()).toBeNull();
     expect(replace).not.toHaveBeenCalled();
   });
 
@@ -224,17 +227,54 @@ describe('OnboardingPage', () => {
     const importStatus = await screen.findByRole('status');
     expect(importStatus.textContent).toContain('Ya hay preferencias guardadas en tu cuenta');
     expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(readOnboardingAnswers()).toEqual({
+      goal: 'wellbeing',
+      pace: 'days-4',
+      equipment: 'dumbbells',
+    });
     expect(replace).not.toHaveBeenCalled();
   });
 
-  it('marks completion and routes to Hoy on skip without saving answers or syncing', () => {
+  it('retains legacy answers when the confirmed import fails', async () => {
+    const legacyAnswers = {
+      goal: 'wellbeing',
+      pace: 'days-4',
+      equipment: 'dumbbells',
+    };
+    window.localStorage.setItem('atlas:onboarding:answers', JSON.stringify(legacyAnswers));
+    fetchMock
+      .mockResolvedValueOnce(
+        jsonResponse({
+          hasSavedPreferences: false,
+          preferences: { goal: null, pace: null, equipment: null },
+        }),
+      )
+      .mockResolvedValueOnce(jsonResponse({ code: 'SERVICE_UNAVAILABLE' }, 503));
+    render(<OnboardingPage />);
+    reachProposal();
+
+    fireEvent.click(screen.getByTestId('onboarding-import-legacy'));
+    fireEvent.click(screen.getByTestId('onboarding-confirm-legacy-import'));
+
+    expect(await screen.findByRole('alert')).toBeTruthy();
+    expect(readOnboardingAnswers()).toEqual(legacyAnswers);
+  });
+
+  it('persists Skip without saving preferences before routing to Hoy', async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ completed: true }));
     render(<OnboardingPage />);
 
     fireEvent.click(screen.getByTestId(ONBOARDING_TEST_IDS.skip));
 
-    expect(isOnboardingDone()).toBe(true);
+    await waitFor(() => expect(replace).toHaveBeenCalledWith('/dashboard/today'));
+    expect(window.localStorage.getItem('atlas:onboarding:welcome-done')).toBeNull();
     expect(readOnboardingAnswers()).toBeNull();
-    expect(replace).toHaveBeenCalledWith('/dashboard/today');
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/profile/onboarding',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ action: 'skip' }),
+      }),
+    );
   });
 });

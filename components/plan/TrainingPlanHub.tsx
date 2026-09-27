@@ -1,7 +1,10 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useRef, useState } from 'react';
 
+import { archiveTrainingPlan as archiveTrainingPlanRequest, TrainingPlanClientError } from '@/lib/api/training-plan';
 import { PageContainer } from '@/components/shell/PageContainer';
 import { buttonClassName } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -55,6 +58,36 @@ export function TrainingPlanHub({ planId }: { planId: number }) {
 }
 
 function TrainingPlanHubContent({ hub }: { hub: TrainingPlanHubDto }) {
+  const router = useRouter();
+  const [archiving, setArchiving] = useState(false);
+  const [archiveError, setArchiveError] = useState<string | null>(null);
+  const archiveMutationId = useRef<string | null>(null);
+
+  async function archivePlan(): Promise<void> {
+    if (!window.confirm('¿Finalizar y archivar este plan? Se conservarán su agenda y sus rutinas.')) {
+      return;
+    }
+    setArchiving(true);
+    setArchiveError(null);
+    try {
+      archiveMutationId.current ??= crypto.randomUUID();
+      await archiveTrainingPlanRequest(hub.plan.id, {
+        mutationId: archiveMutationId.current,
+        expectedPlanUpdatedAt: hub.plan.updatedAt,
+      });
+      archiveMutationId.current = null;
+      router.push('/dashboard/plan/new');
+    } catch (error) {
+      setArchiveError(
+        error instanceof TrainingPlanClientError
+          ? error.message
+          : 'No se pudo archivar el plan. Probá de nuevo.',
+      );
+    } finally {
+      setArchiving(false);
+    }
+  }
+
   return (
     <PageContainer className="space-y-6">
       <section aria-label="Plan semanal" className="space-y-6">
@@ -93,25 +126,50 @@ function TrainingPlanHubContent({ hub }: { hub: TrainingPlanHubDto }) {
             </p>
           </div>
           <nav aria-label="Acciones del plan" className="grid gap-2 sm:flex sm:flex-wrap">
-            <Link
+            {hub.plan.isActive ? <Link
               href={`/dashboard/plan/${hub.plan.id}/edit`}
               className={buttonClassName({ size: 'lg', className: 'min-h-11 w-full sm:w-auto' })}
             >
               Editar plan semanal
+            </Link> : null}
+            <Link
+              href="/dashboard/plan/new"
+              className={buttonClassName({
+                variant: 'secondary',
+                size: 'lg',
+                className: 'min-h-11 w-full sm:w-auto',
+              })}
+            >
+              Crear nuevo plan
             </Link>
             {hub.plan.isActive ? (
-              <Link
-                href={`/dashboard/plan/${hub.plan.id}/improve`}
+              <>
+                <Link
+                  href={`/dashboard/plan/${hub.plan.id}/improve`}
                 className={buttonClassName({
                   variant: 'secondary',
                   size: 'lg',
                   className: 'min-h-11 w-full sm:w-auto',
                 })}
-              >
-                Mejorar plan con Coach Atlas
-              </Link>
+                >
+                  Mejorar plan con Coach Atlas
+                </Link>
+                <button
+                  type="button"
+                  className={buttonClassName({
+                    variant: 'secondary',
+                    size: 'lg',
+                    className: 'min-h-11 w-full sm:w-auto',
+                  })}
+                  disabled={archiving}
+                  onClick={() => void archivePlan()}
+                >
+                  {archiving ? 'Archivando…' : 'Finalizar / Archivar plan'}
+                </button>
+              </>
             ) : null}
           </nav>
+          {archiveError ? <p role="alert" className="text-sm text-danger">{archiveError}</p> : null}
         </header>
 
         <section aria-labelledby="plan-hub-week-title" aria-label="Semana del plan" className="space-y-3">
@@ -136,7 +194,7 @@ function TrainingPlanHubContent({ hub }: { hub: TrainingPlanHubDto }) {
                   className="flex min-h-32 flex-col rounded-xl bg-surface p-4 shadow-card ring-1 ring-line"
                 >
                   <h3 className="text-sm font-semibold text-ink">{PLAN_DAY_LABELS[dayOfWeek]}</h3>
-                  <AssignmentContent assignment={day.assignment} />
+                  <AssignmentContent assignment={day.assignment} planId={hub.plan.id} />
                 </li>
               ) : null;
             })}
@@ -147,7 +205,13 @@ function TrainingPlanHubContent({ hub }: { hub: TrainingPlanHubDto }) {
   );
 }
 
-function AssignmentContent({ assignment }: { assignment: TrainingPlanHubDto['days'][number]['assignment'] }) {
+function AssignmentContent({
+  assignment,
+  planId,
+}: {
+  assignment: TrainingPlanHubDto['days'][number]['assignment'];
+  planId: number;
+}) {
   if (assignment.kind === 'rest') {
     return <p className="mt-3 text-sm text-ink-muted">Descanso</p>;
   }
@@ -175,7 +239,7 @@ function AssignmentContent({ assignment }: { assignment: TrainingPlanHubDto['day
         <p className="text-xs leading-5 text-ink-muted">{assignment.routineDescription}</p>
       ) : null}
       <Link
-        href={`/dashboard/routines/${assignment.routineId}`}
+        href={`/dashboard/routines/${assignment.routineId}?trainingPlanId=${planId}`}
         className="mt-auto inline-flex min-h-11 items-center text-sm font-semibold text-brand hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
         aria-label={`Ver rutina ${assignment.routineName}`}
       >

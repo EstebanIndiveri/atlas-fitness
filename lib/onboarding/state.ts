@@ -1,4 +1,3 @@
-const ONBOARDING_DONE_STORAGE_KEY = 'atlas:onboarding:welcome-done';
 const ONBOARDING_ANSWERS_STORAGE_KEY = 'atlas:onboarding:answers';
 
 /** First-run wizard answers persisted for this browser (option ids per step). */
@@ -29,53 +28,16 @@ function getLocalStorage(): Storage | null {
   }
 }
 
-/**
- * Reads whether the first-run onboarding was completed in this browser.
- * @returns True when localStorage contains the completion marker; false on SSR or storage failure.
- * @example
- * if (!isOnboardingDone()) {
- *   // render onboarding
- * }
- */
-export function isOnboardingDone(): boolean {
-  const storage = getLocalStorage();
-  if (!storage) {
-    return false;
-  }
-
-  try {
-    return storage.getItem(ONBOARDING_DONE_STORAGE_KEY) === 'true';
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Persists onboarding completion for this browser without throwing on storage failure.
- * @returns Nothing.
- * @example
- * markOnboardingDone();
- */
-export function markOnboardingDone(): void {
-  const storage = getLocalStorage();
-  if (!storage) {
-    return;
-  }
-
-  try {
-    storage.setItem(ONBOARDING_DONE_STORAGE_KEY, 'true');
-  } catch {
-    // Storage can be unavailable in private browsing or locked-down webviews.
-  }
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
 }
 
 function isOnboardingAnswers(value: unknown): value is OnboardingAnswers {
-  if (typeof value !== 'object' || value === null) {
+  if (!isRecord(value)) {
     return false;
   }
-  const record = value as Record<string, unknown>;
   return (['goal', 'pace', 'equipment'] as const).every(
-    (key) => record[key] === null || typeof record[key] === 'string',
+    (key) => value[key] === null || typeof value[key] === 'string',
   );
 }
 
@@ -118,6 +80,25 @@ export function saveOnboardingAnswers(answers: OnboardingAnswers): void {
 
   try {
     storage.setItem(ONBOARDING_ANSWERS_STORAGE_KEY, JSON.stringify(answers));
+  } catch {
+    // Storage can be unavailable in private browsing or locked-down webviews.
+  }
+}
+
+/**
+ * Removes browser-local onboarding answers after a confirmed server import.
+ *
+ * @returns Nothing; unavailable browser storage is left unchanged.
+ * @example clearOnboardingAnswers();
+ */
+export function clearOnboardingAnswers(): void {
+  const storage = getLocalStorage();
+  if (!storage) {
+    return;
+  }
+
+  try {
+    storage.removeItem(ONBOARDING_ANSWERS_STORAGE_KEY);
   } catch {
     // Storage can be unavailable in private browsing or locked-down webviews.
   }

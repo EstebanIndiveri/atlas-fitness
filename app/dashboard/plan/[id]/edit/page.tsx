@@ -9,7 +9,10 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState, LoadingState } from '@/components/ui/states';
 import { useEditableTrainingPlan, usePlanBuilder } from '@/hooks/usePlanBuilder';
 import { useRoutineList } from '@/hooks/useRoutineList';
-import { PLAN_COPY } from '@/lib/copy/plan';
+import {
+  PLAN_COPY,
+  TRAINING_PLAN_REPLACEMENT_CONFIRMATION,
+} from '@/lib/copy/plan';
 import type { CreateTrainingPlanResult } from '@/lib/services/training-plan';
 
 function parsePlanRouteId(id: string | undefined): number | undefined {
@@ -29,13 +32,13 @@ export default function EditPlanPage() {
     return <LoadingState />;
   }
 
-  if (planState.notFound) {
+  if (planState.notFound || planId === undefined) {
     return (
       <PageContainer>
         <EmptyState
           title="Plan no encontrado"
           description="No existe o no está disponible para tu cuenta."
-          actions={[{ label: 'Volver a rutinas', href: '/dashboard/routines' }]}
+          actions={[{ label: 'Crear un plan', href: '/dashboard/plan/new' }]}
         />
       </PageContainer>
     );
@@ -54,18 +57,24 @@ export default function EditPlanPage() {
   }
 
   return (
-    <EditPlanForm initialPlan={planState.plan} onSaved={() => router.push('/dashboard/today')} />
+    <EditPlanForm
+      planId={planId}
+      initialPlan={planState.plan}
+      onSaved={(saved) => router.push(`/dashboard/plan/${saved.plan.id}`)}
+    />
   );
 }
 
 function EditPlanForm({
+  planId,
   initialPlan,
   onSaved,
 }: {
+  planId: number;
   initialPlan: CreateTrainingPlanResult;
-  onSaved: () => void;
+  onSaved: (result: CreateTrainingPlanResult) => void;
 }) {
-  const { routines, loading: routinesLoading, error: routinesError } = useRoutineList();
+  const { routines, loading: routinesLoading, error: routinesError } = useRoutineList(planId);
   const builder = usePlanBuilder(routines, { mode: 'edit', initialPlan });
 
   if (routinesLoading) {
@@ -82,12 +91,13 @@ function EditPlanForm({
 
   return (
     <PageContainer>
-      <Link href="/dashboard/routines" className="text-sm font-medium text-brand hover:underline">
-        Volver a rutinas
+      <Link href={`/dashboard/plan/${planId}`} className="text-sm font-medium text-brand hover:underline">
+        Volver al plan
       </Link>
       <div className="mt-4">
         <PlanBuilderForm
           mode="edit"
+          planId={planId}
           routines={routines}
           name={builder.name}
           goal={builder.goal}
@@ -101,8 +111,14 @@ function EditPlanForm({
           onDayRoutineChange={builder.setDayRoutine}
           onDayNoteChange={builder.setDayNote}
           onSubmit={() => {
-            void builder.submit().then((updated) => {
-              if (updated) onSaved();
+            if (
+              initialPlan.plan.isActive
+              && !window.confirm(TRAINING_PLAN_REPLACEMENT_CONFIRMATION)
+            ) {
+              return;
+            }
+            void builder.submit().then((created) => {
+              if (created) onSaved(created);
             });
           }}
         />

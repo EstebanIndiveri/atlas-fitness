@@ -10,6 +10,10 @@ export type CreateTrainingPlanInput = {
   name: string;
   goal?: string;
   schedule: Array<{ dayOfWeek: TrainingPlanDayOfWeek; routineId: number; note?: string }>;
+  mutationId?: string;
+  replacePlanId?: number;
+  replacePlanUpdatedAt?: string;
+  replacePlanStateHash?: string;
 };
 
 export type UpdateTrainingPlanInput = CreateTrainingPlanInput;
@@ -96,6 +100,64 @@ export async function getTrainingPlan(planId: number): Promise<CreateTrainingPla
     );
   }
 
+  return parsed;
+}
+
+/**
+ * Fetches the authenticated user's active plan, if any.
+ *
+ * @returns The active plan and its schedule, or null when none exists.
+ * @throws {TrainingPlanClientError} When the API rejects the request or returns an invalid body.
+ */
+export async function getActiveTrainingPlan(): Promise<CreateTrainingPlanResult | null> {
+  const response = await fetch('/api/training-plan/active');
+  const body = await readBody(response);
+  if (!response.ok) {
+    throw mapTrainingPlanHttpError(response.status, body);
+  }
+  if (body === null) {
+    return null;
+  }
+  const parsed = parseTrainingPlanResponse(body);
+  if (!parsed) {
+    throw new TrainingPlanClientError(
+      'generic',
+      'No se pudo cargar el plan de entrenamiento',
+      response.status,
+    );
+  }
+  return parsed;
+}
+
+/**
+ * Archives an active plan using an owner-scoped idempotency key and expected version.
+ *
+ * @param planId - Persisted plan id to archive.
+ * @param input - Confirmation mutation id and last-seen update timestamp.
+ * @returns The archived plan and preserved schedule.
+ * @throws {TrainingPlanClientError} When the API rejects the request or returns an invalid body.
+ */
+export async function archiveTrainingPlan(
+  planId: number,
+  input: { mutationId: string; expectedPlanUpdatedAt: string },
+): Promise<CreateTrainingPlanResult> {
+  const response = await fetch(`/api/training-plan/${planId}/archive`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  const body = await readBody(response);
+  if (!response.ok) {
+    throw mapTrainingPlanHttpError(response.status, body);
+  }
+  const parsed = parseTrainingPlanResponse(body);
+  if (!parsed) {
+    throw new TrainingPlanClientError(
+      'generic',
+      'No se pudo archivar el plan de entrenamiento',
+      response.status,
+    );
+  }
   return parsed;
 }
 
@@ -206,7 +268,20 @@ function parseTrainingPlanResponse(value: unknown): CreateTrainingPlanResult | n
     schedule.push(scheduled);
   }
 
-  return { plan, schedule };
+  if (
+    value.replacementStateHash !== undefined
+    && (typeof value.replacementStateHash !== 'string'
+      || !/^[0-9a-f]{64}$/.test(value.replacementStateHash))
+  ) {
+    return null;
+  }
+  return {
+    plan,
+    schedule,
+    ...(typeof value.replacementStateHash === 'string'
+      ? { replacementStateHash: value.replacementStateHash }
+      : {}),
+  };
 }
 
 function parseTrainingPlan(value: unknown): TrainingPlan | null {

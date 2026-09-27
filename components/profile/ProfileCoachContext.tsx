@@ -9,7 +9,11 @@ import { ProfilePreferencesSummary } from '@/components/profile/ProfilePreferenc
 import { ONBOARDING_COPY } from '@/lib/copy/onboarding';
 import { PROFILE_PREFERENCES_COPY } from '@/lib/copy/profile';
 import { importLegacyPreferencesIfMissing } from '@/lib/onboarding/preferences-sync';
-import { readOnboardingAnswers, type OnboardingAnswers } from '@/lib/onboarding/state';
+import {
+  clearOnboardingAnswers,
+  readOnboardingAnswers,
+  type OnboardingAnswers,
+} from '@/lib/onboarding/state';
 import {
   EMPTY_USER_PREFERENCES,
   isPreferencesResponse,
@@ -164,6 +168,9 @@ export function ProfileCoachContext() {
     setStatus(null);
     try {
       const result = await importLegacyPreferencesIfMissing(legacyAnswers);
+      if (result === 'imported') {
+        clearOnboardingAnswers();
+      }
       const refreshedPreferences = await requestSavedPreferences();
       setPreferences(refreshedPreferences);
       setIsEditing(false);

@@ -270,7 +270,9 @@ async function loadImprovementSnapshot(
       assignment.kind === 'routine' ? [assignment.routineId] : [],
     ),
   )];
-  const routines = await Promise.all(routineIds.map((routineId) => getRoutineById(routineId, userId)));
+  const routines = await Promise.all(
+    routineIds.map((routineId) => getRoutineById(routineId, userId, hub.plan.id)),
+  );
   const routinesById = new Map(routines.map((routine) => [routine.id, routine]));
 
   return {

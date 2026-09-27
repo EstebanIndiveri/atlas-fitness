@@ -84,11 +84,18 @@ describe('previewCoachAdaptation service', () => {
 
   it('returns an explainable deterministic preview with explicit energy and mood without loading check-in', async () => {
     const result = await previewCoachAdaptation(
-      { routineId: 10, userId: 1, energy: 'high', mood: 4, freeText: ' Mantener técnica ' },
+      {
+        routineId: 10,
+        userId: 1,
+        trainingPlanId: 31,
+        energy: 'high',
+        mood: 4,
+        freeText: ' Mantener técnica ',
+      },
       { generateContent: async () => null },
     );
 
-    expect(mockGetRoutineById).toHaveBeenCalledWith(10, 1);
+    expect(mockGetRoutineById).toHaveBeenCalledWith(10, 1, 31);
     expect(mockGetTodayCheckIn).not.toHaveBeenCalled();
     expect(result).toMatchObject({
       original: { exerciseCount: 3, setCount: 10, estMinutes: 30 },

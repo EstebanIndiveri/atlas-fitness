@@ -2,12 +2,14 @@ import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 let routeParams: { id: string } = { id: '12' };
+let routeSearchParams = new URLSearchParams();
 const mockPush = jest.fn();
 const originalFetch = global.fetch;
 
 jest.mock('next/navigation', () => ({
   useParams: () => routeParams,
   useRouter: () => ({ push: mockPush }),
+  useSearchParams: () => routeSearchParams,
 }));
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -63,6 +65,7 @@ function routineResponse(overrides: Partial<Record<string, unknown>> = {}) {
 
 beforeEach(() => {
   routeParams = { id: '12' };
+  routeSearchParams = new URLSearchParams();
   mockPush.mockClear();
 });
 
@@ -182,7 +185,9 @@ describe('RoutineDetailPage', () => {
   });
 
   it('links the secondary edit action and constructor tab to the edit page', async () => {
-    global.fetch = jest.fn<typeof fetch>().mockResolvedValue(jsonResponse(routineResponse()));
+    global.fetch = jest.fn<typeof fetch>().mockResolvedValue(
+      jsonResponse(routineResponse({ isSystem: false })),
+    );
     const { default: RoutineDetailPage } = await import('./page');
 
     render(<RoutineDetailPage />);
@@ -194,5 +199,32 @@ describe('RoutineDetailPage', () => {
       '/dashboard/routines/12/edit',
     );
     expect(screen.getByRole('button', { name: '✦ 3. Coach Atlas' }).hasAttribute('disabled')).toBe(true);
+  });
+
+  it('keeps system routines viewable without exposing mutable editor navigation', async () => {
+    global.fetch = jest.fn<typeof fetch>().mockResolvedValue(jsonResponse(routineResponse()));
+    const { default: RoutineDetailPage } = await import('./page');
+
+    render(<RoutineDetailPage />);
+
+    expect(await screen.findByRole('heading', { name: 'Empuje y torso superior' })).toBeTruthy();
+    expect(screen.queryByRole('link', { name: '⚏ Editar rutina' })).toBeNull();
+    expect(screen.queryByRole('link', { name: '2. Constructor' })).toBeNull();
+  });
+
+  it('keeps plan-scoped routines view-only while retaining plan context for loading', async () => {
+    routeSearchParams = new URLSearchParams('trainingPlanId=77');
+    const fetchMock = jest.fn<typeof fetch>().mockResolvedValue(
+      jsonResponse(routineResponse({ isSystem: false })),
+    );
+    global.fetch = fetchMock;
+    const { default: RoutineDetailPage } = await import('./page');
+
+    render(<RoutineDetailPage />);
+
+    expect(await screen.findByRole('heading', { name: 'Empuje y torso superior' })).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledWith('/api/routines/12?trainingPlanId=77');
+    expect(screen.queryByRole('link', { name: '⚏ Editar rutina' })).toBeNull();
+    expect(screen.queryByRole('link', { name: '2. Constructor' })).toBeNull();
   });
 });

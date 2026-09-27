@@ -35,7 +35,8 @@ export default function AdaptWorkoutPage() {
 
 function AdaptWorkoutParams() {
   const searchParams = useSearchParams();
-  const routineId = parseRoutineId(searchParams.get('routineId'));
+  const routineId = parsePositiveId(searchParams.get('routineId'));
+  const trainingPlanId = parsePositiveId(searchParams.get('trainingPlanId'));
   const routineName = searchParams.get('routineName')?.trim() || FALLBACK_ROUTINE_NAME;
   const planGoal = searchParams.get('planGoal')?.trim() || null;
 
@@ -57,15 +58,24 @@ function AdaptWorkoutParams() {
     );
   }
 
-  return <AdaptWorkoutContent routineId={routineId} routineName={routineName} planGoal={planGoal} />;
+  return (
+    <AdaptWorkoutContent
+      routineId={routineId}
+      trainingPlanId={trainingPlanId}
+      routineName={routineName}
+      planGoal={planGoal}
+    />
+  );
 }
 
 function AdaptWorkoutContent({
   routineId,
+  trainingPlanId,
   routineName,
   planGoal,
 }: {
   routineId: number;
+  trainingPlanId: number | null;
   routineName: string;
   planGoal: string | null;
 }) {
@@ -87,7 +97,7 @@ function AdaptWorkoutContent({
     && checkIn.error === null
     && currentCheckInContext !== null;
   const checkInContext = hasCompleteCheckIn ? currentCheckInContext : null;
-  const adapt = useCoachAdapt({ routineId, checkInContext });
+  const adapt = useCoachAdapt({ routineId, trainingPlanId, checkInContext });
 
   return (
     <PageContainer className="space-y-5 pb-24">
@@ -171,7 +181,7 @@ function AdaptWorkoutContent({
   );
 }
 
-function parseRoutineId(value: string | null): number | null {
+function parsePositiveId(value: string | null): number | null {
   if (!value) {
     return null;
   }

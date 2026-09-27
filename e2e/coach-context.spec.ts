@@ -1,7 +1,7 @@
 import { expect, test, type Page, type Request } from '@playwright/test';
+import { completeOnboardingForCurrentUser } from './helpers/auth';
 
 const PASSWORD = 'Test1234!';
-const ONBOARDING_DONE_KEY = 'atlas:onboarding:welcome-done';
 const ONBOARDING_ANSWERS_KEY = 'atlas:onboarding:answers';
 const PREFERENCES_ENDPOINT = '/api/profile/preferences';
 const EMPTY_PREFERENCES = { goal: null, pace: null, equipment: null };
@@ -100,13 +100,7 @@ async function registerFreshUser(page: Page, startOnboarding = false): Promise<v
   const user = createTestUser(startOnboarding ? 'onboarding' : 'import');
   await page.goto('/register');
   if (startOnboarding) {
-    await page.evaluate(
-      ({ doneKey, answersKey }) => {
-        localStorage.removeItem(doneKey);
-        localStorage.removeItem(answersKey);
-      },
-      { doneKey: ONBOARDING_DONE_KEY, answersKey: ONBOARDING_ANSWERS_KEY },
-    );
+    await page.evaluate((answersKey) => localStorage.removeItem(answersKey), ONBOARDING_ANSWERS_KEY);
   }
 
   await page.fill('input[type="text"]', user.name);
@@ -121,11 +115,12 @@ async function registerFreshUser(page: Page, startOnboarding = false): Promise<v
         response.url().endsWith('/api/auth/register') &&
         response.status() === 201,
     ),
-    page.waitForURL(startOnboarding ? '/onboarding' : '/dashboard/today', {
-      timeout: 15000,
-    }),
+    ...(startOnboarding ? [page.waitForURL('/onboarding', { timeout: 15000 })] : []),
     page.getByRole('button', { name: 'Crear cuenta' }).click(),
   ]);
+  if (!startOnboarding) {
+    await completeOnboardingForCurrentUser(page);
+  }
 }
 
 async function selectOnboardingOption(
@@ -163,9 +158,37 @@ async function getPreferences(page: Page): Promise<UserPreferencesResponse> {
 }
 
 async function getRoutines(page: Page): Promise<RoutineSummary[]> {
-  const response = await page.request.get('/api/routines');
+  return getRoutinesForPlan(page);
+}
+
+async function getRoutinesForPlan(
+  page: Page,
+  trainingPlanId?: number,
+): Promise<RoutineSummary[]> {
+  const planContext =
+    trainingPlanId === undefined ? '' : `?trainingPlanId=${trainingPlanId}`;
+  const response = await page.request.get(`/api/routines${planContext}`);
   expect(response.status()).toBe(200);
   return (await response.json()) as RoutineSummary[];
+}
+
+async function expectPlanRoutinesVisible(
+  page: Page,
+  plan: SavedPlanResult,
+  libraryBaselineIds: number[],
+): Promise<RoutineSummary[]> {
+  const scheduledRoutineIds = [
+    ...new Set(plan.schedule.map(({ routineId }) => routineId)),
+  ].sort((left, right) => left - right);
+  const expectedPlanContextIds = [
+    ...new Set([...libraryBaselineIds, ...scheduledRoutineIds]),
+  ].sort((left, right) => left - right);
+
+  const planRoutines = await getRoutinesForPlan(page, plan.plan.id);
+  const planRoutineIds = planRoutines.map(({ id }) => id);
+  expect(new Set(planRoutineIds).size).toBe(planRoutineIds.length);
+  expect(planRoutineIds.sort((left, right) => left - right)).toEqual(expectedPlanContextIds);
+  return planRoutines;
 }
 
 async function getToday(page: Page): Promise<TodaySnapshot> {
@@ -205,13 +228,14 @@ test.describe('Coach Context', () => {
     const [onboardingSave] = await Promise.all([
       page.waitForResponse(
         (response) =>
-          response.url().endsWith(PREFERENCES_ENDPOINT) &&
-          response.request().method() === 'PUT',
+          response.url().endsWith('/api/profile/onboarding') &&
+          response.request().method() === 'POST',
       ),
       page.waitForURL('/dashboard/today', { timeout: 10000 }),
       page.getByTestId('onboarding-continue').click(),
     ]);
     expect(onboardingSave.status()).toBe(200);
+    await expect(onboardingSave.json()).resolves.toEqual({ completed: true });
 
     const savedPreferences = await getPreferences(page);
     expect(savedPreferences).toEqual({
@@ -246,8 +270,11 @@ test.describe('Coach Context', () => {
 
     const todayBeforeGeneration = await getToday(page);
     expect(todayBeforeGeneration.kind).toBe('no_plan');
-    const routinesBeforeGeneration = await getRoutines(page);
-    expect(routinesBeforeGeneration.filter((routine) => !routine.isSystem)).toHaveLength(0);
+    const libraryBeforeGeneration = await getRoutines(page);
+    expect(libraryBeforeGeneration.filter((routine) => !routine.isSystem)).toHaveLength(0);
+    const libraryBaselineIds = libraryBeforeGeneration
+      .map(({ id }) => id)
+      .sort((left, right) => left - right);
 
     const guidedSaveRequests: Request[] = [];
     page.on('request', (request) => {
@@ -325,11 +352,13 @@ test.describe('Coach Context', () => {
       await expect(card.getByRole('heading', { name: day.title, exact: true })).toBeVisible();
       await expect(card).toContainText(day.focus);
       await expect(card).toContainText(WEEKDAY_LABELS[day.dayOfWeek] ?? 'Día desconocido');
-      await expect(card.getByRole('listitem')).toHaveCount(day.exercises.length);
-      for (const exercise of day.exercises) {
-        await expect(card.getByText(exercise.exerciseName, { exact: true })).toBeVisible();
+      const exerciseItems = card.getByRole('listitem');
+      await expect(exerciseItems).toHaveCount(day.exercises.length);
+      for (const [index, exercise] of day.exercises.entries()) {
+        const item = exerciseItems.nth(index);
+        await expect(item.getByText(exercise.exerciseName, { exact: true })).toBeVisible();
         await expect(
-          card.getByText(
+          item.getByText(
             `${exercise.muscleGroup} · ${exercise.targetSets}×${exercise.targetReps}`,
             { exact: true },
           ),
@@ -343,8 +372,10 @@ test.describe('Coach Context', () => {
 
     const todayAfterGeneration = await getToday(page);
     expect(todayAfterGeneration.kind).toBe('no_plan');
-    const routinesAfterGeneration = await getRoutines(page);
-    expect(routinesAfterGeneration.filter((routine) => !routine.isSystem)).toHaveLength(0);
+    const libraryAfterGeneration = await getRoutines(page);
+    expect(
+      libraryAfterGeneration.map(({ id }) => id).sort((left, right) => left - right),
+    ).toEqual(libraryBaselineIds);
 
     const [guidedSaveResponse] = await Promise.all([
       page.waitForResponse(
@@ -381,6 +412,24 @@ test.describe('Coach Context', () => {
     expect(
       savedPlan.schedule.map(({ dayOfWeek }) => dayOfWeek).sort((left, right) => left - right),
     ).toEqual(draft.days.map(({ dayOfWeek }) => dayOfWeek).sort((left, right) => left - right));
+    const libraryAfterSave = await getRoutines(page);
+    expect(libraryAfterSave.map(({ id }) => id).sort((left, right) => left - right)).toEqual(
+      libraryBaselineIds,
+    );
+    const scheduledRoutineIds = savedPlan.schedule.map(({ routineId }) => routineId);
+    expect(libraryAfterSave.some(({ id }) => scheduledRoutineIds.includes(id))).toBe(false);
+    const routinesInSavedPlan = await expectPlanRoutinesVisible(
+      page,
+      savedPlan,
+      libraryBaselineIds,
+    );
+    for (const scheduled of savedPlan.schedule) {
+      const detailResponse = await page.request.get(
+        `/api/routines/${scheduled.routineId}?trainingPlanId=${savedPlan.plan.id}`,
+      );
+      expect(detailResponse.status()).toBe(200);
+      expect((await detailResponse.json() as RoutineSummary).id).toBe(scheduled.routineId);
+    }
 
     const saveRequestBody = saveRequest?.postData();
     if (saveRequestBody === null || saveRequestBody === undefined) {
@@ -398,9 +447,18 @@ test.describe('Coach Context', () => {
     expect(replayedPlan.schedule.map(({ dayOfWeek, routineId }) => [dayOfWeek, routineId])).toEqual(
       savedPlan.schedule.map(({ dayOfWeek, routineId }) => [dayOfWeek, routineId]),
     );
-    const routinesAfterReplay = await getRoutines(page);
-    expect(routinesAfterReplay.filter((routine) => !routine.isSystem)).toHaveLength(
-      savedPlan.schedule.length,
+    const libraryAfterReplay = await getRoutines(page);
+    expect(libraryAfterReplay.map(({ id }) => id).sort((left, right) => left - right)).toEqual(
+      libraryBaselineIds,
+    );
+    expect(libraryAfterReplay.some(({ id }) => scheduledRoutineIds.includes(id))).toBe(false);
+    const routinesAfterReplay = await expectPlanRoutinesVisible(
+      page,
+      replayedPlan,
+      libraryBaselineIds,
+    );
+    expect(routinesAfterReplay.map(({ id }) => id).sort((left, right) => left - right)).toEqual(
+      routinesInSavedPlan.map(({ id }) => id).sort((left, right) => left - right),
     );
 
     await page.reload();
@@ -429,7 +487,11 @@ test.describe('Coach Context', () => {
       savedPlan.schedule.map(({ dayOfWeek, routineId }) => [dayOfWeek, routineId]),
     );
 
-    const persistedRoutines = await getRoutines(page);
+    const persistedRoutines = await expectPlanRoutinesVisible(
+      page,
+      persistedPlan,
+      libraryBaselineIds,
+    );
     for (const scheduled of persistedPlan.schedule) {
       const routine = persistedRoutines.find((item) => item.id === scheduled.routineId);
       expect(routine).toBeDefined();

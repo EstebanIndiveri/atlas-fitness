@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { expectCssColor, ATLAS_SMOKE } from './tailwind-smoke';
+import { completeOnboardingForCurrentUser } from './helpers/auth';
 
 async function registerFreshUser(
   page: import('@playwright/test').Page,
@@ -12,9 +13,6 @@ async function registerFreshUser(
   };
 
   await page.goto('/register');
-  if (startOnboarding) {
-    await page.evaluate(() => localStorage.removeItem('atlas:onboarding:welcome-done'));
-  }
   await page.fill('input[type="text"]', testUser.name);
   await page.fill('input[type="email"]', testUser.email);
   const passwordInputs = await page.locator('input[type="password"]').all();
@@ -24,16 +22,21 @@ async function registerFreshUser(
     page.waitForResponse(
       (resp) => resp.url().includes('/api/auth/register') && resp.status() === 201,
     ),
-    page.waitForURL(startOnboarding ? '/onboarding' : '/dashboard/today', {
-      timeout: 15000,
-    }),
+    ...(startOnboarding ? [page.waitForURL('/onboarding', { timeout: 15000 })] : []),
     page.locator('button[type="submit"]').click(),
   ]);
+  if (!startOnboarding) {
+    await completeOnboardingForCurrentUser(page);
+  }
 }
 
 test.describe('Guided session (Epic-E Must)', () => {
   test('GET /api/routines returns seeded routines and active is 200+null', async ({ page }) => {
     await registerFreshUser(page);
+    const onboardingResponse = await page.request.get('/api/profile/onboarding');
+    expect(onboardingResponse.status()).toBe(200);
+    await expect(onboardingResponse.json()).resolves.toEqual({ completed: true });
+
     const active = await page.request.get('/api/workouts/active');
     expect(active.status()).toBe(200);
     expect(await active.json()).toBeNull();

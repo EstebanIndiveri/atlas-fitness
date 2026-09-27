@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
-import { generateWeeklyPlanDraft } from '@/lib/ai/weekly-plan-draft';
+import { composeWeeklyPlanProposal } from '@/lib/ai/weekly-plan-composer';
 import { handleApiError, requireAuth } from '@/lib/auth/middleware';
 import { enforceWeeklyPlanGenerateRateLimit } from '@/lib/auth/weekly-plan-rate-limit';
 import { listExercises } from '@/lib/services/exercises';
@@ -28,8 +28,11 @@ async function readJsonBody(request: NextRequest): Promise<unknown> {
 /**
  * POST /api/training-plan/generate — builds a non-persistent weekly draft.
  *
+ * The brief is validated here, the caller-visible catalog is loaded for the authenticated
+ * user and the coherent week is composed by the weekly plan strategy composer.
+ *
  * @param request Authenticated request with a bounded training brief.
- * @returns A validated Gemini or deterministic fallback proposal.
+ * @returns The composed week with its Gemini or deterministic fallback provenance.
  * @throws {AppError} UNAUTHORIZED or VALIDATION when auth, input, or catalog checks fail.
  * @example
  * await POST(new NextRequest('http://localhost/api/training-plan/generate', { method: 'POST' }));
@@ -48,7 +51,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       throw new AppError('VALIDATION', 'No hay ejercicios disponibles para armar un plan semanal.');
     }
 
-    const draft = await generateWeeklyPlanDraft({ ...parsed.data, catalog });
+    const draft = await composeWeeklyPlanProposal({ ...parsed.data, catalog });
     return NextResponse.json(draft);
   } catch (error) {
     return handleApiError(error);

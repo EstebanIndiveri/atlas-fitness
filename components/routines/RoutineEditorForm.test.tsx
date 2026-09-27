@@ -65,6 +65,35 @@ function renderEditableForm(
 }
 
 describe('RoutineEditorForm', () => {
+  it('edits one routine without exposing weekly frequency', () => {
+    const draft = { ...emptyDraft(), name: 'Empuje' };
+    render(
+      <RoutineEditorForm
+        mode="edit"
+        draft={draft}
+        catalog={[]}
+        selectedExerciseId={null}
+        validation={validateDraft(draft)}
+        error={null}
+        duplicateMessage={null}
+        readOnly={false}
+        busy={false}
+        onMetaChange={jest.fn()}
+        onSelectExercise={jest.fn()}
+        onAddExercise={jest.fn()}
+        onUpdateExercise={jest.fn()}
+        onMoveExercise={jest.fn()}
+        onRemoveExercise={jest.fn()}
+        onSubmit={jest.fn()}
+      />,
+    );
+
+    expect(screen.getByRole('heading', { name: 'Editar rutina' })).toBeTruthy();
+    expect(screen.getByLabelText(ROUTINE_COPY.nameLabel)).toBeTruthy();
+    expect(screen.queryByText(/frecuencia semanal/i)).toBeNull();
+    expect(screen.queryByLabelText(/días de la semana/i)).toBeNull();
+  });
+
   it('exposes labels, empty media, locked system upload and add/remove', () => {
     const onAdd = jest.fn();
     const onRemove = jest.fn();

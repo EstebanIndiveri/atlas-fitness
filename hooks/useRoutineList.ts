@@ -12,7 +12,7 @@ function asClientError(error: unknown): RoutineClientError {
   return new RoutineClientError('generic', ROUTINE_COPY.errorLoad, 0);
 }
 
-export function useRoutineList() {
+export function useRoutineList(trainingPlanId?: number) {
   const [routines, setRoutines] = useState<RoutineSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -23,7 +23,7 @@ export function useRoutineList() {
 
     async function load() {
       try {
-        const list = await fetchRoutines();
+        const list = await fetchRoutines(trainingPlanId);
         if (cancelled) return;
         setRoutines(list);
         setError(null);
@@ -37,7 +37,7 @@ export function useRoutineList() {
     return () => {
       cancelled = true;
     };
-  }, [requestId]);
+  }, [requestId, trainingPlanId]);
 
   const reload = useCallback(() => {
     setRequestId((current) => current + 1);

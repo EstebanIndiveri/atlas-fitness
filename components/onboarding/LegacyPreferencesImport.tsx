@@ -11,6 +11,7 @@ import {
   importLegacyPreferencesIfMissing,
 } from '@/lib/onboarding/preferences-sync';
 import {
+  clearOnboardingAnswers,
   readOnboardingAnswers,
   type OnboardingAnswers,
 } from '@/lib/onboarding/state';
@@ -70,6 +71,9 @@ export function LegacyPreferencesImport() {
     setStatus(null);
     try {
       const result = await importLegacyPreferencesIfMissing(answers);
+      if (result === 'imported') {
+        clearOnboardingAnswers();
+      }
       setStatus(
         result === 'imported'
           ? ONBOARDING_COPY.sync.importSuccess

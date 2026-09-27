@@ -1,11 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { PWA_COPY } from '../lib/pwa/copy';
 import { PWA_THEME } from '../lib/pwa/theme';
-
-const TEST_USER = {
-  email: 'qa@atlas.test',
-  password: 'Test1234!',
-};
+import { registerAndCompleteTestAccount } from './helpers/auth';
 
 test.describe('PWA installability', () => {
   test('links the web manifest and exposes installability fields', async ({ page, request }) => {
@@ -85,17 +81,7 @@ test.describe('PWA installability', () => {
   });
 
   test('shows iOS Agregar a Inicio copy on Settings', async ({ page }) => {
-    await page.goto('/login', { waitUntil: 'networkidle' });
-    await page.fill('input[type="email"]', TEST_USER.email);
-    await page.fill('input[type="password"]', TEST_USER.password);
-    await Promise.all([
-      page.waitForResponse(
-        (resp) => resp.url().includes('/api/auth/login') && resp.status() === 200,
-        { timeout: 10000 }
-      ),
-      page.waitForURL('/dashboard/today', { timeout: 20000 }),
-      page.click('button[type="submit"]'),
-    ]);
+    await registerAndCompleteTestAccount(page, 'PWA Settings E2E');
     await Promise.all([
       page.waitForURL('**/dashboard/settings', { timeout: 10000 }),
       page.getByTestId('profile-link').click(),

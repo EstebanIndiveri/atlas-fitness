@@ -38,8 +38,9 @@ async function throwMapped(response: Response, method: string): Promise<never> {
   throw new RoutineClientError(mapped.kind, mapped.message, response.status);
 }
 
-export async function fetchRoutines(): Promise<RoutineSummary[]> {
-  const response = await fetch('/api/routines');
+export async function fetchRoutines(trainingPlanId?: number): Promise<RoutineSummary[]> {
+  const planContext = trainingPlanId === undefined ? '' : `?trainingPlanId=${trainingPlanId}`;
+  const response = await fetch(`/api/routines${planContext}`);
   if (!response.ok) {
     await throwMapped(response, 'GET');
   }
@@ -50,8 +51,9 @@ export async function fetchRoutines(): Promise<RoutineSummary[]> {
   return parsed;
 }
 
-export async function fetchRoutine(id: number): Promise<RoutineSummary> {
-  const response = await fetch(`/api/routines/${id}`);
+export async function fetchRoutine(id: number, trainingPlanId?: number): Promise<RoutineSummary> {
+  const planContext = trainingPlanId === undefined ? '' : `?trainingPlanId=${trainingPlanId}`;
+  const response = await fetch(`/api/routines/${id}${planContext}`);
   if (!response.ok) {
     await throwMapped(response, 'GET');
   }

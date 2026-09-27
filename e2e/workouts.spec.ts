@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { expectCssColor, ATLAS_SMOKE } from './tailwind-smoke';
+import { completeOnboardingForCurrentUser } from './helpers/auth';
 
 /**
  * Starts a manual ad-hoc workout via the API and opens its logger page.
@@ -35,9 +36,9 @@ test.describe('Workout Flow', () => {
       page.waitForResponse(
         (resp) => resp.url().includes('/api/auth/register') && resp.status() === 201,
       ),
-      page.waitForURL('/dashboard/today', { timeout: 15000 }),
       page.locator('button[type="submit"]').click(),
     ]);
+    await completeOnboardingForCurrentUser(page);
   });
 
   test('GET /api/workouts/active returns 200 with null when none is active', async ({ page }) => {

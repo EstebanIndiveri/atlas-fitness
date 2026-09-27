@@ -6,6 +6,9 @@ import { isWeeklyPlanDraft } from '@/lib/api/weekly-plan-draft';
 import type { WeeklyPlanDraft } from '@/lib/ai/weekly-plan-draft';
 import type { RoutineDraftLevel } from '@/lib/ai/routine-draft';
 import { ONBOARDING_COPY } from '@/lib/copy/onboarding';
+import { getActiveTrainingPlan } from '@/lib/api/training-plan';
+import { TRAINING_PLAN_REPLACEMENT_CONFIRMATION } from '@/lib/copy/plan';
+import type { CreateTrainingPlanResult } from '@/lib/services/training-plan';
 import type { RoutineKind } from '@/types/routine';
 import type { ExerciseCatalogItem } from '@/types/exercise';
 import type { UserPreferencesResponse } from '@/types/user-preferences';
@@ -157,6 +160,7 @@ export function useGuidedPlan({ catalog, onSaved }: UseGuidedPlanOptions) {
   const editedFieldsRef = useRef(new Set<GuidedPlanField>());
   const draftRef = useRef<WeeklyPlanDraft | null>(null);
   const mutationIdRef = useRef<string | null>(null);
+  const replacementPlanRef = useRef<CreateTrainingPlanResult | null>(null);
   const stepRef = useRef<GuidedPlanStep>('brief');
   const [draft, setDraft] = useState<WeeklyPlanDraft | null>(null);
   const [step, setStep] = useState<GuidedPlanStep>('brief');
@@ -249,6 +253,7 @@ export function useGuidedPlan({ catalog, onSaved }: UseGuidedPlanOptions) {
     setBusy(true);
     setError(null);
     try {
+      const replacementPlan = await getActiveTrainingPlan();
       const requestedDays = Number(currentForm.daysPerWeek);
       const response = await fetch('/api/training-plan/generate', {
         method: 'POST',
@@ -270,6 +275,7 @@ export function useGuidedPlan({ catalog, onSaved }: UseGuidedPlanOptions) {
         throw new Error('La propuesta recibida no es válida.');
       }
       const nextDraft = body;
+      replacementPlanRef.current = replacementPlan;
       draftRef.current = nextDraft;
       mutationIdRef.current = null;
       setDraft(nextDraft);
@@ -289,6 +295,14 @@ export function useGuidedPlan({ catalog, onSaved }: UseGuidedPlanOptions) {
     const currentDraft = draftRef.current ?? draft;
     if (!currentDraft) {
       setError({ kind: 'validation', message: 'Primero generá una propuesta.' });
+      return;
+    }
+    const replacementPlan = replacementPlanRef.current;
+    if (replacementPlan && !window.confirm(TRAINING_PLAN_REPLACEMENT_CONFIRMATION)) {
+      return;
+    }
+    if (replacementPlan && !replacementPlan.replacementStateHash) {
+      setError({ kind: 'plan_create', message: 'No se pudo verificar el plan activo. Volvé a intentarlo.' });
       return;
     }
     setSaving(true);
@@ -311,6 +325,13 @@ export function useGuidedPlan({ catalog, onSaved }: UseGuidedPlanOptions) {
           name: currentDraft.name,
           goal: currentDraft.goal,
           days,
+          ...(replacementPlan
+            ? {
+                replacePlanId: replacementPlan.plan.id,
+                replacePlanUpdatedAt: replacementPlan.plan.updatedAt.toISOString(),
+                replacePlanStateHash: replacementPlan.replacementStateHash,
+              }
+            : {}),
         }),
       });
       if (!response.ok) {
