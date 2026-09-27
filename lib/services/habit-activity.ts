@@ -30,7 +30,8 @@ const QUARTER_WINDOW_DAYS = 90;
  * @param period - Window to resolve.
  * @param today - Córdoba calendar date (YYYY-MM-DD) of the reference instant.
  * @returns Inclusive window bounds, both Córdoba YYYY-MM-DD strings.
- * @throws {Error} When `period` is not a supported period, or `today` is not a valid Córdoba date.
+ * @throws {Error} When `period` is not a supported period, or `today` is not a real calendar day
+ * in YYYY-MM-DD form (a shape-valid but non-existent day such as `2026-02-31` is rejected too).
  * @example
  * resolveHabitActivityWindow('week', '2026-09-24'); // { windowStart: '2026-09-21', windowEnd: '2026-09-27' }
  */
@@ -38,18 +39,33 @@ function resolveHabitActivityWindow(
   period: HabitActivityPeriod,
   today: string,
 ): HabitActivityWindowBounds {
+  // `addLocalDateDays` only validates the YYYY-MM-DD shape, so a shape-valid but non-existent
+  // day ("2026-02-31") would flow through and corrupt every lexicographic window comparison.
+  // Round-tripping the day canonicalises it: any non-canonical value fails the round-trip.
+  const canonicalToday = addLocalDateDays(today, 0);
+
+  if (canonicalToday !== today) {
+    throw new Error(`Invalid local date: ${today}`);
+  }
+
   if (period === 'week') {
-    const windowStart = addLocalDateDays(today, -localDateWeekdayIndex(today));
+    const windowStart = addLocalDateDays(canonicalToday, -localDateWeekdayIndex(canonicalToday));
 
     return { windowStart, windowEnd: addLocalDateDays(windowStart, 6) };
   }
 
   if (period === 'month') {
-    return { windowStart: addLocalDateDays(today, -(MONTH_WINDOW_DAYS - 1)), windowEnd: today };
+    return {
+      windowStart: addLocalDateDays(canonicalToday, -(MONTH_WINDOW_DAYS - 1)),
+      windowEnd: canonicalToday,
+    };
   }
 
   if (period === 'quarter') {
-    return { windowStart: addLocalDateDays(today, -(QUARTER_WINDOW_DAYS - 1)), windowEnd: today };
+    return {
+      windowStart: addLocalDateDays(canonicalToday, -(QUARTER_WINDOW_DAYS - 1)),
+      windowEnd: canonicalToday,
+    };
   }
 
   throw new Error(`Unsupported habit activity period: ${period}`);

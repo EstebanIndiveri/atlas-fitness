@@ -378,10 +378,21 @@ describe('computeHabitActivity', () => {
   });
 
   describe('invalid input', () => {
-    it('rejects a date that is not a Córdoba calendar date', () => {
+    it('rejects a date that is not in YYYY-MM-DD form', () => {
       expect(() => computeHabitActivity({ period: 'week', today: '2026-9-4', logs: [] })).toThrow(
         /Invalid/
       );
+    });
+
+    it('rejects a shape-valid date that is not a real calendar day', () => {
+      // '2026-13-45' and '2026-02-31' match /^\d{4}-\d{2}-\d{2}$/ but do not exist. Without a
+      // canonicalisation check the month window silently becomes a 0-day (or 51-day) window
+      // instead of throwing, so every malformed value must be rejected for every period.
+      for (const today of ['2026-13-45', '2026-02-31', '2026-00-10', '0000-01-01']) {
+        for (const period of ['week', 'month', 'quarter'] as const) {
+          expect(() => computeHabitActivity({ period, today, logs: [] })).toThrow(/Invalid/);
+        }
+      }
     });
 
     it('rejects a period outside the supported union', () => {
