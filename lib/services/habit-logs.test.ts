@@ -244,6 +244,22 @@ describe('loadHabitActivityInWindow', () => {
     expect(args).toEqual([userId, WINDOW_START, WINDOW_END]);
   });
 
+  it('returns the window rows ascending by local date', async () => {
+    await db.insert(habitLogs).values([
+      { userId, localDate: WINDOW_END, habitKey: 'walk', done: true },
+      { userId, localDate: '2026-09-20', habitKey: 'walk', done: true },
+      { userId, localDate: WINDOW_START, habitKey: 'walk', done: true },
+      { userId, localDate: '2026-09-10', habitKey: 'walk', done: true },
+    ]);
+
+    const rows = await loadHabitActivityInWindow(userId, WINDOW_START, WINDOW_END);
+
+    const localDates = rows.map((row) => row.localDate);
+    expect(localDates).toEqual([...localDates].sort());
+    expect(localDates[0]).toBe(WINDOW_START);
+    expect(localDates[localDates.length - 1]).toBe(WINDOW_END);
+  });
+
   it('returns an empty list when the window holds no rows', async () => {
     await db
       .insert(habitLogs)

@@ -135,7 +135,9 @@ export async function getTodayHabitLogs(userId: number, now: Date = new Date()):
  * @param userId - Authenticated owner of the logs.
  * @param windowStart - Inclusive Córdoba start date in YYYY-MM-DD format.
  * @param windowEnd - Inclusive Córdoba end date in YYYY-MM-DD format.
- * @returns The HabitLog rows inside the window, ascending by local date (empty array when none).
+ * @returns The HabitLog rows inside the window, explicitly ordered ascending by local date
+ * (empty array when none). The order is guaranteed by this loader's own `ORDER BY`, not by the
+ * index scan, so callers may rely on it whatever query plan the engine picks.
  * @example
  * const logs = await loadHabitActivityInWindow(1, '2026-09-21', '2026-09-27');
  */
