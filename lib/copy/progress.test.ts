@@ -53,6 +53,13 @@ describe('PROGRESS_COPY habit activity', () => {
     );
   });
 
+  it('names the unavailable state with period-scoped copy instead of today-scoped copy', () => {
+    expect(PROGRESS_COPY.habitActivity.unavailable).toBe(
+      'No pudimos cargar tu actividad de hábitos. Probá de nuevo en unos minutos.',
+    );
+    expect(PROGRESS_COPY.habitActivity.unavailable).not.toMatch(/de hoy/i);
+  });
+
   it('labels a calendar day as recorded, unrecorded or not yet reached', () => {
     expect(PROGRESS_COPY.habitActivity.dayRecorded('2026-09-24')).toBe('2026-09-24: registrado');
     expect(PROGRESS_COPY.habitActivity.dayMissing('2026-09-25')).toBe('2026-09-25: sin registro');

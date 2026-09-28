@@ -4,6 +4,7 @@
 import { afterEach, describe, expect, it, jest } from '@jest/globals';
 import { act, renderHook, waitFor } from '@testing-library/react';
 
+import { PROGRESS_COPY } from '@/lib/copy/progress';
 import { TODAY_COPY } from '@/lib/copy/today';
 import type { HabitActivityPeriod, HabitActivityWindow } from '@/types/habit-activity';
 import { useHabitActivity } from './useHabitActivity';
@@ -89,7 +90,7 @@ describe('useHabitActivity', () => {
     expect(result.current.error).toBe(TODAY_COPY.habitsSessionExpired);
   });
 
-  it('maps a validation failure to the habits error copy', async () => {
+  it('maps a validation failure to the period-scoped unavailable copy', async () => {
     mockFetch().mockResolvedValue(
       jsonResponse({ code: 'VALIDATION', message: 'Período inválido' }, 400),
     );
@@ -100,10 +101,10 @@ describe('useHabitActivity', () => {
     });
 
     expect(result.current.activity).toBeNull();
-    expect(result.current.error).toBe(TODAY_COPY.habitsError);
+    expect(result.current.error).toBe(PROGRESS_COPY.habitActivity.unavailable);
   });
 
-  it('maps a generic failure to the habits error copy', async () => {
+  it('maps a generic failure to the period-scoped unavailable copy', async () => {
     mockFetch().mockResolvedValue(jsonResponse({ code: 'CONFLICT', message: 'Boom' }, 500));
 
     const { result } = renderHook(() => useHabitActivity('week'));
@@ -112,7 +113,7 @@ describe('useHabitActivity', () => {
     });
 
     expect(result.current.activity).toBeNull();
-    expect(result.current.error).toBe(TODAY_COPY.habitsError);
+    expect(result.current.error).toBe(PROGRESS_COPY.habitActivity.unavailable);
   });
 
   it('treats a body that fails transport validation as an error, never as partial data', async () => {
@@ -127,7 +128,7 @@ describe('useHabitActivity', () => {
     });
 
     expect(result.current.activity).toBeNull();
-    expect(result.current.error).toBe(TODAY_COPY.habitsError);
+    expect(result.current.error).toBe(PROGRESS_COPY.habitActivity.unavailable);
   });
 
   it('never exposes the previous period’s window once another period is requested', async () => {
@@ -166,7 +167,7 @@ describe('useHabitActivity', () => {
 
     const { result } = renderHook(() => useHabitActivity('week'));
     await waitFor(() => {
-      expect(result.current.error).toBe(TODAY_COPY.habitsError);
+      expect(result.current.error).toBe(PROGRESS_COPY.habitActivity.unavailable);
     });
 
     act(() => {
