@@ -1,4 +1,5 @@
 /** @jest-environment jsdom */
+import { describe, expect, it } from '@jest/globals';
 import { render, screen } from '@testing-library/react';
 import { PROGRESS_COPY } from '@/lib/copy/progress';
 import { TODAY_COPY } from '@/lib/copy/today';
@@ -159,7 +160,7 @@ describe('HabitActivityCard', () => {
       screen.queryByText(PROGRESS_COPY.habitActivity.activeDaysLabel),
     ).toBeNull();
     expect(screen.queryByText('0')).toBeNull();
-    expect(screen.queryByText('Calculado por Atlas')).toBeNull();
+    expect(screen.getAllByText('Calculado por Atlas')).toHaveLength(1);
   });
 
   it('names missing activity, not missing history, when a full window holds no recorded day', () => {
@@ -264,6 +265,11 @@ describe('HabitActivityCard', () => {
 
     expect(screen.queryByText('3')).toBeNull();
     expect(screen.queryByText(PROGRESS_COPY.habitActivity.summary(3, 4))).toBeNull();
+    expect(
+      screen.queryByText(
+        PROGRESS_COPY.habitActivity.windowLabel('21/09/2026', '27/09/2026'),
+      ),
+    ).toBeNull();
     expect(screen.getByText(PROGRESS_COPY.habitActivity.loading)).toBeDefined();
   });
 });
