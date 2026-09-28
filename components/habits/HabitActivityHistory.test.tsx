@@ -295,6 +295,24 @@ describe('HabitActivityHistory', () => {
     expect(screen.getAllByText('Calculado por Atlas')).toHaveLength(HABIT_KEYS.length);
   });
 
+  it('announces each per-habit count once instead of echoing its own sentence', () => {
+    mockActivity({
+      activity: makeWindow('month', [
+        { recorded: true },
+        { recorded: true },
+        { recorded: true },
+        { today: true },
+      ]),
+    });
+
+    render(<HabitActivityHistory />);
+
+    const sentence = PROGRESS_COPY.habitActivity.recordedDaysLabel('Hidratación', 3, 30);
+    const stripsText = screen.getByTestId('habit-activity-strips').textContent ?? '';
+
+    expect(stripsText.split(sentence)).toHaveLength(2);
+  });
+
   it('renders a future day as still-to-come and never as a day without a record', () => {
     mockActivity({
       activity: makeWindow(
