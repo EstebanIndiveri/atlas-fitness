@@ -67,6 +67,17 @@ describe('PROGRESS_COPY habit activity', () => {
     expect(PROGRESS_COPY.habitActivity.legendMissing).toBe('Sin registro');
   });
 
+  it('drops the copy of the removed habit consistency card', () => {
+    expect(Object.keys(PROGRESS_COPY.habits)).toEqual(['todayOnly']);
+  });
+
+  it('names the wellbeing window so the card is not read as period-aggregated', () => {
+    expect(PROGRESS_COPY.wellbeing.windowLabel).toBe(
+      'Refleja solo tu check-in de hoy. No se acumula con el período elegido.',
+    );
+    expect(PROGRESS_COPY.wellbeing.windowLabel).toMatch(/hoy/i);
+  });
+
   it('uses activity vocabulary and no forbidden §13 token in any habit-activity string', () => {
     const strings = [
       ...collectStrings(PROGRESS_COPY.habitActivity),

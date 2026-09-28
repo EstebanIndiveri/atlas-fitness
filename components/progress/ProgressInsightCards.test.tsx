@@ -1,18 +1,10 @@
 import { describe, expect, it } from '@jest/globals';
 import { render, screen } from '@testing-library/react';
 
-import type { HabitDoneMap } from '@/hooks/useHabits';
 import type { DailyCheckInResponse } from '@/lib/api/checkin';
 import type { StrengthProgressSummary } from '@/lib/services/strength-progress';
 
-import { HabitConsistencyCard, StrengthEvolutionCard, WellbeingCard } from './ProgressInsightCards';
-
-const doneByKey: HabitDoneMap = {
-  hydration: true,
-  walk: false,
-  mobility: true,
-  sleep: false,
-};
+import { StrengthEvolutionCard, WellbeingCard } from './ProgressInsightCards';
 
 const checkin: DailyCheckInResponse = {
   id: 1,
@@ -89,15 +81,14 @@ describe('ProgressInsightCards', () => {
     expect(screen.getByText('Todavía no registraste ánimo o energía hoy.')).toBeTruthy();
   });
 
-  it('does not fabricate habit consistency percentages from today-only habit data', () => {
-    render(<HabitConsistencyCard doneByKey={doneByKey} loading={false} error={null} />);
+  it('states the wellbeing window so the card cannot be read as period-aggregated', () => {
+    const { unmount } = render(<WellbeingCard checkin={checkin} loading={false} error={null} />);
 
-    expect(screen.getByRole('heading', { name: 'Hábitos consistentes' })).toBeTruthy();
-    expect(screen.getByText('Todavía no hay historial suficiente para calcular consistencia por hábito.')).toBeTruthy();
-    expect(
-      screen.getByText(
-        'Hoy registraste 2 de 4 hábitos. Abajo está el detalle día por día del período elegido.',
-      ),
-    ).toBeTruthy();
+    expect(screen.getByText('Refleja solo tu check-in de hoy. No se acumula con el período elegido.')).toBeTruthy();
+
+    unmount();
+    render(<WellbeingCard checkin={null} loading={false} error={null} />);
+
+    expect(screen.getByText('Refleja solo tu check-in de hoy. No se acumula con el período elegido.')).toBeTruthy();
   });
 });
