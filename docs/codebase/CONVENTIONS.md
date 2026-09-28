@@ -4,7 +4,7 @@
 
 ## Reconciliación actual — develop post PR #114
 
-- `README.md` ya no declara un scaffold: identifica v0.6.1 como última versión publicada y enlaza el checkpoint operativo.
+- `README.md` ya no declara un scaffold: identifica la última versión publicada del producto (hoy v0.9.0) y enlaza el checkpoint operativo.
 - ADR-003 ya no está propuesto: su flujo de Gemini opcional y fallback determinista está implementado para la sesión guiada. Esto no implica uso de Gemini en otros productos o flujos.
 - La observación de gobernanza a continuación corresponde al 18-09-2026; no se vuelve a certificar aquí el estado actual de GitHub.
 
