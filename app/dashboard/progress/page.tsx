@@ -1,11 +1,8 @@
 'use client';
 
 import { AtlasInterpretationCard } from '@/components/progress/AtlasInterpretationCard';
-import {
-  HabitConsistencyCard,
-  StrengthEvolutionCard,
-  WellbeingCard,
-} from '@/components/progress/ProgressInsightCards';
+import { HabitActivityCard } from '@/components/progress/HabitActivityCard';
+import { StrengthEvolutionCard, WellbeingCard } from '@/components/progress/ProgressInsightCards';
 import { ProgressHeader } from '@/components/progress/ProgressHeader';
 import { ProgressSummaryCard } from '@/components/progress/ProgressSummaryCard';
 import { RecentSessionsCard } from '@/components/progress/RecentSessionsCard';
@@ -14,7 +11,7 @@ import { WeeklyConsistencyCard } from '@/components/progress/WeeklyConsistencyCa
 import { PageContainer } from '@/components/shell/PageContainer';
 import { ErrorState, LoadingState } from '@/components/ui/states';
 import { useDailyCheckin } from '@/hooks/useDailyCheckin';
-import { useHabits } from '@/hooks/useHabits';
+import { useHabitActivity } from '@/hooks/useHabitActivity';
 import { cn } from '@/lib/ui/cn';
 import { useProgress } from '@/hooks/useProgress';
 import { PROGRESS_COPY } from '@/lib/copy/progress';
@@ -84,7 +81,7 @@ function PeriodTabs({ period, onChange }: PeriodTabsProps) {
 export default function ProgressPage() {
   const { summary, week, loading, error, period, setPeriod } = useProgress();
   const checkin = useDailyCheckin();
-  const habits = useHabits();
+  const habitActivity = useHabitActivity(period);
 
   const handlePeriodChange = (next: string): void => {
     if (isProgressPeriod(next)) {
@@ -122,10 +119,10 @@ export default function ProgressPage() {
             loading={checkin.loading}
             error={checkin.error}
           />
-          <HabitConsistencyCard
-            doneByKey={habits.doneByKey}
-            loading={habits.loading}
-            error={habits.error}
+          <HabitActivityCard
+            activity={habitActivity.activity}
+            loading={habitActivity.loading}
+            error={habitActivity.error}
           />
           <RecentSessionsCard sessions={summary.sessions} />
         </>

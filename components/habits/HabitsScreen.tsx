@@ -8,6 +8,7 @@ import { HydrationHabitRow } from '@/components/today/HydrationHabitRow';
 import { Card } from '@/components/ui/Card';
 import { ErrorState, LoadingState } from '@/components/ui/states';
 import { useHabits } from '@/hooks/useHabits';
+import { PROGRESS_COPY } from '@/lib/copy/progress';
 import { isQuantitativeHabitKey } from '@/types/habit';
 
 const COPY = {
@@ -86,6 +87,10 @@ export function HabitsScreen(): JSX.Element {
 
       <p className="text-xs leading-relaxed text-ink-muted">
         Atlas muestra solo valores registrados manualmente. No hay metas ni métricas automáticas.
+      </p>
+
+      <p className="text-xs leading-relaxed text-ink-muted">
+        {PROGRESS_COPY.habits.todayOnly(completedCount, HABIT_PREVIEWS.length)}
       </p>
     </Card>
   );
