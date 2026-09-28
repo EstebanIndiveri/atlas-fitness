@@ -2,6 +2,7 @@ import { createClient } from '@libsql/client';
 
 import { loadLocalEnv, LOCAL_FILE_DB_URL } from '../dev/load-local-env';
 import { REQUIRED_SCHEMA, REQUIRED_TABLES } from './readiness-contract';
+import { resolveLibsqlClientConfig } from './client-config';
 
 interface ExistingIndex {
   unique: boolean;
@@ -197,10 +198,9 @@ export function findMissingTables(existingTables: Iterable<string>): string[] {
 export async function inspectConfiguredDatabase(): Promise<DatabaseReadiness> {
   loadLocalEnv();
 
-  const client = createClient({
-    url: getConfiguredDatabaseUrl(),
-    authToken: process.env.TURSO_AUTH_TOKEN || undefined,
-  });
+  const client = createClient(
+    resolveLibsqlClientConfig(getConfiguredDatabaseUrl(), process.env.TURSO_AUTH_TOKEN || undefined),
+  );
 
   try {
     const result = await client.execute(
