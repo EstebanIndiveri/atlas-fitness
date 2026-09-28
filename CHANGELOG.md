@@ -4,6 +4,27 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Este
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-09-27
+
+*Integrada en `develop`; el corte de versión, el tag anotado y el back-merge los realiza el workstream de release — v0.9.0 todavía no está publicada.*
+
+### Added
+- Lectura de **actividad de hábitos registrada**: un registro de solo lectura con ventana de semana, mes o trimestre en hora de Córdoba, sin metas, sin porcentajes y sin cumplimiento.
+- Endpoint autenticado `GET /api/stats/habits?period=week|month|quarter`, con período validado y valor por defecto explícito.
+- Cliente tipado que rechaza cualquier respuesta fuera del contrato —incluida una clave de hábito desconocida— en lugar de renderizarla parcialmente.
+- Hook `useHabitActivity`: los números quedan asociados al período consultado, así cambiar de período nunca muestra los del período anterior.
+- Card "Actividad de hábitos registrada" en Progreso: días con registro, días transcurridos del período y fuente declarada de cada número.
+- Registro de actividad en la pantalla de Hábitos: selector de período y calendario día por día, junto a los controles de hoy.
+
+### Changed
+- La card de hábitos de Progreso reporta actividad **observada** del período elegido en lugar de sugerir una consistencia histórica que no se calculaba.
+- El vocabulario de hábitos es de actividad registrada ("días con registro", "sin registro", "todavía no llegó"); no hay "% adherencia", "meta" ni "cumplimiento".
+- El resumen de hoy en la pantalla de Hábitos ahora aclara que el detalle día por día del período elegido está justo debajo.
+
+### Fixed
+- La card "Hábitos consistentes" ya no muestra un estado vacío como si fuera una medición: se removió ese componente y el detalle real vive en el registro de actividad por día.
+- La card "Bienestar registrado" declara que refleja solo el check-in de hoy y que no se acumula con el período elegido, para que no se lea como un dato de mes o trimestre.
+
 ## [0.8.0] - 2026-09-27
 
 ### Added
