@@ -335,10 +335,27 @@ describe('HabitActivityHistory', () => {
     const accessibleNames = Array.from(container.querySelectorAll('[aria-label]')).map(
       (element) => element.getAttribute('aria-label') ?? '',
     );
-    const rendered = [screen.getByTestId('habit-activity-history').textContent ?? '', ...accessibleNames];
+    const rendered = [container.textContent ?? '', ...accessibleNames];
 
     expect(accessibleNames).toHaveLength(1 + HABIT_KEYS.length * (1 + WINDOW_LENGTH.month));
+    expect(rendered.join(' ')).toMatch(PROGRESS_COPY.habitActivity.historyTitle);
+    expect(rendered.join(' ')).toMatch(PROGRESS_COPY.habitActivity.historyWeekdayLegend);
     expect(rendered.join(' ')).not.toMatch(FORBIDDEN_VOCABULARY);
+  });
+
+  it.each([
+    ['available', undefined],
+    ['insufficient', { elapsedDays: 3, insightStatus: 'insufficient' as const }],
+  ])('explains what each mark means on a %s record', (_state, overrides) => {
+    mockActivity({
+      activity: makeWindow('week', [{ recorded: true }, { today: true }], overrides),
+    });
+
+    render(<HabitActivityHistory />);
+
+    expect(screen.getByText(PROGRESS_COPY.habitActivity.legendRecorded)).toBeTruthy();
+    expect(screen.getByText(PROGRESS_COPY.habitActivity.legendMissing)).toBeTruthy();
+    expect(screen.getByText(PROGRESS_COPY.habitActivity.legendFuture)).toBeTruthy();
   });
 
   it('switches the window through the period control and re-renders the new period', () => {
