@@ -66,6 +66,8 @@ export const PROGRESS_COPY = {
   },
   habitActivity: {
     title: 'Actividad de hábitos registrada',
+    historyTitle: 'Registro de actividad de hábitos',
+    historyWeekdayLegend: 'Cada marca es un día, de lunes a domingo, en hora de Córdoba.',
     periodAria: 'Período de actividad de hábitos',
     loading: 'Cargando tu actividad de hábitos…',
     unavailable: 'No pudimos cargar tu actividad de hábitos. Probá de nuevo en unos minutos.',
