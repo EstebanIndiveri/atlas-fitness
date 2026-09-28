@@ -15,7 +15,7 @@ const periodSchema = z.enum(['week', 'month', 'quarter']);
  * The window is always scoped to the session user and always truthful: counts cover the
  * whole window and no target, composite, or percentage claim is derived here.
  */
-export async function GET(request: NextRequest) {
+export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     const session = await requireAuth(request);
     const rawPeriod = request.nextUrl.searchParams.get('period') ?? 'week';
@@ -24,8 +24,8 @@ export async function GET(request: NextRequest) {
       throw new AppError('VALIDATION', 'Período de actividad de hábitos inválido');
     }
 
-    const window = await getHabitActivityForUser(session.userId, parsed.data);
-    return NextResponse.json(window);
+    const activityWindow = await getHabitActivityForUser(session.userId, parsed.data);
+    return NextResponse.json(activityWindow);
   } catch (error) {
     return handleApiError(error);
   }

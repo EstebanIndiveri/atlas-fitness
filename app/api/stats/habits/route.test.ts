@@ -95,6 +95,11 @@ const EXPECTED_WEEK: HabitActivityWindow = {
 
 const ACCEPTED_PERIODS = ['week', 'month', 'quarter'] as const;
 const MAX_WINDOW_DAYS = 90;
+const EXPECTED_WINDOW_DAYS: Record<(typeof ACCEPTED_PERIODS)[number], number> = {
+  week: 7,
+  month: 30,
+  quarter: MAX_WINDOW_DAYS,
+};
 
 function habitsUrl(params: Record<string, string> = {}): string {
   const query = new URLSearchParams(params).toString();
@@ -197,13 +202,15 @@ describe('/api/stats/habits', () => {
     expect(body.elapsedDays).toBe(MAX_WINDOW_DAYS);
   });
 
-  it('never serves a window longer than 90 days, whatever the accepted period', async () => {
+  it('serves exactly windowStart..windowEnd and never exceeds the 90-day cap', async () => {
     for (const period of ACCEPTED_PERIODS) {
       const response = await GET(await authenticatedRequest(userId, { period }));
       const body = await readWindow(response);
 
       expect(response.status).toBe(200);
+      expect(body.days).toHaveLength(EXPECTED_WINDOW_DAYS[period]);
       expect(body.days.length).toBeLessThanOrEqual(MAX_WINDOW_DAYS);
+      expect(body.days[0].localDate).toBe(body.windowStart);
       expect(body.days[body.days.length - 1].localDate).toBe(body.windowEnd);
     }
   });
