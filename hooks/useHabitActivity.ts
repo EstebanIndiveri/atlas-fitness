@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { fetchHabitActivity, HabitActivityClientError } from '@/lib/api/habit-activity';
+import { PROGRESS_COPY } from '@/lib/copy/progress';
 import { TODAY_COPY } from '@/lib/copy/today';
 import type { HabitActivityPeriod, HabitActivityWindow } from '@/types/habit-activity';
 
@@ -63,7 +64,7 @@ export function useHabitActivity(period: HabitActivityPeriod): UseHabitActivityR
             error:
               caught instanceof HabitActivityClientError && caught.kind === 'unauthorized'
                 ? TODAY_COPY.habitsSessionExpired
-                : TODAY_COPY.habitsError,
+                : PROGRESS_COPY.habitActivity.unavailable,
           });
         }
       }

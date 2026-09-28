@@ -70,6 +70,7 @@ export const PROGRESS_COPY = {
     title: 'Actividad de hábitos registrada',
     periodAria: 'Período de actividad de hábitos',
     loading: 'Cargando tu actividad de hábitos…',
+    unavailable: 'No pudimos cargar tu actividad de hábitos. Probá de nuevo en unos minutos.',
     windowLabel: (from: string, to: string) => `Del ${from} al ${to} (hora de Córdoba)`,
     todayIsLabel: (date: string) => `Hoy es ${date} en Córdoba`,
     activeDaysLabel: 'Días con hábitos registrados',
