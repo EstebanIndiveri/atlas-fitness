@@ -63,7 +63,32 @@ export const PROGRESS_COPY = {
     title: 'Hábitos consistentes',
     emptyTitle: 'Sin histórico de hábitos',
     emptyBody: 'Todavía no hay historial suficiente para calcular consistencia por hábito.',
-    todayOnly: (done: number, total: number) => `Hoy registraste ${done} de ${total} hábitos; eso no se muestra como porcentaje histórico.`,
+    todayOnly: (done: number, total: number) =>
+      `Hoy registraste ${done} de ${total} hábitos. Abajo está el detalle día por día del período elegido.`,
+  },
+  habitActivity: {
+    title: 'Actividad de hábitos registrada',
+    periodAria: 'Período de actividad de hábitos',
+    loading: 'Cargando tu actividad de hábitos…',
+    windowLabel: (from: string, to: string) => `Del ${from} al ${to} (hora de Córdoba)`,
+    todayIsLabel: (date: string) => `Hoy es ${date} en Córdoba`,
+    activeDaysLabel: 'Días con hábitos registrados',
+    elapsedDaysLabel: 'Días transcurridos del período',
+    recordedDaysLabel: (habitName: string, activeDays: number, elapsedDays: number) =>
+      `${habitName}: ${activeDays} de ${elapsedDays} días con registro`,
+    summary: (activeDays: number, elapsedDays: number) =>
+      `Registraste hábitos en ${activeDays} de los ${elapsedDays} días transcurridos.`,
+    insufficientTitle: 'Todavía no hay suficiente período para resumir',
+    insufficientElapsed: (elapsedDays: number, minimumElapsedDays: number) =>
+      `Pasaron ${elapsedDays} de los ${minimumElapsedDays} días que Atlas necesita para resumir este período.`,
+    insufficientNoActivity: 'Todavía no registraste ningún hábito en este período.',
+    dayStripAria: (habitName: string) => `Días registrados de ${habitName}`,
+    dayRecorded: (localDate: string) => `${localDate}: registrado`,
+    dayMissing: (localDate: string) => `${localDate}: sin registro`,
+    dayFuture: (localDate: string) => `${localDate}: todavía no llegó`,
+    legendRecorded: 'Registrado',
+    legendMissing: 'Sin registro',
+    legendFuture: 'Todavía no llegó',
   },
   sessions: {
     title: 'Sesiones recientes',
