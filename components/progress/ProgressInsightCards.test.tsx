@@ -94,6 +94,10 @@ describe('ProgressInsightCards', () => {
 
     expect(screen.getByRole('heading', { name: 'Hábitos consistentes' })).toBeTruthy();
     expect(screen.getByText('Todavía no hay historial suficiente para calcular consistencia por hábito.')).toBeTruthy();
-    expect(screen.getByText('Hoy registraste 2 de 4 hábitos; eso no se muestra como porcentaje histórico.')).toBeTruthy();
+    expect(
+      screen.getByText(
+        'Hoy registraste 2 de 4 hábitos. Abajo está el detalle día por día del período elegido.',
+      ),
+    ).toBeTruthy();
   });
 });
