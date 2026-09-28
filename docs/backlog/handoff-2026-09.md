@@ -114,6 +114,49 @@ Ver [`../../CHANGELOG.md`](../../CHANGELOG.md) para detalle agrupado Added/Chang
 - [x] Back-merge `main→develop` con merge commit en el PR #169; `develop` quedó en `e3734c1c9610a97ae5c2f8ac6b32030e3ee449b2`.
 - [x] Deployment de producción de `0cd7a1a` en `SUCCESS` ([https://atlas-fitness-9q6lj9eai-eindi-acme.vercel.app](https://atlas-fitness-9q6lj9eai-eindi-acme.vercel.app)); smoke `/`, `/login` y `/onboarding` = 200, `/dashboard/today` = 307 → `/login`, y `GET /api/stats/habits?period=week` = 401 sin sesión.
 
+### Checkpoint de desarrollo actual (2026-09-28) — posterior a v0.9.0
+
+Snapshot operativo vigente. Distingue explícitamente la **release publicada** del **baseline de desarrollo actual**; los párrafos históricos de arriba conservan sus fechas, SHAs y cifras como evidencia de sus propias waves.
+
+**RELEASE PUBLICADA — v0.9.0**
+
+- Última versión publicada. El tag anotado `v0.9.0` apunta a `0cd7a1a250cbdbf81f4897af129274524222a206` (release PR #168; back-merge #169). `package.json` / `package-lock.json` en **0.9.0**.
+- El hardening descrito abajo (#174) **no** forma parte del tag v0.9.0: vive solo en `develop`.
+
+**BASELINE DE DESARROLLO ACTUAL — develop**
+
+- `develop` → `1728a14f6e7b04622498de3b0104d72d5ccd8381` (tree `36e6882265347d878d0fe6ea653a28e87c6b3127`).
+- `main` → `f4c991df920631e99ff65578921da67d1bcef47e`; **`main` es ancestro de `develop`** (ya no están estructuralmente divergidas).
+- `develop` contiene endurecimiento post-release que todavía no está representado por una nueva versión de producto. `package.json` **sigue en 0.9.0** en ambas ramas.
+
+**PR #174 — hardening de DB mergeado (solo develop, no en el tag v0.9.0)**
+
+- `fix(db): esperar el lock de escritura local en lugar de responder SQLITE_BUSY`; merge SHA `a3cb62881bf394d2f9c89aec006d32693773e8d8` (base `develop`). Issue **#172 cerrado / completado** (2026-09-28).
+- **Causa raíz:** el libSQL local basado en archivo usaba SQLite con rollback-journal y sin busy timeout efectivo para el cliente de la aplicación; una escritura concurrente podía fallar de inmediato con `SQLITE_BUSY: database is locked` y aflorar como HTTP 500 en E2E.
+- **Fix entregado:** configuración centralizada del cliente libSQL; timeout de lock **solo local** para bases `file:`/`memory`; comportamiento remoto de **Turso sin cambios**; `LOCAL_DB_BUSY_TIMEOUT_MS` acotado; app, readiness y migraciones usan la configuración compartida.
+- **Evidencia:** Jest 236 suites / 1608 tests; typecheck limpio; lint 0 errores; build verde; Playwright 72 passed / 1 skipped / 0 failed. Stress CI independiente: **10 ejecuciones consecutivas de Playwright, 10/10 exitosas, 0 ocurrencias de `SQLITE_BUSY`**. CI post-merge de `develop`: run `36442823783` success.
+
+**PR #175 — normalización de ancestría (solo estructura de repo)**
+
+- `chore(repo): normalize main ancestry before v0.10.0`; merge SHA = `1728a14f6e7b04622498de3b0104d72d5ccd8381`.
+- Solo ancestría: **0 archivos cambiados, 0 adiciones, 0 borrados**; el tree de `develop` no cambió (`36e6882`). Efecto: `main` pasa a ser ancestro de `develop`.
+
+**Deuda técnica residual — DEFERRED / NON-BLOCKING**
+
+No se corrige en este checkpoint y **no** se convierte en MUST de v0.10.0:
+
+1. `drizzle.config.ts` / drizzle-kit no hereda el busy timeout local.
+2. No hay migración a WAL.
+3. No hay capa de retry de DB.
+4. El E2E sigue compartiendo `file:./local.db` en lugar de aislar DB por spec/worker.
+
+**NEXT MAJOR PRODUCT STEP — v0.10.0 Product Discovery + Architecture (NO implementación)**
+
+- v0.10.0 **no ha comenzado**, no tiene feature set aprobado.
+- Debe comenzar desde el baseline actual de `develop` (`1728a14f6e7b04622498de3b0104d72d5ccd8381`).
+- Debe evaluar el backlog existente y las oportunidades de producto **antes** de elegir MUST/SHOULD/DEFER.
+- **No** se preselecciona Habit Builder ni ninguna otra feature como alcance del release. La investigación de **Liftoff** permanece como input de producto futuro separado y no debe influir silenciosamente en v0.10.0.
+
 ## 7. Backlog restante
 
 ### Alto impacto / próximo
@@ -163,3 +206,4 @@ Ver [`AGENTS.md`](../../AGENTS.md) antes de tocar código. Resumen operativo:
 4. **Auditar copy de honestidad**: cualquier “Atlas sabe/aprende/recuperación” debe mapear a datos reales o cambiarse a “Atlas usa tu plan/check-in/historial”. No describir las preferencias guardadas como aprendizaje, ni atribuir la propuesta a datos que el brief no incluye.
 5. **Branch protection sigue siendo riesgo organizacional**: documentar como bloqueado hasta que el owner del repo active reglas y CI requerida.
 6. **Mantener docs vivas**: actualizar este handoff y changelog en cada release menor; si cambia un contrato público, actualizar ADR/engineering docs relacionados.
+7. **Próximo paso mayor — v0.10.0 Product Discovery + Architecture, no implementación**: v0.10.0 **no ha comenzado** y no tiene feature set aprobado. Debe comenzar desde el baseline de `develop` @ `1728a14f` (ver §6, “Checkpoint de desarrollo actual”), evaluar primero el backlog y las oportunidades de producto, y recién entonces elegir MUST/SHOULD/DEFER. No preseleccionar Habit Builder ni ninguna otra feature. La deuda de DB de §6 queda DEFERRED/NON-BLOCKING. La investigación de Liftoff es un input de producto futuro separado y no debe influir silenciosamente en v0.10.0.
