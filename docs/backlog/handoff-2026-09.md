@@ -123,9 +123,13 @@ Snapshot operativo vigente. Distingue explícitamente la **release publicada** d
 - Última versión publicada. El tag anotado `v0.9.0` apunta a `0cd7a1a250cbdbf81f4897af129274524222a206` (release PR #168; back-merge #169). `package.json` / `package-lock.json` en **0.9.0**.
 - El hardening descrito abajo (#174) **no** forma parte del tag v0.9.0: vive solo en `develop`.
 
-**BASELINE DE DESARROLLO ACTUAL — develop**
+**BASELINE DE DESARROLLO — distinción explícita**
 
-- `develop` → `1728a14f6e7b04622498de3b0104d72d5ccd8381` (tree `36e6882265347d878d0fe6ea653a28e87c6b3127`).
+Dos cosas distintas que **no** deben confundirse. Un SHA escrito aquí envejece con el próximo merge a `develop`; tratalo como evidencia puntual, no como verdad permanente.
+
+1. **Último baseline pre-checkpoint / con código (LAST PRE-CHECKPOINT / CODE-BEARING BASELINE)** — `1728a14f6e7b04622498de3b0104d72d5ccd8381` (tree `36e6882265347d878d0fe6ea653a28e87c6b3127`). Es el estado de `develop` posterior al #175 y **anterior** al checkpoint documental #176. Sirve como referencia del último estado que contenía código de producto, pero **no** es el HEAD vivo de `develop`.
+2. **Baseline de desarrollo vivo (LIVE DEVELOPMENT BASELINE)** — se obtiene con `git fetch origin` + `git rev-parse origin/develop` **inmediatamente antes de iniciar una nueva wave**. No debe asumirse ningún SHA fijo: cambia con cada merge a `develop`.
+
 - `main` → `f4c991df920631e99ff65578921da67d1bcef47e`; **`main` es ancestro de `develop`** (ya no están estructuralmente divergidas).
 - `develop` contiene endurecimiento post-release que todavía no está representado por una nueva versión de producto. `package.json` **sigue en 0.9.0** en ambas ramas.
 
@@ -141,6 +145,12 @@ Snapshot operativo vigente. Distingue explícitamente la **release publicada** d
 - `chore(repo): normalize main ancestry before v0.10.0`; merge SHA = `1728a14f6e7b04622498de3b0104d72d5ccd8381`.
 - Solo ancestría: **0 archivos cambiados, 0 adiciones, 0 borrados**; el tree de `develop` no cambió (`36e6882`). Efecto: `main` pasa a ser ancestro de `develop`.
 
+**PR #176 — checkpoint documental post-v0.9.0 (solo docs)**
+
+- `docs: checkpoint post-v0.9.0 hardening before v0.10.0`; merge SHA = `8ab59ba181a1c03df6107984dc956bc7be6a8b61`.
+- Solo documentación: 1 archivo cambiado (`docs/backlog/handoff-2026-09.md`), 44 inserciones, 0 borrados; sin cambios de código, tests, configuración ni metadata.
+- **Evidencia histórica de checkpoint:** tras el merge del PR #176, `develop` quedó en `8ab59ba181a1c03df6107984dc956bc7be6a8b61`. Ese SHA es evidencia puntual del checkpoint y **no debe asumirse como HEAD vigente para siempre**: toda wave futura debe releer `origin/develop` en vivo.
+
 **Deuda técnica residual — DEFERRED / NON-BLOCKING**
 
 No se corrige en este checkpoint y **no** se convierte en MUST de v0.10.0:
@@ -153,7 +163,8 @@ No se corrige en este checkpoint y **no** se convierte en MUST de v0.10.0:
 **NEXT MAJOR PRODUCT STEP — v0.10.0 Product Discovery + Architecture (NO implementación)**
 
 - v0.10.0 **no ha comenzado**, no tiene feature set aprobado.
-- Debe comenzar desde el baseline actual de `develop` (`1728a14f6e7b04622498de3b0104d72d5ccd8381`).
+- Regla durable de arranque: hacer `git fetch origin`, exigir **worktree limpio** y tomar el **SHA vivo de `origin/develop`** justo antes de la discovery como baseline autoritativo. No confiar en SHAs fijos escritos en este documento.
+- SHA esperado al momento de este documento: `8ab59ba181a1c03df6107984dc956bc7be6a8b61`. `1728a14f6e7b04622498de3b0104d72d5ccd8381` queda solo como evidencia histórica pre-checkpoint documental.
 - Debe evaluar el backlog existente y las oportunidades de producto **antes** de elegir MUST/SHOULD/DEFER.
 - **No** se preselecciona Habit Builder ni ninguna otra feature como alcance del release. La investigación de **Liftoff** permanece como input de producto futuro separado y no debe influir silenciosamente en v0.10.0.
 
@@ -206,4 +217,4 @@ Ver [`AGENTS.md`](../../AGENTS.md) antes de tocar código. Resumen operativo:
 4. **Auditar copy de honestidad**: cualquier “Atlas sabe/aprende/recuperación” debe mapear a datos reales o cambiarse a “Atlas usa tu plan/check-in/historial”. No describir las preferencias guardadas como aprendizaje, ni atribuir la propuesta a datos que el brief no incluye.
 5. **Branch protection sigue siendo riesgo organizacional**: documentar como bloqueado hasta que el owner del repo active reglas y CI requerida.
 6. **Mantener docs vivas**: actualizar este handoff y changelog en cada release menor; si cambia un contrato público, actualizar ADR/engineering docs relacionados.
-7. **Próximo paso mayor — v0.10.0 Product Discovery + Architecture, no implementación**: v0.10.0 **no ha comenzado** y no tiene feature set aprobado. Debe comenzar desde el baseline de `develop` @ `1728a14f` (ver §6, “Checkpoint de desarrollo actual”), evaluar primero el backlog y las oportunidades de producto, y recién entonces elegir MUST/SHOULD/DEFER. No preseleccionar Habit Builder ni ninguna otra feature. La deuda de DB de §6 queda DEFERRED/NON-BLOCKING. La investigación de Liftoff es un input de producto futuro separado y no debe influir silenciosamente en v0.10.0.
+7. **Próximo paso mayor — v0.10.0 Product Discovery + Architecture, no implementación**: v0.10.0 **no ha comenzado** y no tiene feature set aprobado. Debe arrancar con `git fetch origin`, **worktree limpio** y el **SHA vivo de `origin/develop`** como baseline autoritativo de discovery (ver §6, “Checkpoint de desarrollo actual”); el SHA esperado al momento de este documento es `8ab59ba`, y `1728a14f` queda solo como evidencia histórica pre-checkpoint documental. Evaluar primero el backlog y las oportunidades de producto, y recién entonces elegir MUST/SHOULD/DEFER. No preseleccionar Habit Builder ni ninguna otra feature. La deuda de DB de §6 queda DEFERRED/NON-BLOCKING. La investigación de Liftoff es un input de producto futuro separado y no debe influir silenciosamente en v0.10.0.
