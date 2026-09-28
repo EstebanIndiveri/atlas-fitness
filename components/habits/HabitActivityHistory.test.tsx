@@ -156,7 +156,12 @@ describe('HabitActivityHistory', () => {
 
   it('treats a window that is still too young as insufficient and names the threshold', () => {
     mockActivity({
-      activity: makeWindow('week', [{ recorded: true, today: true }]),
+      activity: makeWindow(
+        'week',
+        Array.from({ length: 7 }, (_, index) =>
+          index === 0 ? { recorded: true, today: true } : { future: true },
+        ),
+      ),
     });
 
     render(<HabitActivityHistory />);
@@ -169,13 +174,29 @@ describe('HabitActivityHistory', () => {
         PROGRESS_COPY.habitActivity.insufficientElapsed(1, INSIGHT_MINIMUM_ELAPSED_DAYS),
       ),
     ).toBeTruthy();
-    expect(screen.getByText(PROGRESS_COPY.habitActivity.windowLabel('21/09/2026', '27/09/2026'))).toBeTruthy();
-    expect(screen.getByText(PROGRESS_COPY.habitActivity.todayIsLabel('27/09/2026'))).toBeTruthy();
-    expect(screen.queryByTestId('habit-activity-strips')).toBeNull();
+    expect(screen.queryByText(PROGRESS_COPY.habitActivity.insufficientNoActivity)).toBeNull();
+    expect(
+      screen.getByText(PROGRESS_COPY.habitActivity.windowLabel('21/09/2026', '27/09/2026')),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(PROGRESS_COPY.habitActivity.todayIsLabel('21/09/2026')),
+    ).toBeTruthy();
     expect(screen.queryByText(PROGRESS_COPY.habitActivity.summary(1, 1))).toBeNull();
+
+    const hydrationStrip = screen.getByLabelText(
+      PROGRESS_COPY.habitActivity.dayStripAria('Hidratación'),
+    );
+
+    expect(
+      within(hydrationStrip).getByLabelText(PROGRESS_COPY.habitActivity.dayRecorded('21/09/2026')),
+    ).toBeTruthy();
+    expect(
+      within(hydrationStrip).getByLabelText(PROGRESS_COPY.habitActivity.dayFuture('22/09/2026')),
+    ).toBeTruthy();
+    expect(screen.queryByText('Calculado por Atlas')).toBeNull();
   });
 
-  it('keeps a window with stored rows but zero activity out of the measured rendering', () => {
+  it('renders stored rows with zero activity as days sin registro, never as measured zeroes', () => {
     mockActivity({
       activity: makeWindow(
         'month',
@@ -187,9 +208,26 @@ describe('HabitActivityHistory', () => {
     render(<HabitActivityHistory />);
 
     expect(screen.getByText(PROGRESS_COPY.habitActivity.insufficientNoActivity)).toBeTruthy();
+    expect(
+      screen.queryByText(
+        PROGRESS_COPY.habitActivity.insufficientElapsed(30, INSIGHT_MINIMUM_ELAPSED_DAYS),
+      ),
+    ).toBeNull();
     expect(screen.queryByText(PROGRESS_COPY.habitActivity.summary(0, 30))).toBeNull();
-    expect(screen.queryByText(PROGRESS_COPY.habitActivity.activeDaysLabel)).toBeNull();
-    expect(screen.queryByTestId('habit-activity-strips')).toBeNull();
+    expect(screen.queryByText('Calculado por Atlas')).toBeNull();
+
+    const hydrationStrip = screen.getByLabelText(
+      PROGRESS_COPY.habitActivity.dayStripAria('Hidratación'),
+    );
+    const labels = within(hydrationStrip)
+      .getAllByRole('listitem')
+      .map((mark) => mark.getAttribute('aria-label') ?? '');
+
+    expect(labels).toHaveLength(30);
+    expect(labels[0]).toBe(PROGRESS_COPY.habitActivity.dayMissing('29/08/2026'));
+    expect(labels[29]).toBe(PROGRESS_COPY.habitActivity.dayMissing('27/09/2026'));
+    expect(labels.every((label) => label.endsWith(': sin registro'))).toBe(true);
+    expect(labels.join(' ')).not.toMatch(FORBIDDEN_VOCABULARY);
   });
 
   it('dates every mark, labels the weekday Monday-first and marks missing days as sin registro', () => {
@@ -241,7 +279,7 @@ describe('HabitActivityHistory', () => {
 
     expect(screen.getByText(PROGRESS_COPY.habitActivity.summary(3, 30))).toBeTruthy();
     expect(screen.getByText(PROGRESS_COPY.habitActivity.windowLabel('29/08/2026', '27/09/2026'))).toBeTruthy();
-    expect(screen.getByText(PROGRESS_COPY.habitActivity.todayIsLabel('27/09/2026'))).toBeTruthy();
+    expect(screen.getByText(PROGRESS_COPY.habitActivity.todayIsLabel('01/09/2026'))).toBeTruthy();
     expect(screen.queryByTestId('habit-activity-insufficient')).toBeNull();
 
     const strips = within(screen.getByTestId('habit-activity-strips')).getAllByRole('list');
@@ -299,7 +337,7 @@ describe('HabitActivityHistory', () => {
     );
     const rendered = [screen.getByTestId('habit-activity-history').textContent ?? '', ...accessibleNames];
 
-    expect(accessibleNames).toHaveLength(HABIT_KEYS.length + 1);
+    expect(accessibleNames).toHaveLength(1 + HABIT_KEYS.length * (1 + WINDOW_LENGTH.month));
     expect(rendered.join(' ')).not.toMatch(FORBIDDEN_VOCABULARY);
   });
 
