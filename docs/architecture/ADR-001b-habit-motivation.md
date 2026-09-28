@@ -72,7 +72,7 @@ Esta wave entrega **actividad observada**: en cuántos días hay algún registro
 
 **"Streaks / nudges"** (fila 3 de la tabla de este ADR, **Must**) recibió **cero cambios** en esta wave: ya estaba entregado en waves anteriores — `lib/services/streaks.ts`, `app/api/cron/streak-nudge/route.ts`, `types/streak.ts` y la tabla `streakNudges` en `lib/db/schema.ts:506`. No es un pendiente de v0.9.0 ni una capacidad que falte: actividad registrada **no** es una racha, y nadie debería reimplementarla por leer este addendum.
 
-Lo que sí queda sin cerrar en esta wave, con evidencia `archivo:línea` en [`docs/backlog/deferred-defects-2026-09.md`](../backlog/deferred-defects-2026-09.md): los botones de header de Progreso sin handler (`components/progress/ProgressHeader.tsx`, cero `onClick`) y el "Volumen no disponible" impreso incondicionalmente en las filas de sesiones recientes (`components/progress/RecentSessionsCard.tsx:57`). La prueba end-to-end de estas pantallas queda **pendiente del workstream de QA**.
+Lo que sí queda sin cerrar en esta wave, con evidencia `archivo:línea` en [`docs/backlog/deferred-defects-2026-09.md`](../backlog/deferred-defects-2026-09.md): los botones de header de Progreso sin handler (`components/progress/ProgressHeader.tsx`, cero `onClick`) y el "Volumen no disponible" impreso incondicionalmente en las filas de sesiones recientes (`components/progress/RecentSessionsCard.tsx:57`). La prueba end-to-end de estas pantallas quedó cubierta por `e2e/habit-activity.spec.ts` (20 casos) en el PR #167.
 
 ### A7. Cierre del defecto #5: la promesa de actividad del row de Settings
 

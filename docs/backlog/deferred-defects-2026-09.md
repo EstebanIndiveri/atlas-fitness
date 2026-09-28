@@ -2,9 +2,9 @@
 
 > **Registro durable de candidatos diferidos.** El brief de v0.9.0 (§3.1) listó **cinco** defectos de honestidad de datos. La wave corrigió **#1 y #2** (ver [`../../CHANGELOG.md`](../../CHANGELOG.md) bajo `[0.9.0]`) y, sin proponérselo como corrección, **cumplió la promesa de #5** al entregar el read path histórico que faltaba. Los **dos candidatos restantes (#3 y #4)** quedaron explícitamente *"logged as candidates, not silently absorbed into scope"*: este documento los deja por escrito con evidencia verificable para que no se evaporen.
 >
-> **Estado verificado contra el código integrado en `develop`** (base de esta wave, merge-base `40fc988`). **#3 y #4 siguen sin corregir en esa base; la promesa de #5 ya está cubierta.** Los archivos citados son **evidencia**, no superficie de edición: `lib/copy/ui.ts` y `components/progress/ProgressHeader.tsx` son código.
+> **Estado verificado contra el código integrado en `develop`** (base de esta wave, merge-base `9385edcb`). **#3 y #4 siguen sin corregir en esa base; la promesa de #5 ya está cubierta.** Los archivos citados son **evidencia**, no superficie de edición: `lib/copy/ui.ts` y `components/progress/ProgressHeader.tsx` son código.
 >
-> **Cobertura de pruebas:** la prueba end-to-end de las pantallas de hábitos y Progreso quedó **pendiente del workstream de QA (E)**; en esta base no existe `e2e/habit-activity.spec.ts` y no se registran sus resultados.
+> **Cobertura de pruebas:** la prueba end-to-end de las pantallas de hábitos y Progreso vive en `e2e/habit-activity.spec.ts` (**1029 líneas, 20 casos**), integrada en `develop` con el **PR #167**. Cubre el contrato del endpoint (`/api/stats/habits`), la card de Progreso, el registro día por día en Hábitos, la lectura manual, el contrato de copy y el viewport móvil.
 
 ## Cómo leer cada entrada
 
@@ -25,7 +25,7 @@
 
 ## #3 — Botones de header de Progreso sin handler
 
-- **Estado:** **ABIERTO** en `40fc988`.
+- **Estado:** **ABIERTO** en `9385edcb`.
 - **Qué se ve:** la cabecera de Progreso muestra dos acciones —"Notificaciones" y "Compartir progreso"— que son botones reales para el usuario y para la accesibilidad, pero **no hacen nada**: no hay `onClick`, ni `href`, ni estado `disabled`.
 - **Evidencia:**
   - `components/progress/ProgressHeader.tsx:32-38` — `<button type="button" aria-label="Notificaciones">`.
@@ -37,11 +37,11 @@
 
 ## #4 — Filas de sesiones recientes siempre dicen "Volumen no disponible"
 
-- **Estado:** **ABIERTO** en `40fc988`.
+- **Estado:** **ABIERTO** en `9385edcb`.
 - **Qué se ve:** cada fila de "Sesiones recientes" imprime el copy de indisponible, **incondicionalmente**, aunque el volumen de esa sesión sí se computa en la misma pantalla.
 - **Evidencia:**
   - `components/progress/RecentSessionsCard.tsx:56-58` — imprime `PROGRESS_COPY.sessions.volumeUnavailable` sin ninguna condición ni valor.
-  - `lib/copy/progress.ts:102` — `volumeUnavailable: 'Volumen no disponible'` (esa es la línea real en `40fc988`).
+  - `lib/copy/progress.ts:102` — `volumeUnavailable: 'Volumen no disponible'` (esa es la línea real en `9385edcb`).
   - `components/progress/RecentSessionsCard.test.tsx:27` — `expect(screen.getByText('Volumen no disponible')).toBeTruthy()`: el test **fija** el comportamiento actual en lugar de detectarlo como carencia.
   - El volumen por sesión **sí** se calcula: `lib/services/strength-progress.ts:212` (`totalVolumeKg: sumVolumeKg(workout.sets)`, decimal string) y se tipa en `lib/services/strength-progress.ts:13-17` (`StrengthVolumePoint.totalVolumeKg: string`).
   - El resumen que alimenta la card **no transporta** volumen: `lib/services/progress-summary.ts:16-21` (`ProgressSessionSummary` tiene `workoutId`, `startedAt`, `durationMinutes`, `routineName`).
@@ -51,7 +51,7 @@
 
 ## #5 — El row de Settings prometía actividad histórica (cerrado)
 
-- **Estado:** **CERRADO por v0.9.0** — la promesa dejó de ser falsa porque existe un read path histórico verificable. Verificado en `40fc988`, no inferido del brief.
+- **Estado:** **CERRADO por v0.9.0** — la promesa dejó de ser falsa porque existe un read path histórico verificable. Verificado en `9385edcb`, no inferido del brief.
 - **Qué decía el defecto:** en Settings, el row "Hábitos de bienestar" tiene la descripción "Ver actividad y hábitos" y lleva a `/dashboard/habits`; esa promesa de **actividad** histórica no tenía ningún read path (la pantalla mostraba solo el registro de hoy).
 - **Evidencia (lo que promete):**
   - `app/dashboard/settings/page.tsx:279` — `description="Ver actividad y hábitos"` (literal en el JSX).
