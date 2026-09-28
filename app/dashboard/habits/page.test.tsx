@@ -144,4 +144,18 @@ describe('HabitsPage', () => {
     expect(within(record).queryByRole('status')).toBeNull();
     expect(within(record).queryByRole('button', { name: 'Reintentar' })).toBeNull();
   });
+
+  it('keeps today’s count and points from it at the record below', () => {
+    mockHabits({ doneByKey: { hydration: true, walk: true, mobility: false, sleep: false } });
+
+    render(<HabitsPage />);
+
+    expect(screen.getByText('2 de 4 completados')).toBeTruthy();
+    const pointer = screen.getByText(PROGRESS_COPY.habits.todayOnly(2, 4));
+    expect(pointer.closest('[data-testid="habits-list"]')).toBeNull();
+    expect(
+      pointer.compareDocumentPosition(screen.getByTestId('habit-activity-history')) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
 });
