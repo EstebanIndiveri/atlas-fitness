@@ -3,7 +3,6 @@ import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
 import { MetricValue } from '@/components/ui/MetricValue';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
-import type { HabitDoneMap } from '@/hooks/useHabits';
 import { PROGRESS_COPY } from '@/lib/copy/progress';
 import type { StrengthProgressSummary, StrengthVolumePoint } from '@/lib/services/strength-progress';
 import type { DailyCheckInResponse } from '@/lib/api/checkin';
@@ -11,12 +10,6 @@ import { metric } from '@/types/metric';
 
 interface WellbeingCardProps {
   checkin: DailyCheckInResponse | null;
-  loading: boolean;
-  error: string | null;
-}
-
-interface HabitConsistencyCardProps {
-  doneByKey: HabitDoneMap;
   loading: boolean;
   error: string | null;
 }
@@ -168,7 +161,7 @@ export function WellbeingCard({ checkin, loading, error }: WellbeingCardProps) {
     <Card className="space-y-4 rounded-[28px] p-5">
       <div>
         <h2 className="text-base font-semibold text-ink">{PROGRESS_COPY.wellbeing.title}</h2>
-        <p className="mt-1 text-sm text-ink-muted">Basado en tu check-in registrado.</p>
+        <p className="mt-1 text-sm text-ink-muted">{PROGRESS_COPY.wellbeing.windowLabel}</p>
       </div>
       {loading ? <LoadingState compact /> : null}
       {!loading && error ? <ErrorState message={error} /> : null}
@@ -203,36 +196,6 @@ export function WellbeingCard({ checkin, loading, error }: WellbeingCardProps) {
             </p>
           ) : null}
         </div>
-      ) : null}
-    </Card>
-  );
-}
-
-/**
- * Habits card that refuses to turn today-only toggles into fake consistency percentages.
- *
- * @param props Current habit hook state.
- * @returns Honest habits consistency empty state with optional today-only context.
- * @example
- * <HabitConsistencyCard doneByKey={doneByKey} loading={false} error={null} />
- */
-export function HabitConsistencyCard({ doneByKey, loading, error }: HabitConsistencyCardProps) {
-  const habitStates = Object.values(doneByKey);
-  const completedToday = habitStates.filter(Boolean).length;
-  const totalHabits = habitStates.length;
-
-  return (
-    <Card className="space-y-3 rounded-[28px] p-5">
-      <h2 className="text-base font-semibold text-ink">{PROGRESS_COPY.habits.title}</h2>
-      {loading ? <LoadingState compact /> : null}
-      {!loading && error ? <ErrorState message={error} /> : null}
-      {!loading && !error ? (
-        <>
-          <EmptyState title={PROGRESS_COPY.habits.emptyTitle} description={PROGRESS_COPY.habits.emptyBody} />
-          <p className="rounded-xl bg-canvas p-3 text-sm text-ink-muted">
-            {PROGRESS_COPY.habits.todayOnly(completedToday, totalHabits)}
-          </p>
-        </>
       ) : null}
     </Card>
   );

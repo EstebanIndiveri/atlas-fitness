@@ -55,14 +55,12 @@ export const PROGRESS_COPY = {
     noteLabel: 'Nota',
     emptyTitle: 'Sin check-in de bienestar',
     emptyBody: 'Todavía no registraste ánimo o energía hoy.',
+    windowLabel: 'Refleja solo tu check-in de hoy. No se acumula con el período elegido.',
     low: 'Baja',
     medium: 'Media',
     high: 'Alta',
   },
   habits: {
-    title: 'Hábitos consistentes',
-    emptyTitle: 'Sin histórico de hábitos',
-    emptyBody: 'Todavía no hay historial suficiente para calcular consistencia por hábito.',
     todayOnly: (done: number, total: number) =>
       `Hoy registraste ${done} de ${total} hábitos. Abajo está el detalle día por día del período elegido.`,
   },
