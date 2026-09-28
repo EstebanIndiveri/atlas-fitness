@@ -1,5 +1,6 @@
 import type { JSX } from 'react';
 
+import { HabitActivityHistory } from '@/components/habits/HabitActivityHistory';
 import { HabitsScreen } from '@/components/habits/HabitsScreen';
 import { PageContainer } from '@/components/shell/PageContainer';
 
@@ -17,6 +18,7 @@ export default function HabitsPage(): JSX.Element {
         </p>
       </header>
       <HabitsScreen />
+      <HabitActivityHistory />
     </PageContainer>
   );
 }

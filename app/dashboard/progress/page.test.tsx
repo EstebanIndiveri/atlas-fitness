@@ -5,18 +5,36 @@ declare const jest: typeof import('@jest/globals').jest;
 
 jest.mock('@/hooks/useProgress', () => ({ useProgress: jest.fn() }));
 jest.mock('@/hooks/useDailyCheckin', () => ({ useDailyCheckin: jest.fn() }));
-jest.mock('@/hooks/useHabits', () => ({ useHabits: jest.fn() }));
+jest.mock('@/hooks/useHabitActivity', () => ({ useHabitActivity: jest.fn() }));
 
 import { useDailyCheckin as useDailyCheckinHook } from '@/hooks/useDailyCheckin';
-import { useHabits as useHabitsHook } from '@/hooks/useHabits';
+import { useHabitActivity as useHabitActivityHook } from '@/hooks/useHabitActivity';
 import { useProgress as useProgressHook } from '@/hooks/useProgress';
+import type { HabitActivityWindow } from '@/types/habit-activity';
 import ProgressPage from './page';
 
 const useProgress = jest.mocked(useProgressHook);
 const useDailyCheckin = jest.mocked(useDailyCheckinHook);
-const useHabits = jest.mocked(useHabitsHook);
+const useHabitActivity = jest.mocked(useHabitActivityHook);
 
 const setPeriod = jest.fn<(period: 'week' | 'month' | 'quarter') => void>();
+
+const habitActivity: HabitActivityWindow = {
+  period: 'month',
+  windowStart: '2026-09-01',
+  windowEnd: '2026-09-30',
+  elapsedDays: 30,
+  activeDays: 5,
+  perHabit: {
+    hydration: { activeDays: 3 },
+    walk: { activeDays: 0 },
+    mobility: { activeDays: 1 },
+    sleep: { activeDays: 1 },
+  },
+  days: [],
+  insightStatus: 'available',
+  insightMinimumElapsedDays: 7,
+};
 
 const week = {
   weekStart: '2026-09-14',
@@ -40,16 +58,11 @@ function mockSideHooks(): void {
     reload: jest.fn(),
     submit: jest.fn<ReturnType<typeof useDailyCheckinHook>['submit']>().mockResolvedValue(null),
   });
-  useHabits.mockReturnValue({
-    doneByKey: { hydration: false, walk: false, mobility: false, sleep: false },
-    amountByKey: { hydration: null, walk: null, mobility: null, sleep: null },
+  useHabitActivity.mockReturnValue({
+    activity: habitActivity,
     loading: false,
-    saving: false,
     error: null,
     reload: jest.fn(),
-    toggle: jest.fn<ReturnType<typeof useHabitsHook>['toggle']>().mockResolvedValue(undefined),
-    addAmount: jest.fn<ReturnType<typeof useHabitsHook>['addAmount']>().mockResolvedValue(undefined),
-    clearAmount: jest.fn<ReturnType<typeof useHabitsHook>['clearAmount']>().mockResolvedValue(undefined),
   });
 }
 
@@ -105,7 +118,10 @@ describe('ProgressPage', () => {
     expect(screen.getByRole('heading', { name: 'Consistencia semanal' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Evolución de fuerza' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Bienestar registrado' })).toBeTruthy();
-    expect(screen.getByRole('heading', { name: 'Hábitos consistentes' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Actividad de hábitos registrada' })).toBeTruthy();
+    expect(screen.getByText('Registraste hábitos en 5 de los 30 días transcurridos.')).toBeTruthy();
+    expect(screen.getByText('Del 01/09/2026 al 30/09/2026 (hora de Córdoba)')).toBeTruthy();
+    expect(useHabitActivity).toHaveBeenCalledWith('month');
     expect(screen.getByRole('heading', { name: 'Sesiones recientes' })).toBeTruthy();
     expect(screen.getByText('Todavía no hay series completadas para graficar tu fuerza.')).toBeTruthy();
   });
@@ -168,6 +184,48 @@ describe('ProgressPage', () => {
 
     expect(screen.getByText('Todavía no hay suficientes datos reales para interpretar una tendencia. Registrá sesiones o check-ins y Atlas va a leerlos acá.')).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Todavía no hay entrenos' })).toBeTruthy();
+  });
+
+  it('labels the wellbeing card with its real window while 3 meses is selected', () => {
+    useDailyCheckin.mockReturnValue({
+      checkin: {
+        id: 1,
+        userId: 7,
+        localDate: '2026-09-20',
+        mood: 4,
+        energy: 'high',
+        note: null,
+        createdAt: '2026-09-20T12:00:00.000Z',
+        updatedAt: '2026-09-20T12:00:00.000Z',
+      },
+      loading: false,
+      saving: false,
+      error: null,
+      reload: jest.fn(),
+      submit: jest.fn<ReturnType<typeof useDailyCheckinHook>['submit']>().mockResolvedValue(null),
+    });
+    useProgress.mockReturnValue({
+      loading: false,
+      error: null,
+      period: 'quarter',
+      setPeriod,
+      week,
+      summary: {
+        period: 'quarter',
+        fromLocalDate: '2026-07-01',
+        toLocalDate: '2026-09-30',
+        completedSessions: 30,
+        totalDurationMinutes: 1500,
+        strength: { hasLoggedSets: false, latestVolumeKg: null, trendLabel: 'Sin datos de fuerza', points: [] },
+        sessions: [],
+      },
+    });
+
+    render(<ProgressPage />);
+
+    expect(screen.getByRole('radio', { name: '3 meses' }).className).toContain('bg-ink');
+    expect(screen.getByRole('heading', { name: 'Resumen de 3 meses' })).toBeTruthy();
+    expect(screen.getByText('Refleja solo tu check-in de hoy. No se acumula con el período elegido.')).toBeTruthy();
   });
 
   it('wires period tabs to the progress hook', () => {

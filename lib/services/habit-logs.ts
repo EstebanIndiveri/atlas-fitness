@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, asc, eq, gte, lte } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { db } from '@/lib/db/client';
@@ -121,4 +121,40 @@ export async function getHabitLogsForDate(userId: number, localDate: string): Pr
 export async function getTodayHabitLogs(userId: number, now: Date = new Date()): Promise<HabitLog[]> {
   const localDate = cordobaLocalDate(now);
   return getHabitLogsForDate(userId, localDate);
+}
+
+/**
+ * Lists one user's habit logs inside an inclusive Córdoba date window.
+ *
+ * Exactly one user-scoped, date-bounded range query covers the whole window, and the rows
+ * are grouped by callers in a single in-memory pass: no per-day and no per-habit read, so a
+ * 90-day window costs the same one query as a single day. `loadActiveDates` must NOT be
+ * reused here — it answers a different question (it excludes habits, so habit activity is
+ * invisible to it) and it is unbounded, loading every ended workout and check-in the user
+ * ever created. Do not "unify" the two helpers.
+ * @param userId - Authenticated owner of the logs.
+ * @param windowStart - Inclusive Córdoba start date in YYYY-MM-DD format.
+ * @param windowEnd - Inclusive Córdoba end date in YYYY-MM-DD format.
+ * @returns The HabitLog rows inside the window, explicitly ordered ascending by local date
+ * (empty array when none). The order is guaranteed by this loader's own `ORDER BY`, not by the
+ * index scan, so callers may rely on it whatever query plan the engine picks.
+ * @example
+ * const logs = await loadHabitActivityInWindow(1, '2026-09-21', '2026-09-27');
+ */
+export async function loadHabitActivityInWindow(
+  userId: number,
+  windowStart: string,
+  windowEnd: string,
+): Promise<HabitLog[]> {
+  return db
+    .select()
+    .from(habitLogs)
+    .where(
+      and(
+        eq(habitLogs.userId, userId),
+        gte(habitLogs.localDate, windowStart),
+        lte(habitLogs.localDate, windowEnd),
+      ),
+    )
+    .orderBy(asc(habitLogs.localDate));
 }
