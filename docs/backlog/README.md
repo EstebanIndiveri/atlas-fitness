@@ -1,13 +1,15 @@
 # Backlog — Atlas Fitness
 
 Fuente de verdad de alcance junto a los ADRs en [`docs/architecture/`](../architecture/) y el harness de trabajo en [`AGENTS.md`](../../AGENTS.md).  
-Este backlog refleja `develop` tras los PR #130–#137. v0.7.0 se publicó con el tag sobre `dae2bc949538f9cb9fa02faf8db0712d04b9d9f9`. El PR de release #138 se fusionó en `main` como `ba0857c5c42f730263e2d735ff57e69f6b0d42ea` y #139 finalizó los metadatos en `e1a592cb1aa9d26205933e2301b9926b9b834aa0`, sobre cuyo commit se creó y publicó el tag anotado `v0.7.1`; las versiones de paquete están en 0.7.1. (Al snapshot 2026-09-25 el tag aún no existía.) Este repo no usa GitHub Releases. El CI de los cambios de producto pasó en el run 36201073118. Este backlog convive con la visión estratégica de [`handoff-atlas-adaptive-core.md`](./handoff-atlas-adaptive-core.md): ese documento marca el norte de **Atlas Adaptive Core V1**; este README traduce el estado operativo y lo que queda. Para el checkpoint paso-a-paso y evidencia de pruebas ver [`handoff-2026-09.md`](./handoff-2026-09.md).
+Este backlog refleja `develop` tras los PR #163–#165. v0.7.0 se publicó con el tag sobre `dae2bc949538f9cb9fa02faf8db0712d04b9d9f9`. El PR de release #138 se fusionó en `main` como `ba0857c5c42f730263e2d735ff57e69f6b0d42ea` y #139 finalizó los metadatos en `e1a592cb1aa9d26205933e2301b9926b9b834aa0`, sobre cuyo commit se creó y publicó el tag anotado `v0.7.1`. Después se publicó **v0.8.0** con el tag anotado `v0.8.0` sobre `44c0bbfca8f52995f7a850b997118814e27b3043`; las versiones de paquete están en 0.8.0. **v0.9.0 todavía no está cortada ni tagueada**: su trabajo de producto está integrado en `develop` y el corte queda en el workstream de release. Este repo no usa GitHub Releases. El CI de los cambios de producto v0.7.1 pasó en el run 36201073118. Este backlog convive con la visión estratégica de [`handoff-atlas-adaptive-core.md`](./handoff-atlas-adaptive-core.md): ese documento marca el norte de **Atlas Adaptive Core V1**; este README traduce el estado operativo y lo que queda. Para el checkpoint paso-a-paso y evidencia de pruebas ver [`handoff-2026-09.md`](./handoff-2026-09.md).
 
 ## Estado actual del producto
 
 Atlas ya dejó atrás el scaffold: existe un loop usable de **onboarding → Hoy → Entrenar/adaptar → sesión guiada → feedback/progreso**, con PWA, auth, DB Turso/libSQL + Drizzle, Telegram link/webhook modular, rutinas, planes semanales, Coach Atlas y métricas con fuente.
 
 ### Hecho recientemente
+
+- ✅ **Actividad de hábitos registrada (v0.9.0, PR #163–#165 integrados en `develop`; release pendiente)**: dominio puro de actividad (`lib/services/habit-activity.ts`) con loader acotado en `lib/services/habit-logs.ts`; `GET /api/stats/habits` de solo lectura con cliente tipado (`lib/api/habit-activity.ts`); y lectura en pantalla — card en Progreso (`components/progress/HabitActivityCard.tsx`) y registro día por día con selector de período semana/mes/trimestre en hora de Córdoba en Hábitos (`components/habits/HabitActivityHistory.tsx`, montado en `app/dashboard/habits/page.tsx:21`). Se reporta **actividad observada** (días con registro sobre días transcurridos), sin metas ni porcentaje de cumplimiento, y la card "Hábitos consistentes" se eliminó por presentar un empty state como si fuera una medición. La prueba end-to-end de estas pantallas queda **pendiente del workstream de QA**. El input de actividad de hábitos al Coach y al brief del plan (workstream D) **no se construyó**.
 
 - ✅ **Coach freeText / adaptación honesta**: la adaptación interpreta poco tiempo, fatiga y falta de máquinas, con motivos trazables y fallback determinístico.
 - ✅ **`dayReason` honesto**: `lib/services/day-reason.ts` reemplaza leaks de notas libres por copy determinístico basado en check-in, descanso previo y objetivo del plan.
@@ -43,6 +45,7 @@ Atlas ya dejó atrás el scaffold: existe un loop usable de **onboarding → Hoy
 - Hero de Hoy con motivo honesto y acciones Empezar/Adaptar.
 - Coach adaptation preview/apply sobre rutinas/sesión con fallback.
 - Progreso básico con consistencia semanal, fuerza y sesiones recientes.
+- Actividad de hábitos registrada — lectura por período (`week`/`month`/`quarter` en `America/Argentina/Cordoba`), de solo lectura y con fuente declarada, sobre los días transcurridos. Integrada en `develop`, en cierre de release v0.9.0.
 - PWA instalable + Settings/Profile con copy de instalación.
 - Telegram link/webhook modular e idempotente.
 - Data honesty por tipos (`Metric<T>`, `MetricValue`) y empty states honestos.
@@ -54,6 +57,7 @@ Atlas ya dejó atrás el scaffold: existe un loop usable de **onboarding → Hoy
 
 ### Should — próximos candidatos
 
+- **Input de actividad de hábitos al Coach y al brief del plan semanal (workstream D de v0.9.0, `Should`, fuera de la ruta crítica): no construido.** Quedó deliberadamente fuera del alcance de v0.9.0; su precondición —el read path histórico de actividad— ya existe. Si se prioriza, nunca debe presentarse al modelo como adherencia a una meta, sino como actividad observada.
 - Si PO prioriza más explicabilidad, agregar una razón por día basada únicamente en el brief y el borrador observables. La revisión actual atribuye Gemini/fallback y muestra objetivo, día, foco y ejercicios con series/repeticiones; no presenta una explicación basada en historial, check-ins, biometría ni aprendizaje.
 - Ampliar rate limiting durable a superficies adicionales sólo si el uso lo requiere; login/register ya tienen límite durable. No hay evidencia actual para considerar implementados límites de Telegram, Gemini o crons.
 - Observabilidad más completa para endpoints sensibles si aumenta el uso real.
@@ -67,6 +71,7 @@ Coach Context no implica aprendizaje automático ni modifica el plan activo al e
 
 ### UX gaps conocidos (pendientes de verificar/priorizar)
 
+- **Defectos de honestidad de datos diferidos por v0.9.0 (#3, #4, #5) — verificados en el código de `develop`, abiertos:** botones de `components/progress/ProgressHeader.tsx` sin `onClick`; volumen de sesión siempre “no disponible” en `components/progress/RecentSessionsCard.tsx:57` pese a que el volumen se computa en `lib/services/strength-progress.ts`; y el row de Settings que promete actividad (`app/dashboard/settings/page.tsx:279`). Evidencia completa, estado de cada uno y cambios mínimos que los cerrarían en [`deferred-defects-2026-09.md`](./deferred-defects-2026-09.md).
 - **Progreso de fuerza — validación QA pendiente, no bug confirmado:** código y tests sintéticos soportan que una sesión elegible se muestre como “Punto de partida”. La validación contra historial QA real todavía está pendiente; no marcar como resuelto ni como backlog stale.
 
 ### No reproducido / comportamiento verificado
@@ -102,8 +107,10 @@ Coach Context no implica aprendizaje automático ni modifica el plan activo al e
 2. Si PO prioriza, ampliar la explicación diaria del borrador sin atribuir señales o aprendizaje que el código no usa ni muestra.
 3. Las notificaciones siguen diferidas hasta contar con una acción real.
 4. Cada entrega: TDD → auditoría pre-PR con `code-review` → suite full limpia → PR a `develop` → release candidate desde `develop` → `main` + tag + back-merge.
+5. Los defectos diferidos #3–#5 no se cierran solo con código: #3 y #5 piden decisión de producto (implementar la acción o retirar la promesa) antes de tocar los componentes. Detalle en [`deferred-defects-2026-09.md`](./deferred-defects-2026-09.md).
 
 ## Handoffs
 
+- [`deferred-defects-2026-09.md`](./deferred-defects-2026-09.md) — registro durable de los defectos de honestidad de datos diferidos por la wave v0.9.0 (#3, #4, #5), con evidencia `archivo:línea` y estado verificado.
 - [`handoff-2026-09.md`](./handoff-2026-09.md) — handoff operativo actual para personas/agentes: arquitectura, estado, backlog, guidelines y recomendaciones.
 - [`handoff-atlas-adaptive-core.md`](./handoff-atlas-adaptive-core.md) — visión estratégica Atlas Adaptive Core V1: DATA HONESTY RULE, roadmap de dos tracks, MoSCoW original y DoD aspiracional.
