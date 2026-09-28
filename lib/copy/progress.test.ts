@@ -78,6 +78,14 @@ describe('PROGRESS_COPY habit activity', () => {
     expect(PROGRESS_COPY.wellbeing.windowLabel).toMatch(/hoy/i);
   });
 
+  it('names the read-only activity record without calling it a history of goals', () => {
+    expect(PROGRESS_COPY.habitActivity.historyTitle).toBe('Registro de actividad de hábitos');
+    expect(PROGRESS_COPY.habitActivity.historyWeekdayLegend).toBe(
+      'Cada marca es un día, de lunes a domingo, en hora de Córdoba.',
+    );
+    expect(PROGRESS_COPY.habitActivity.historyTitle).not.toMatch(/historial/i);
+  });
+
   it('uses activity vocabulary and no forbidden §13 token in any habit-activity string', () => {
     const strings = [
       ...collectStrings(PROGRESS_COPY.habitActivity),
