@@ -6,6 +6,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Este
 
 ## [0.9.0] - 2026-09-27
 
+*Integrada en `develop`; el corte de versión, el tag anotado y el back-merge los realiza el workstream de release — v0.9.0 todavía no está publicada.*
+
 ### Added
 - Lectura de **actividad de hábitos registrada**: un registro de solo lectura con ventana de semana, mes o trimestre en hora de Córdoba, sin metas, sin porcentajes y sin cumplimiento.
 - Endpoint autenticado `GET /api/stats/habits?period=week|month|quarter`, con período validado y valor por defecto explícito.

@@ -44,7 +44,7 @@ El brief (§7.2) presenta tres firmas juntas como si las tres vivieran en el mó
 | `getHabitActivityForUser` | loader de caso de uso | `lib/services/habit-activity.ts` |
 | `loadHabitActivityInWindow` | lectura acotada | `lib/services/habit-logs.ts` |
 
-**Por qué:** `lib/services/habit-logs.ts` sigue siendo el **único** módulo que toca la tabla `habit_logs` (es también donde viven `getHabitLogsForDate`, `getTodayHabitLogs` y `setHabitLog`), y `lib/services/habit-activity.ts` queda como módulo de **dominio puro y sin DB** — su única importación desde la capa de datos es el propio loader acotado — con la misma forma que el ya probado `lib/services/weekly-consistency.ts`. Eso es lo que permite testear la métrica sin DB. §7.2 sigue siendo válido como **ilustración** del contrato, pero su bloque de código agrupa tres firmas que deliberadamente viven en dos archivos y **omite `HabitActivityInput`**, el tipo que la función pura efectivamente recibe.
+**Por qué:** `lib/services/habit-logs.ts` sigue siendo el **único** módulo que toca la tabla `habit_logs` (es también donde viven `getHabitLogsForDate`, `getTodayHabitLogs` y `setHabitLog`), y `lib/services/habit-activity.ts` queda como módulo de **dominio puro y sin DB** — su única importación desde la capa de datos es el propio loader acotado — con la misma forma que el ya probado `lib/services/weekly-consistency.ts`. Eso es lo que permite testear la métrica sin DB. §7.2 sigue siendo válido como **ilustración** del contrato: su bloque de código nombra las tres firmas —incluido `HabitActivityInput`, el tipo que la función pura recibe— pero las presenta agrupadas como si todas vivieran en `habit-activity.ts`, cuando `loadHabitActivityInWindow` vive en `lib/services/habit-logs.ts` (§14.2). La tabla de arriba registra la ubicación real de cada una.
 
 ### A2. Regla de performance de §7.4 — decisión registrada
 
@@ -63,11 +63,19 @@ Esta wave entrega **actividad observada**: en cuántos días hay algún registro
 ### A5. Reconciliaciones verificadas contra el brief
 
 - La card **"Hábitos consistentes" se eliminó** de `components/progress/ProgressInsightCards.tsx`, y ese archivo **encogió** (239 → 202 líneas): su estado vacío presentaba como medición algo que no se calculaba.
-- `habits.todayOnly` **se reescribió, no se borró**: ahora indica que el detalle día por día del período elegido está justo debajo.
+- `habits.todayOnly` **se reescribió, no se borró** (commit `c90de22`): la frase pasó de `Hoy registraste {done} de {total} hábitos; eso no se muestra como porcentaje histórico.` a nombrar el detalle día por día que está justo debajo. El símbolo se conservó; su único consumidor cambió de la card eliminada a `components/habits/HabitsScreen.tsx:93`.
 - Se **agregó** el grupo de copy `habitActivity.*` en `lib/copy/progress.ts` (título, leyenda de días registrado / sin registro / todavía no llegó, etiquetas de período y estados de carga e indisponible).
 - El fix de etiqueta de ventana de bienestar (**D6**) requirió una edición a **nivel de página** en `app/dashboard/progress/page.tsx` — no alcanzaba con cambiar el copy.
 - El registro de actividad vive en la pantalla de Hábitos y es **de solo lectura**: no crea, no edita ni borra hábitos, y no agrega navegación nueva.
 
 ### A6. Lo que sigue diferido
 
-**"Streaks / nudges"** (Must v2 de este ADR) **no se entregó** en esta wave: sigue del lado `Should` y las listas de arriba no se contradicen — actividad registrada **no** es una racha. Quedan además diferidos, con evidencia en [`docs/backlog/deferred-defects-2026-09.md`](../backlog/deferred-defects-2026-09.md): los botones de header de Progreso sin handler; el "Volumen no disponible" en las filas de sesiones recientes; y la promesa de actividad del row de Settings, **parcialmente cumplida** (el read path histórico ahora existe; el subcopy dice "de hoy" porque describe los controles de hoy). La prueba end-to-end de estas pantallas queda **pendiente del workstream de QA**.
+**"Streaks / nudges"** (fila 3 de la tabla de este ADR, **Must**) recibió **cero cambios** en esta wave: ya estaba entregado en waves anteriores — `lib/services/streaks.ts`, `app/api/cron/streak-nudge/route.ts`, `types/streak.ts` y la tabla `streakNudges` en `lib/db/schema.ts:506`. No es un pendiente de v0.9.0 ni una capacidad que falte: actividad registrada **no** es una racha, y nadie debería reimplementarla por leer este addendum.
+
+Lo que sí queda sin cerrar en esta wave, con evidencia `archivo:línea` en [`docs/backlog/deferred-defects-2026-09.md`](../backlog/deferred-defects-2026-09.md): los botones de header de Progreso sin handler (`components/progress/ProgressHeader.tsx`, cero `onClick`) y el "Volumen no disponible" impreso incondicionalmente en las filas de sesiones recientes (`components/progress/RecentSessionsCard.tsx:57`). La prueba end-to-end de estas pantallas queda **pendiente del workstream de QA**.
+
+### A7. Cierre del defecto #5: la promesa de actividad del row de Settings
+
+El brief §3.1 registró como defecto que el row "Hábitos de bienestar" de Settings prometiera **actividad histórica** sin read path. Verificado en el código integrado: el destino de ese row, `app/dashboard/habits/page.tsx:21`, renderiza `<HabitActivityHistory />` — junto a `<HabitsScreen />` en `:20` —, que muestra la actividad del período elegido sobre la misma ventana de Córdoba que el resto del producto. La promesa del row (`app/dashboard/settings/page.tsx:279`, literal `description="Ver actividad y hábitos"`) queda por lo tanto **cumplida**, no diferida.
+
+Lo que permanece no es una promesa rota sino una imprecisión de copy, y se registra como tal: el subcopy del row es un literal en el JSX mientras `lib/copy/ui.ts:23` define `profileHabitsDescription`, key que **no se usa en ningún archivo del repo** y cuyo texto además habla solo de "hoy"; y el subtítulo de la pantalla de Hábitos (`app/dashboard/habits/page.tsx:16-18`, "Tu registro manual de hoy") describe solo los controles de hoy aunque debajo esté el registro por período. Estado detallado: [`docs/backlog/deferred-defects-2026-09.md`](../backlog/deferred-defects-2026-09.md).

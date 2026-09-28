@@ -71,7 +71,7 @@ Coach Context no implica aprendizaje automático ni modifica el plan activo al e
 
 ### UX gaps conocidos (pendientes de verificar/priorizar)
 
-- **Defectos de honestidad de datos diferidos por v0.9.0 (#3, #4, #5) — verificados en el código de `develop`, abiertos:** botones de `components/progress/ProgressHeader.tsx` sin `onClick`; volumen de sesión siempre “no disponible” en `components/progress/RecentSessionsCard.tsx:57` pese a que el volumen se computa en `lib/services/strength-progress.ts`; y el row de Settings que promete actividad (`app/dashboard/settings/page.tsx:279`). Evidencia completa, estado de cada uno y cambios mínimos que los cerrarían en [`deferred-defects-2026-09.md`](./deferred-defects-2026-09.md).
+- **Defectos de honestidad de datos de v0.9.0 (#3 y #4) — verificados en el código de `develop`, abiertos:** botones de `components/progress/ProgressHeader.tsx` sin `onClick`; y volumen de sesión siempre “no disponible” en `components/progress/RecentSessionsCard.tsx:57` pese a que el volumen se computa en `lib/services/strength-progress.ts`. El defecto **#5 quedó cerrado**: el row de Settings que promete actividad (`app/dashboard/settings/page.tsx:279`) ya tiene read path histórico en su destino (`app/dashboard/habits/page.tsx:21`). Evidencia completa, estado de cada uno y cambios mínimos que cerrarían #3 y #4 en [`deferred-defects-2026-09.md`](./deferred-defects-2026-09.md).
 - **Progreso de fuerza — validación QA pendiente, no bug confirmado:** código y tests sintéticos soportan que una sesión elegible se muestre como “Punto de partida”. La validación contra historial QA real todavía está pendiente; no marcar como resuelto ni como backlog stale.
 
 ### No reproducido / comportamiento verificado
@@ -107,10 +107,10 @@ Coach Context no implica aprendizaje automático ni modifica el plan activo al e
 2. Si PO prioriza, ampliar la explicación diaria del borrador sin atribuir señales o aprendizaje que el código no usa ni muestra.
 3. Las notificaciones siguen diferidas hasta contar con una acción real.
 4. Cada entrega: TDD → auditoría pre-PR con `code-review` → suite full limpia → PR a `develop` → release candidate desde `develop` → `main` + tag + back-merge.
-5. Los defectos diferidos #3–#5 no se cierran solo con código: #3 y #5 piden decisión de producto (implementar la acción o retirar la promesa) antes de tocar los componentes. Detalle en [`deferred-defects-2026-09.md`](./deferred-defects-2026-09.md).
+5. Los defectos diferidos #3 y #4 no se cierran solo con código: #3 pide decisión de producto (implementar la acción o retirar el botón) antes de tocar el componente. #5 ya quedó cerrado por el read path de actividad; lo residual ahí es copy. Detalle en [`deferred-defects-2026-09.md`](./deferred-defects-2026-09.md).
 
 ## Handoffs
 
-- [`deferred-defects-2026-09.md`](./deferred-defects-2026-09.md) — registro durable de los defectos de honestidad de datos diferidos por la wave v0.9.0 (#3, #4, #5), con evidencia `archivo:línea` y estado verificado.
+- [`deferred-defects-2026-09.md`](./deferred-defects-2026-09.md) — registro durable de los defectos de honestidad de datos de la wave v0.9.0 (#1 y #2 corregidos, #5 cerrado por el read path entregado, #3 y #4 abiertos), con evidencia `archivo:línea` y estado verificado.
 - [`handoff-2026-09.md`](./handoff-2026-09.md) — handoff operativo actual para personas/agentes: arquitectura, estado, backlog, guidelines y recomendaciones.
 - [`handoff-atlas-adaptive-core.md`](./handoff-atlas-adaptive-core.md) — visión estratégica Atlas Adaptive Core V1: DATA HONESTY RULE, roadmap de dos tracks, MoSCoW original y DoD aspiracional.
