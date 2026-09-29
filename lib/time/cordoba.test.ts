@@ -7,6 +7,7 @@ import {
   cordobaLocalDateToUtcRange,
   cordobaWeekdayIndex,
   localDateWeekdayIndex,
+  sundayFirstLocalDateWeekdayIndex,
   yesterdayCordoba,
 } from './cordoba';
 
@@ -70,6 +71,32 @@ describe('Córdoba timezone helpers', () => {
   it('rejects an invalid calendar date string', () => {
     expect(() => localDateWeekdayIndex('2026/09/21')).toThrow();
     expect(() => localDateWeekdayIndex('nope')).toThrow();
+  });
+
+  describe('sundayFirstLocalDateWeekdayIndex', () => {
+    it('returns a Sunday-first weekday index from a calendar date string', () => {
+      expect(sundayFirstLocalDateWeekdayIndex('2026-09-27')).toBe(0); // Sunday
+      expect(sundayFirstLocalDateWeekdayIndex('2026-09-21')).toBe(1); // Monday
+      expect(sundayFirstLocalDateWeekdayIndex('2026-09-24')).toBe(4); // Thursday
+      expect(sundayFirstLocalDateWeekdayIndex('2026-09-26')).toBe(6); // Saturday
+    });
+
+    it('proves the existing Monday-first helper cannot be reused for Sunday-first semantics', () => {
+      // Same date, opposite weekday atlases: Sunday is 0 here but 6 in the Monday-first helper.
+      expect(sundayFirstLocalDateWeekdayIndex('2026-09-27')).toBe(0);
+      expect(localDateWeekdayIndex('2026-09-27')).toBe(6);
+      // Every date must satisfy `(mondayFirst + 1) % 7 === sundayFirst`.
+      for (const localDate of ['2026-09-21', '2026-09-22', '2026-09-26', '2026-09-27']) {
+        expect(sundayFirstLocalDateWeekdayIndex(localDate)).toBe(
+          (localDateWeekdayIndex(localDate) + 1) % 7,
+        );
+      }
+    });
+
+    it('rejects an invalid calendar date string', () => {
+      expect(() => sundayFirstLocalDateWeekdayIndex('2026/09/21')).toThrow();
+      expect(() => sundayFirstLocalDateWeekdayIndex('nope')).toThrow();
+    });
   });
 
   describe('cordobaLocalDateToUtcRange', () => {
