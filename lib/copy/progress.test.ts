@@ -86,6 +86,34 @@ describe('PROGRESS_COPY habit activity', () => {
     expect(PROGRESS_COPY.habitActivity.historyTitle).not.toMatch(/historial/i);
   });
 
+  it('keeps the target-adherence vocabulary in its own namespace, apart from activity', () => {
+    expect(PROGRESS_COPY.habitActivity).not.toHaveProperty('resultLabel');
+    expect(PROGRESS_COPY.habitTarget).toHaveProperty('resultLabel');
+    expect(PROGRESS_COPY.habitTarget.title).toBe('Días objetivo cumplidos');
+  });
+
+  it('always renders the N de M counts for a result, with the percentage as a separate label', () => {
+    expect(PROGRESS_COPY.habitTarget.resultLabel(3, 5)).toBe('3 de 5 días objetivo');
+    expect(PROGRESS_COPY.habitTarget.resultLabel(0, 4)).toBe('0 de 4 días objetivo');
+    expect(PROGRESS_COPY.habitTarget.percentLabel(60)).toBe('60%');
+    expect(PROGRESS_COPY.habitTarget.resultValueLabel).not.toBe(
+      PROGRESS_COPY.habitTarget.percentValueLabel,
+    );
+  });
+
+  it('names the not-configured and no-elapsed-objective-day states separately', () => {
+    expect(PROGRESS_COPY.habitTarget.notConfiguredTitle).toBe('Sin días objetivo configurados');
+    expect(PROGRESS_COPY.habitTarget.notConfiguredBody).toBe(
+      'Configurá los días que querés proponerte; tu actividad anterior sigue visible.',
+    );
+    expect(PROGRESS_COPY.habitTarget.noExpectedBody).toBe(
+      'Todavía no transcurrió un día objetivo en este período.',
+    );
+    expect(PROGRESS_COPY.habitTarget.notConfiguredBody).not.toBe(
+      PROGRESS_COPY.habitTarget.noExpectedBody,
+    );
+  });
+
   it('uses activity vocabulary and no forbidden §13 token in any habit-activity string', () => {
     const strings = [
       ...collectStrings(PROGRESS_COPY.habitActivity),

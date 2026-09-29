@@ -9,8 +9,9 @@ describe('ProgressHeader', () => {
 
     expect(screen.getByText('◎')).toBeTruthy();
     expect(screen.getByText('Atlas')).toBeTruthy();
-    expect(screen.getByLabelText('Notificaciones')).toBeTruthy();
-    expect(screen.getByLabelText('Compartir progreso')).toBeTruthy();
+    expect(screen.queryByLabelText('Notificaciones')).toBeNull();
+    expect(screen.queryByLabelText('Compartir progreso')).toBeNull();
+    expect(screen.queryByRole('button')).toBeNull();
     expect(screen.getByRole('heading', { name: 'Progreso' })).toBeTruthy();
     expect(screen.getByText(/¿Estás avanzando\?/)).toBeTruthy();
     expect(screen.getByText('septiembre de 2026')).toBeTruthy();
