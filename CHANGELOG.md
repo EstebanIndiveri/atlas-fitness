@@ -4,7 +4,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Este
 
 ## [Unreleased]
 
-> **Estado: v0.10.0 integrado en `develop`, no publicado.** `package.json` y `package-lock.json` siguen en `0.9.0`; no existe tag ni release v0.10.0. Las entradas de abajo describen comportamiento verificable en el código integrado y sus tests, no una versión publicada. Toda métrica citada tiene evidencia en `lib/**`, `app/**`, `components/**`, `hooks/**` o `e2e/**`.
+## [0.10.0] - 2026-09-29
+
+> **Estado: preparación de release.** El contenido de v0.10.0 está integrado en `develop` y `package.json`/`package-lock.json` ya declaran `0.10.0`. Todavía no se creó tag ni release. Las entradas de abajo describen comportamiento verificable en el código integrado y sus tests; toda métrica citada tiene evidencia en `lib/**`, `app/**`, `components/**`, `hooks/**` o `e2e/**`.
 
 ### Added
 
