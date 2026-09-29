@@ -4,7 +4,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Este
 
 ## [Unreleased]
 
-> **Estado: v0.10.0 integrado en `develop`, no publicado.** `package.json` y `package-lock.json` siguen en `0.9.0`; no existe tag ni release v0.10.0. Las entradas de abajo describen comportamiento verificable en el código integrado y sus tests, no una versión publicada. Toda métrica citada tiene evidencia en `lib/**`, `app/**`, `components/**`, `hooks/**` o `e2e/**`.
+## [0.10.0] - 2026-09-29
+
+> **Estado: publicado (2026-09-29).** El release PR #186 (`chore(release): v0.10.0`, `release/0.10.0` → `main`, head `8bad403645d3cc41afbca9267d0030e139a801ac`) se fusionó en `main` mediante un merge normal (no squash), dejando el merge commit `531bf0706355763885c9798fc012a5eb6bbc0298`; el tag anotado `v0.10.0` (objeto `a03d0591f172f87a8b3410a2e003d614dba38a31`) apunta a ese commit y `package.json`/`package-lock.json` quedaron en `0.10.0`. La migración de producción `0023_habit_target_schedules` (aditiva, sin backfill) corrió en el gate pre-merge sobre `release/0.10.0` (workflow "Migrate Production DB", run 36580211527) y se reafirmó post-merge sobre `main` @ `531bf07` (run 36580447444), ambas en `SUCCESS`. El deployment de producción de Vercel (id 6736930690) del commit `531bf07` quedó en `SUCCESS` y el smoke sin sesión pasó: `/`, `/login`, `/onboarding` = 200; `/dashboard/today` = 307 → `/login`; `/api/stats/habits?period=week`, `/api/habit-targets` y `/api/stats/habit-adherence?period=week` = 401. Este repo publica mediante tag anotado, no mediante GitHub Releases: no se creó un objeto GitHub Release. Las entradas de abajo describen comportamiento verificable en el código integrado y sus tests; toda métrica citada tiene evidencia en `lib/**`, `app/**`, `components/**`, `hooks/**` o `e2e/**`.
 
 ### Added
 
