@@ -2,12 +2,14 @@
 
 import { AtlasInterpretationCard } from '@/components/progress/AtlasInterpretationCard';
 import { HabitActivityCard } from '@/components/progress/HabitActivityCard';
+import { HabitTargetAdherenceCard } from '@/components/progress/HabitTargetAdherenceCard';
 import { StrengthEvolutionCard, WellbeingCard } from '@/components/progress/ProgressInsightCards';
 import { ProgressHeader } from '@/components/progress/ProgressHeader';
 import { ProgressSummaryCard } from '@/components/progress/ProgressSummaryCard';
 import { RecentSessionsCard } from '@/components/progress/RecentSessionsCard';
 import { formatWeekConsistencyPercent } from '@/components/progress/ProgressFormat';
 import { WeeklyConsistencyCard } from '@/components/progress/WeeklyConsistencyCard';
+import { useHabitTargetAdherence } from '@/components/progress/useHabitTargetAdherence';
 import { PageContainer } from '@/components/shell/PageContainer';
 import { ErrorState, LoadingState } from '@/components/ui/states';
 import { useDailyCheckin } from '@/hooks/useDailyCheckin';
@@ -82,6 +84,7 @@ export default function ProgressPage() {
   const { summary, week, loading, error, period, setPeriod } = useProgress();
   const checkin = useDailyCheckin();
   const habitActivity = useHabitActivity(period);
+  const habitAdherence = useHabitTargetAdherence(period);
 
   const handlePeriodChange = (next: string): void => {
     if (isProgressPeriod(next)) {
@@ -123,6 +126,11 @@ export default function ProgressPage() {
             activity={habitActivity.activity}
             loading={habitActivity.loading}
             error={habitActivity.error}
+          />
+          <HabitTargetAdherenceCard
+            adherence={habitAdherence.adherence}
+            loading={habitAdherence.loading}
+            error={habitAdherence.error}
           />
           <RecentSessionsCard sessions={summary.sessions} />
         </>

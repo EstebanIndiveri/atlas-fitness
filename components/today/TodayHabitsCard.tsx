@@ -7,6 +7,7 @@ import { HabitPreviewRow } from '@/components/today/HabitPreviewRow';
 import { HydrationHabitRow } from '@/components/today/HydrationHabitRow';
 import { Card } from '@/components/ui/Card';
 import { ErrorState, LoadingState } from '@/components/ui/states';
+import { useHabitTargets } from '@/hooks/useHabitTargets';
 import { useHabits } from '@/hooks/useHabits';
 import { isQuantitativeHabitKey } from '@/types/habit';
 
@@ -28,6 +29,7 @@ const COPY = {
 export function TodayHabitsCard(): JSX.Element {
   const { doneByKey, amountByKey, loading, saving, error, toggle, addAmount, clearAmount } =
     useHabits();
+  const { expectedTodayByKey } = useHabitTargets();
   const completedCount = countCompletedHabits(doneByKey);
 
   return (
@@ -50,6 +52,7 @@ export function TodayHabitsCard(): JSX.Element {
                 key={habit.id}
                 habit={habit}
                 amount={amountByKey[habit.id]}
+                expectedToday={expectedTodayByKey[habit.id]}
                 onAdd={addAmount}
                 onClear={clearAmount}
                 disabled={saving}
@@ -59,6 +62,7 @@ export function TodayHabitsCard(): JSX.Element {
                 key={habit.id}
                 habit={habit}
                 done={doneByKey[habit.id]}
+                expectedToday={expectedTodayByKey[habit.id]}
                 onToggle={toggle}
                 disabled={saving}
               />

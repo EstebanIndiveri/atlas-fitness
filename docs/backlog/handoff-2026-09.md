@@ -114,6 +114,69 @@ Ver [`../../CHANGELOG.md`](../../CHANGELOG.md) para detalle agrupado Added/Chang
 - [x] Back-merge `main→develop` con merge commit en el PR #169; `develop` quedó en `e3734c1c9610a97ae5c2f8ac6b32030e3ee449b2`.
 - [x] Deployment de producción de `0cd7a1a` en `SUCCESS` ([https://atlas-fitness-9q6lj9eai-eindi-acme.vercel.app](https://atlas-fitness-9q6lj9eai-eindi-acme.vercel.app)); smoke `/`, `/login` y `/onboarding` = 200, `/dashboard/today` = 307 → `/login`, y `GET /api/stats/habits?period=week` = 401 sin sesión.
 
+### Checkpoint de desarrollo actual (2026-09-28) — posterior a v0.9.0
+
+Snapshot operativo vigente. Distingue explícitamente la **release publicada** del **baseline de desarrollo actual**; los párrafos históricos de arriba conservan sus fechas, SHAs y cifras como evidencia de sus propias waves.
+
+**RELEASE PUBLICADA — v0.9.0**
+
+- Última versión publicada. El tag anotado `v0.9.0` apunta a `0cd7a1a250cbdbf81f4897af129274524222a206` (release PR #168; back-merge #169). `package.json` / `package-lock.json` en **0.9.0**.
+- El hardening descrito abajo (#174) **no** forma parte del tag v0.9.0: vive solo en `develop`.
+
+**BASELINE DE DESARROLLO — distinción explícita**
+
+Dos cosas distintas que **no** deben confundirse. Un SHA escrito aquí envejece con el próximo merge a `develop`; tratalo como evidencia puntual, no como verdad permanente.
+
+1. **Último baseline pre-checkpoint / con código (LAST PRE-CHECKPOINT / CODE-BEARING BASELINE)** — `1728a14f6e7b04622498de3b0104d72d5ccd8381` (tree `36e6882265347d878d0fe6ea653a28e87c6b3127`). Es el estado de `develop` posterior al #175 y **anterior** al checkpoint documental #176. Sirve como referencia del último estado que contenía código de producto, pero **no** es el HEAD vivo de `develop`.
+2. **Baseline de desarrollo vivo (LIVE DEVELOPMENT BASELINE)** — se obtiene con `git fetch origin` + `git rev-parse origin/develop` **inmediatamente antes de iniciar una nueva wave**. No debe asumirse ningún SHA fijo: cambia con cada merge a `develop`.
+
+- `main` → `f4c991df920631e99ff65578921da67d1bcef47e`; **`main` es ancestro de `develop`** (ya no están estructuralmente divergidas).
+- `develop` contiene endurecimiento post-release que todavía no está representado por una nueva versión de producto. `package.json` **sigue en 0.9.0** en ambas ramas.
+
+**PR #174 — hardening de DB mergeado (solo develop, no en el tag v0.9.0)**
+
+- `fix(db): esperar el lock de escritura local en lugar de responder SQLITE_BUSY`; merge SHA `a3cb62881bf394d2f9c89aec006d32693773e8d8` (base `develop`). Issue **#172 cerrado / completado** (2026-09-28).
+- **Causa raíz:** el libSQL local basado en archivo usaba SQLite con rollback-journal y sin busy timeout efectivo para el cliente de la aplicación; una escritura concurrente podía fallar de inmediato con `SQLITE_BUSY: database is locked` y aflorar como HTTP 500 en E2E.
+- **Fix entregado:** configuración centralizada del cliente libSQL; timeout de lock **solo local** para bases `file:`/`memory`; comportamiento remoto de **Turso sin cambios**; `LOCAL_DB_BUSY_TIMEOUT_MS` acotado; app, readiness y migraciones usan la configuración compartida.
+- **Evidencia:** Jest 236 suites / 1608 tests; typecheck limpio; lint 0 errores; build verde; Playwright 72 passed / 1 skipped / 0 failed. Stress CI independiente: **10 ejecuciones consecutivas de Playwright, 10/10 exitosas, 0 ocurrencias de `SQLITE_BUSY`**. CI post-merge de `develop`: run `36442823783` success.
+
+**PR #175 — normalización de ancestría (solo estructura de repo)**
+
+- `chore(repo): normalize main ancestry before v0.10.0`; merge SHA = `1728a14f6e7b04622498de3b0104d72d5ccd8381`.
+- Solo ancestría: **0 archivos cambiados, 0 adiciones, 0 borrados**; el tree de `develop` no cambió (`36e6882`). Efecto: `main` pasa a ser ancestro de `develop`.
+
+**PR #176 — checkpoint documental post-v0.9.0 (solo docs)**
+
+- `docs: checkpoint post-v0.9.0 hardening before v0.10.0`; merge SHA = `8ab59ba181a1c03df6107984dc956bc7be6a8b61`.
+- Solo documentación: 1 archivo cambiado (`docs/backlog/handoff-2026-09.md`), 44 inserciones, 0 borrados; sin cambios de código, tests, configuración ni metadata.
+- **Evidencia histórica de checkpoint:** tras el merge del PR #176, `develop` quedó en `8ab59ba181a1c03df6107984dc956bc7be6a8b61`. Ese SHA es evidencia puntual del checkpoint y **no debe asumirse como HEAD vigente para siempre**: toda wave futura debe releer `origin/develop` en vivo.
+
+**Deuda técnica residual — DEFERRED / NON-BLOCKING**
+
+No se corrige en este checkpoint y **no** se convierte en MUST de v0.10.0:
+
+1. `drizzle.config.ts` / drizzle-kit no hereda el busy timeout local.
+2. No hay migración a WAL.
+3. No hay capa de retry de DB.
+4. El E2E sigue compartiendo `file:./local.db` en lugar de aislar DB por spec/worker.
+
+**WAVE v0.10.0 — INTEGRADA EN `develop`, NO PUBLICADA (truth sync 2026-09-29)**
+
+- v0.10.0 ("días objetivo de hábitos") está **integrada en `develop`** mediante los workstreams A–F; **no está publicada**: `package.json`/`package-lock.json` siguen en **0.9.0**, no hay tag ni release `v0.10.0`. La release se ejecuta solo por el flujo de §6 y §17 del brief (corte `release/0.10.0`, bump, PR a `main`, tag, back-merge).
+- Baseline de esta wave: `0758166a55380796b79402f872d181a6a5f1a3ea` (merge final de F sobre `develop`). Es evidencia puntual; toda wave futura debe releer el HEAD vivo de `origin/develop`.
+- **Qué se entregó (verificado en código y tests):**
+  - Intención explícita versionada por días de la semana con vigencia Córdoba y sin backfill (`lib/db/migrations/0023_habit_target_schedules.sql`, `lib/db/schema.ts`, `lib/services/habit-targets.ts`).
+  - Create/update/deactivate explícitos con conflicto optimista `{ targetId, version }` (`409`), reemplazo del mismo día, cancelación transaccional de una versión creada hoy y preservación de historia (`lib/services/habit-targets.ts`, `app/api/habit-targets/**`).
+  - Cumplimiento `N de M días objetivo` con `configurationState`/`metricState` independientes y `no_expected_days` sin ratio (`lib/services/habit-target-adherence.ts`, `types/habit-adherence.ts`, `app/api/stats/habit-adherence/route.ts`, `components/progress/HabitTargetAdherenceCard.tsx`).
+  - Configuración y read-back en Hábitos, señal "Objetivo de hoy" y marks diarios (`components/habits/**`, `components/today/TodayHabitsCard.tsx`, `hooks/useHabitTargets.ts`, `hooks/useHabitAdherence.ts`).
+  - Honestidad de Progreso: botones inertes retirados y volumen real por sesión (`components/progress/ProgressHeader.tsx`, `lib/services/progress-summary.ts`, `components/progress/RecentSessionsCard.tsx`).
+  - Evidencia E2E del loop completo en `e2e/habit-targets.spec.ts` (13 casos: configuración/persistencia, contrato de cumplimiento, aislamiento cross-user, honestidad de Progreso y golden path mobile).
+- **Qué NO se entregó (sigue `DEFER`/`EXCLUDE`, no describir como shipped):**
+  - `DEFER`: hábitos creados/renombrados/reordenados por el usuario; targets cuantitativos (litros, minutos, pasos); reminders, quiet hours y push/email/Telegram nudges; backdating/corrección histórica; hábitos dentro del streak existente; Coach/Plan consumiendo activity o adherence; context assembler de preferencias/plan/historia; eliminar hardcodes de improve-plan; bienestar histórico en Progress; DB tooling residual y branch protection.
+  - `EXCLUDE`: gamificación (quests, XP, niveles, badges, recompensas, Liftoff parity); composite habit+training scores; inferir targets desde registros pasados; mutación silenciosa por AI/cron; release/version bump dentro de la implementación de features.
+  - **Coach no aprende**: v0.10 no agrega inputs de adherence a Coach ni cambia prompts/adapters; los schedules son intención explícita, no aprendizaje. **No hay soporte de reminders.**
+- **Regla durable**: no describir ninguna entrada planificada como publicada. La versión publicada sigue siendo **v0.9.0** y `package.json` permanece en **0.9.0** hasta el corte de `release/0.10.0`.
+
 ## 7. Backlog restante
 
 ### Alto impacto / próximo
@@ -130,7 +193,7 @@ Coach Context no aprende de las preferencias ni modifica el plan activo al edita
 
 ### UX gaps conocidos / validaciones pendientes
 
-- **Defectos de honestidad de datos de v0.9.0 (#3 y #4) — verificados en el código de `develop`, abiertos:** botones de `components/progress/ProgressHeader.tsx` sin `onClick`; y “Volumen no disponible” impreso incondicionalmente en `components/progress/RecentSessionsCard.tsx:57` aunque el volumen se computa en `lib/services/strength-progress.ts`. El defecto **#5 quedó cerrado**: el row de Settings que promete “Ver actividad y hábitos” (`app/dashboard/settings/page.tsx:279`) ya tiene read path histórico en su destino (`app/dashboard/habits/page.tsx:21`); lo que queda ahí es una imprecisión de copy, no una promesa rota. Evidencia `archivo:línea`, estado y cambio mínimo que cerraría #3 y #4 en [`deferred-defects-2026-09.md`](./deferred-defects-2026-09.md).
+- **Defectos de honestidad de datos de Progreso (#3 y #4) — resueltos por v0.10.0 en `develop`, no publicados:** los botones de `components/progress/ProgressHeader.tsx` sin acción se retiraron y las sesiones recientes ahora muestran el volumen real por sesión cuando existen sets elegibles, con "Volumen no disponible" solo cuando realmente falta (`lib/services/progress-summary.ts`, `components/progress/RecentSessionsCard.tsx`, evidencia E2E en `e2e/habit-targets.spec.ts`). El defecto **#5 ya estaba cerrado** por el read path histórico de actividad. El registro histórico `deferred-defects-2026-09.md` conserva la evidencia `archivo:línea` y el estado verificado de la wave v0.9.0 como registro de esa wave.
 - **Progreso de fuerza — validación QA real pendiente, no bug confirmado:** código y tests sintéticos soportan que una sesión elegible se muestre como “Punto de partida”. Todavía falta validar contra historial QA real. No marcar como resuelto ni como backlog stale.
 - Perfil conserva valores "No configurado" por diseño honesto; convertirlos en flows reales solo si PO prioriza.
 
@@ -163,3 +226,4 @@ Ver [`AGENTS.md`](../../AGENTS.md) antes de tocar código. Resumen operativo:
 4. **Auditar copy de honestidad**: cualquier “Atlas sabe/aprende/recuperación” debe mapear a datos reales o cambiarse a “Atlas usa tu plan/check-in/historial”. No describir las preferencias guardadas como aprendizaje, ni atribuir la propuesta a datos que el brief no incluye.
 5. **Branch protection sigue siendo riesgo organizacional**: documentar como bloqueado hasta que el owner del repo active reglas y CI requerida.
 6. **Mantener docs vivas**: actualizar este handoff y changelog en cada release menor; si cambia un contrato público, actualizar ADR/engineering docs relacionados.
+7. **Estado de v0.10.0 — integrada en `develop`, no publicada**: la wave de días objetivo de hábitos (workstreams A–F) ya está integrada y verificada, pero **no está publicada**; `package.json` sigue en 0.9.0 y no hay tag `v0.10.0`. La release se ejecuta solo por el flujo de §6 y §17 del brief. No describir ninguna entrada planificada (`DEFER`/`EXCLUDE`) como shipped. La deuda de DB de §6 queda DEFERRED/NON-BLOCKING. La investigación de Liftoff es un input de producto futuro separado y no debe influir silenciosamente en ninguna wave.

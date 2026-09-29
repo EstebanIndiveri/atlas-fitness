@@ -6,16 +6,22 @@ declare const jest: typeof import('@jest/globals').jest;
 jest.mock('@/hooks/useProgress', () => ({ useProgress: jest.fn() }));
 jest.mock('@/hooks/useDailyCheckin', () => ({ useDailyCheckin: jest.fn() }));
 jest.mock('@/hooks/useHabitActivity', () => ({ useHabitActivity: jest.fn() }));
+jest.mock('@/components/progress/useHabitTargetAdherence', () => ({
+  useHabitTargetAdherence: jest.fn(),
+}));
 
+import { useHabitTargetAdherence as useHabitTargetAdherenceHook } from '@/components/progress/useHabitTargetAdherence';
 import { useDailyCheckin as useDailyCheckinHook } from '@/hooks/useDailyCheckin';
 import { useHabitActivity as useHabitActivityHook } from '@/hooks/useHabitActivity';
 import { useProgress as useProgressHook } from '@/hooks/useProgress';
+import type { HabitTargetAdherenceWindow } from '@/types/habit-adherence';
 import type { HabitActivityWindow } from '@/types/habit-activity';
 import ProgressPage from './page';
 
 const useProgress = jest.mocked(useProgressHook);
 const useDailyCheckin = jest.mocked(useDailyCheckinHook);
 const useHabitActivity = jest.mocked(useHabitActivityHook);
+const useHabitTargetAdherence = jest.mocked(useHabitTargetAdherenceHook);
 
 const setPeriod = jest.fn<(period: 'week' | 'month' | 'quarter') => void>();
 
@@ -49,6 +55,59 @@ const week = {
   })),
 };
 
+function habitTargetAdherence(
+  overrides: Partial<HabitTargetAdherenceWindow> = {},
+): HabitTargetAdherenceWindow {
+  return {
+    period: 'month',
+    windowStart: '2026-09-01',
+    windowEnd: '2026-09-30',
+    today: '2026-09-24',
+    configurationState: 'configured',
+    metricState: 'result',
+    expectedHabitDays: 10,
+    completedExpectedHabitDays: 7,
+    extraRecordedHabitDays: 1,
+    adherencePercent: 70,
+    perHabit: {
+      hydration: {
+        configurationState: 'configured',
+        metricState: 'result',
+        expectedHabitDays: 4,
+        completedExpectedHabitDays: 3,
+        extraRecordedHabitDays: 1,
+        adherencePercent: 75,
+      },
+      walk: {
+        configurationState: 'configured',
+        metricState: 'result',
+        expectedHabitDays: 2,
+        completedExpectedHabitDays: 1,
+        extraRecordedHabitDays: 0,
+        adherencePercent: 50,
+      },
+      mobility: {
+        configurationState: 'configured',
+        metricState: 'result',
+        expectedHabitDays: 2,
+        completedExpectedHabitDays: 2,
+        extraRecordedHabitDays: 0,
+        adherencePercent: 100,
+      },
+      sleep: {
+        configurationState: 'configured',
+        metricState: 'result',
+        expectedHabitDays: 2,
+        completedExpectedHabitDays: 1,
+        extraRecordedHabitDays: 0,
+        adherencePercent: 50,
+      },
+    },
+    days: [],
+    ...overrides,
+  };
+}
+
 function mockSideHooks(): void {
   useDailyCheckin.mockReturnValue({
     checkin: null,
@@ -60,6 +119,12 @@ function mockSideHooks(): void {
   });
   useHabitActivity.mockReturnValue({
     activity: habitActivity,
+    loading: false,
+    error: null,
+    reload: jest.fn(),
+  });
+  useHabitTargetAdherence.mockReturnValue({
+    adherence: habitTargetAdherence(),
     loading: false,
     error: null,
     reload: jest.fn(),
@@ -104,7 +169,7 @@ describe('ProgressPage', () => {
         completedSessions: 14,
         totalDurationMinutes: 915,
         strength: { hasLoggedSets: false, latestVolumeKg: null, trendLabel: 'Sin datos de fuerza', points: [] },
-        sessions: [{ workoutId: 3, startedAt: '2026-09-20T12:00:00.000Z', durationMinutes: 50, routineName: 'Empuje' }],
+        sessions: [{ workoutId: 3, startedAt: '2026-09-20T12:00:00.000Z', durationMinutes: 50, routineName: 'Empuje', totalVolumeKg: null }],
       },
     });
 
@@ -122,8 +187,60 @@ describe('ProgressPage', () => {
     expect(screen.getByText('Registraste hábitos en 5 de los 30 días transcurridos.')).toBeTruthy();
     expect(screen.getByText('Del 01/09/2026 al 30/09/2026 (hora de Córdoba)')).toBeTruthy();
     expect(useHabitActivity).toHaveBeenCalledWith('month');
+    expect(screen.getByRole('heading', { name: 'Días objetivo cumplidos' })).toBeTruthy();
+    expect(screen.getByText('7 de 10 días objetivo')).toBeTruthy();
+    expect(useHabitTargetAdherence).toHaveBeenCalledWith('month');
     expect(screen.getByRole('heading', { name: 'Sesiones recientes' })).toBeTruthy();
     expect(screen.getByText('Todavía no hay series completadas para graficar tu fuerza.')).toBeTruthy();
+  });
+
+  it('keeps observed habit activity and target adherence as separate cards with separate numbers', () => {
+    useHabitTargetAdherence.mockReturnValue({
+      adherence: habitTargetAdherence({
+        expectedHabitDays: 8,
+        completedExpectedHabitDays: 2,
+        extraRecordedHabitDays: 0,
+        adherencePercent: 25,
+      }),
+      loading: false,
+      error: null,
+      reload: jest.fn(),
+    });
+    useProgress.mockReturnValue({
+      loading: false,
+      error: null,
+      period: 'month',
+      setPeriod,
+      week,
+      summary: {
+        period: 'month',
+        fromLocalDate: '2026-09-01',
+        toLocalDate: '2026-09-30',
+        completedSessions: 14,
+        totalDurationMinutes: 915,
+        strength: { hasLoggedSets: false, latestVolumeKg: null, trendLabel: 'Sin datos de fuerza', points: [] },
+        sessions: [],
+      },
+    });
+
+    render(<ProgressPage />);
+
+    expect(screen.getByRole('heading', { name: 'Actividad de hábitos registrada' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Días objetivo cumplidos' })).toBeTruthy();
+    expect(screen.getByText('Registraste hábitos en 5 de los 30 días transcurridos.')).toBeTruthy();
+    const adherenceResult = screen.getByTestId('habit-target-adherence-result');
+    expect(adherenceResult.textContent).toContain('2 de 8 días objetivo');
+    expect(adherenceResult.textContent).not.toContain('días transcurridos');
+  });
+
+  it('removes the inert header actions', () => {
+    useProgress.mockReturnValue({ summary: null, week: null, loading: true, error: null, period: 'month', setPeriod });
+
+    render(<ProgressPage />);
+
+    expect(screen.queryByLabelText('Notificaciones')).toBeNull();
+    expect(screen.queryByLabelText('Compartir progreso')).toBeNull();
+    expect(screen.queryByText('Compartir progreso')).toBeNull();
   });
 
   it('renders weekly consistency in the period summary only for the week period', () => {

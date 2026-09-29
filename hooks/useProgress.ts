@@ -30,7 +30,8 @@ function isSessionSummary(value: unknown): value is ProgressSessionSummary {
     Number.isInteger(value.workoutId) &&
     typeof value.startedAt === 'string' &&
     (Number.isInteger(value.durationMinutes) || value.durationMinutes === null) &&
-    (typeof value.routineName === 'string' || value.routineName === null)
+    (typeof value.routineName === 'string' || value.routineName === null) &&
+    (typeof value.totalVolumeKg === 'string' || value.totalVolumeKg === null)
   );
 }
 

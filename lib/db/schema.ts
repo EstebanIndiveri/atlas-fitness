@@ -1,5 +1,13 @@
 import { sql } from 'drizzle-orm';
-import { sqliteTable, text, integer, uniqueIndex, index, check } from 'drizzle-orm/sqlite-core';
+import {
+  sqliteTable,
+  text,
+  integer,
+  uniqueIndex,
+  index,
+  check,
+  primaryKey,
+} from 'drizzle-orm/sqlite-core';
 import type {
   UserEquipmentPreference,
   UserGoalPreference,
@@ -566,6 +574,78 @@ export const habitLogs = sqliteTable(
   })
 );
 
+/**
+ * Habit target schedule versions — the user's explicit weekly intention for one
+ * catalog habit, versioned by inclusive Córdoba effective dates (v0.10 §6/§9).
+ *
+ * `effective_to IS NULL` marks the single active version per `(user_id, habit_key)`;
+ * the partial unique index enforces that at the storage level. A change closes the
+ * previous version the day before and inserts a new row from today, so earlier dates
+ * stay immutable. `version` is the monotonic compare-and-swap token of the row and is
+ * incremented atomically on every mutation; timestamps are never a concurrency token.
+ */
+export const habitTargetSchedules = sqliteTable(
+  'habit_target_schedules',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id),
+    habitKey: text('habit_key').notNull(),
+    effectiveFrom: text('effective_from').notNull(),
+    effectiveTo: text('effective_to'),
+    version: integer('version').notNull().default(1),
+    createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+    updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  },
+  (table) => ({
+    uniqueActiveSchedule: uniqueIndex('habit_target_schedules_active_unique')
+      .on(table.userId, table.habitKey)
+      .where(sql`${table.effectiveTo} IS NULL`),
+    uniqueUserHabitEffectiveFrom: uniqueIndex(
+      'habit_target_schedules_user_habit_effective_from_unique'
+    ).on(table.userId, table.habitKey, table.effectiveFrom),
+    userEffectiveRangeIdx: index('habit_target_schedules_user_effective_range_idx').on(
+      table.userId,
+      table.effectiveFrom,
+      table.effectiveTo
+    ),
+    habitKeyValue: check(
+      'habit_target_schedules_habit_key_check',
+      sql`${table.habitKey} IN ('hydration', 'walk', 'mobility', 'sleep')`
+    ),
+    versionValue: check('habit_target_schedules_version_check', sql`${table.version} >= 1`),
+    effectiveRange: check(
+      'habit_target_schedules_effective_range_check',
+      sql`${table.effectiveTo} IS NULL OR ${table.effectiveTo} >= ${table.effectiveFrom}`
+    ),
+  })
+);
+
+/**
+ * Selected weekdays of one habit target schedule version.
+ *
+ * Sunday-first `0 = Sunday … 6 = Saturday`, matching training plans. The composite
+ * primary key makes duplicate weekdays impossible, and the check keeps every value
+ * in range. Days cascade from their owning schedule version.
+ */
+export const habitTargetDays = sqliteTable(
+  'habit_target_days',
+  {
+    scheduleId: integer('schedule_id')
+      .notNull()
+      .references(() => habitTargetSchedules.id, { onDelete: 'cascade' }),
+    dayOfWeek: integer('day_of_week').notNull(),
+  },
+  (table) => ({
+    compositePrimaryKey: primaryKey({ columns: [table.scheduleId, table.dayOfWeek] }),
+    dayOfWeekRange: check(
+      'habit_target_days_day_of_week_check',
+      sql`${table.dayOfWeek} BETWEEN 0 AND 6`
+    ),
+  })
+);
+
 // Type exports
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -627,3 +707,8 @@ export type NewStreakNudge = typeof streakNudges.$inferInsert;
 
 export type HabitLog = typeof habitLogs.$inferSelect;
 export type NewHabitLog = typeof habitLogs.$inferInsert;
+
+export type HabitTargetScheduleRow = typeof habitTargetSchedules.$inferSelect;
+export type NewHabitTargetScheduleRow = typeof habitTargetSchedules.$inferInsert;
+export type HabitTargetDayRow = typeof habitTargetDays.$inferSelect;
+export type NewHabitTargetDayRow = typeof habitTargetDays.$inferInsert;

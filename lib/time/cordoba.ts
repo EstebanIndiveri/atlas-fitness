@@ -91,6 +91,29 @@ export function localDateWeekdayIndex(localDate: string): number {
   return (sundayFirst + 6) % 7;
 }
 
+/**
+ * Sunday-first weekday index (0 = Sunday … 6 = Saturday) for a YYYY-MM-DD
+ * calendar date, computed purely from the calendar day with no timezone shift.
+ *
+ * Habit-target schedules use the same `0=Sunday … 6=Saturday` convention as
+ * training plans, so this helper is the canonical one for that domain. It is
+ * deliberately NOT `localDateWeekdayIndex`, which is Monday-first
+ * (0 = Monday … 6 = Sunday); using that helper for schedule matching would
+ * shift every selected weekday by one day.
+ *
+ * @param localDate Córdoba calendar date (YYYY-MM-DD).
+ * @returns Sunday-based weekday index in the range 0–6.
+ * @throws {Error} When `localDate` is not a valid YYYY-MM-DD string.
+ * @example sundayFirstLocalDateWeekdayIndex('2026-09-27') // 0 (Sunday)
+ */
+export function sundayFirstLocalDateWeekdayIndex(localDate: string): number {
+  if (!LOCAL_DATE_RE.test(localDate)) {
+    throw new Error(`Invalid local date: ${localDate}`);
+  }
+  const [year, month, day] = localDate.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+}
+
 const WEEKDAY_TO_MONDAY_INDEX: Record<string, number> = {
   Mon: 0,
   Tue: 1,

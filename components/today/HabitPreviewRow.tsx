@@ -1,6 +1,7 @@
 import type { JSX } from 'react';
 
 import type { HabitPreview } from '@/components/habits/habit-catalog';
+import { HabitTargetTodayBadge } from '@/components/habits/HabitTargetTodayBadge';
 import { cn } from '@/lib/ui/cn';
 import type { HabitKey } from '@/types/habit';
 
@@ -11,6 +12,8 @@ interface HabitPreviewRowProps {
   done: boolean;
   onToggle: (habitKey: HabitKey) => void;
   disabled?: boolean;
+  /** Marks the habit as an objective for today without changing its recordability. */
+  expectedToday?: boolean;
 }
 
 /**
@@ -24,7 +27,7 @@ interface HabitPreviewRowProps {
  * @example
  * <HabitPreviewRow habit={habit} done={false} onToggle={toggle} />
  */
-export function HabitPreviewRow({ habit, done, onToggle, disabled = false }: HabitPreviewRowProps): JSX.Element {
+export function HabitPreviewRow({ habit, done, onToggle, disabled = false, expectedToday = false }: HabitPreviewRowProps): JSX.Element {
   return (
     <li className="flex min-w-0 items-center gap-3 py-2">
       <button
@@ -58,6 +61,11 @@ export function HabitPreviewRow({ habit, done, onToggle, disabled = false }: Hab
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-medium text-ink">{habit.name}</span>
           <span className="block truncate text-xs text-ink-muted">{habit.hint}</span>
+          {expectedToday ? (
+            <span className="mt-1 block">
+              <HabitTargetTodayBadge habitKey={habit.id} />
+            </span>
+          ) : null}
         </span>
         <span className="mr-1 shrink-0 text-right text-xs font-semibold text-ink-muted">
           {done ? 'Registrado' : 'Registrar'}

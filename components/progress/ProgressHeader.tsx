@@ -28,22 +28,6 @@ export function ProgressHeader({ toLocalDate, now = new Date(), updated }: Progr
           </span>
           <span>{PROGRESS_COPY.brand}</span>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            aria-label="Notificaciones"
-            className="grid h-9 w-9 place-items-center rounded-full bg-surface text-ink shadow-card ring-1 ring-line"
-          >
-            <span aria-hidden>⌁</span>
-          </button>
-          <button
-            type="button"
-            aria-label="Compartir progreso"
-            className="grid h-9 w-9 place-items-center rounded-full bg-surface text-ink shadow-card ring-1 ring-line"
-          >
-            <span aria-hidden>↥</span>
-          </button>
-        </div>
       </div>
       <div>
         <h1 className="font-serif text-4xl font-semibold tracking-[-0.04em] text-ink">

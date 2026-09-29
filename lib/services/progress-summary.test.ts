@@ -27,6 +27,7 @@ const NOW = new Date('2026-09-24T15:00:00.000Z');
 describe('getProgressSummary', () => {
   let userId: number;
   let routineId: number;
+  let exerciseId: number;
 
   beforeEach(async () => {
     await db.delete(habitLogs);
@@ -57,6 +58,18 @@ describe('getProgressSummary', () => {
       .values({ slug: 'progress-routine', name: 'Torso fuerte', isSystem: true })
       .returning();
     routineId = routine.id;
+
+    const [exercise] = await db
+      .insert(exercises)
+      .values({
+        slug: 'progress-exercise',
+        name: 'Press Banca',
+        muscleGroup: 'Pecho',
+        instructions: 'Empujar la barra con control.',
+        isSystem: true,
+      })
+      .returning();
+    exerciseId = exercise.id;
   });
 
   async function addWorkout(input: {
@@ -77,6 +90,25 @@ describe('getProgressSummary', () => {
       })
       .returning();
     return workout.id;
+  }
+
+  async function addSet(input: {
+    workoutId: number;
+    setIndex: number;
+    reps: number;
+    weightKg: string;
+    completed?: boolean;
+    deletedAt?: string;
+  }): Promise<void> {
+    await db.insert(workoutSets).values({
+      workoutId: input.workoutId,
+      exerciseId,
+      setIndex: input.setIndex,
+      reps: input.reps,
+      weightKg: input.weightKg,
+      completed: input.completed ?? true,
+      deletedAt: input.deletedAt ? new Date(input.deletedAt) : null,
+    });
   }
 
   it('returns zeros and an empty list when the selected window has no completed sessions', async () => {
@@ -184,5 +216,68 @@ describe('getProgressSummary', () => {
       'Torso fuerte',
       null,
     ]);
+  });
+
+  it('carries exact decimal session volume from eligible sets and null only when none qualify', async () => {
+    const withVolume = await addWorkout({
+      startedAt: '2026-09-24T12:00:00.000Z',
+      endedAt: '2026-09-24T13:00:00.000Z',
+    });
+    await addSet({ workoutId: withVolume, setIndex: 1, reps: 8, weightKg: '12.5' });
+    await addSet({ workoutId: withVolume, setIndex: 2, reps: 4, weightKg: '2.25' });
+
+    const noSets = await addWorkout({
+      startedAt: '2026-09-23T12:00:00.000Z',
+      endedAt: '2026-09-23T13:00:00.000Z',
+    });
+
+    const ineligible = await addWorkout({
+      startedAt: '2026-09-22T12:00:00.000Z',
+      endedAt: '2026-09-22T13:00:00.000Z',
+    });
+    await addSet({
+      workoutId: ineligible,
+      setIndex: 1,
+      reps: 10,
+      weightKg: '50',
+      completed: false,
+    });
+    await addSet({
+      workoutId: ineligible,
+      setIndex: 2,
+      reps: 10,
+      weightKg: '50',
+      deletedAt: '2026-09-22T13:30:00.000Z',
+    });
+
+    const zeroVolume = await addWorkout({
+      startedAt: '2026-09-21T12:00:00.000Z',
+      endedAt: '2026-09-21T13:00:00.000Z',
+    });
+    await addSet({ workoutId: zeroVolume, setIndex: 1, reps: 5, weightKg: '0' });
+
+    const summary = await getProgressSummary(userId, 'week', NOW);
+    const volumeByWorkout = new Map(
+      summary.sessions.map((session) => [session.workoutId, session.totalVolumeKg]),
+    );
+
+    expect(volumeByWorkout.get(withVolume)).toBe('109');
+    expect(volumeByWorkout.get(zeroVolume)).toBe('0');
+    expect(volumeByWorkout.get(noSets)).toBeNull();
+    expect(volumeByWorkout.get(ineligible)).toBeNull();
+  });
+
+  it('aligns per-session volume by real workout id even when the strength window excludes the session', async () => {
+    const late = await addWorkout({
+      startedAt: '2026-09-28T02:30:00.000Z',
+      endedAt: '2026-09-28T03:30:00.000Z',
+    });
+    await addSet({ workoutId: late, setIndex: 1, reps: 8, weightKg: '15' });
+
+    const summary = await getProgressSummary(userId, 'week', NOW);
+
+    expect(summary.sessions.map((session) => session.workoutId)).toEqual([late]);
+    expect(summary.sessions[0].totalVolumeKg).toBe('120');
+    expect(summary.strength.points).toEqual([]);
   });
 });

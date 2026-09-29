@@ -2,13 +2,19 @@ import { drizzle } from 'drizzle-orm/libsql';
 import { createClient } from '@libsql/client';
 import { loadLocalEnv } from '../dev/load-local-env';
 import * as schema from './schema';
-import { resolveDatabaseUrl } from './database-url';
+import { resolveAppLibsqlClientConfig } from './client-config';
 
 loadLocalEnv();
 
-const client = createClient({
-  url: resolveDatabaseUrl(),
-  authToken: process.env.TURSO_AUTH_TOKEN || undefined,
-});
+/**
+ * Options this file hands to `createClient`.
+ *
+ * Exported so `client.test.ts` can assert the app-wide wiring: dropping the resolved
+ * busy timeout here puts local concurrent writes back to failing immediately with
+ * `SQLITE_BUSY` (issue #172).
+ */
+export const libsqlClientConfig = resolveAppLibsqlClientConfig();
+
+const client = createClient(libsqlClientConfig);
 
 export const db = drizzle(client, { schema });

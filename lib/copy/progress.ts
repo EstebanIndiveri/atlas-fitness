@@ -91,6 +91,33 @@ export const PROGRESS_COPY = {
     legendMissing: 'Sin registro',
     legendFuture: 'Todavía no llegó',
   },
+  habitTarget: {
+    title: 'Días objetivo cumplidos',
+    windowLabel: (from: string, to: string) =>
+      `Cumplimiento del ${from} al ${to} (hora de Córdoba)`,
+    loading: 'Cargando tu cumplimiento de días objetivo…',
+    unavailable:
+      'No pudimos cargar tu cumplimiento de días objetivo. Probá de nuevo en unos minutos.',
+    resultValueLabel: 'Días objetivo cumplidos',
+    resultLabel: (completed: number, expected: number) =>
+      `${completed} de ${expected} días objetivo`,
+    percentValueLabel: 'Porcentaje de días objetivo',
+    percentLabel: (percent: number) => `${percent}%`,
+    provenance: 'Compara tus registros reales con los días objetivo que definiste.',
+    configuredLabel: 'Tenés objetivos activos.',
+    partialLabel: 'Tenés objetivo activo solo en algunos hábitos.',
+    historicalInactive:
+      'El objetivo ya no está activo hoy, pero el resultado de este período se mantiene.',
+    notConfiguredTitle: 'Sin días objetivo configurados',
+    notConfiguredBody:
+      'Configurá los días que querés proponerte; tu actividad anterior sigue visible.',
+    noExpectedTitle: 'Todavía no transcurrió un día objetivo',
+    noExpectedBody: 'Todavía no transcurrió un día objetivo en este período.',
+    extraLabel: (extra: number) =>
+      extra === 1
+        ? '1 día registrado fuera de objetivo (no cuenta en el resultado)'
+        : `${extra} días registrados fuera de objetivo (no cuentan en el resultado)`,
+  },
   sessions: {
     title: 'Sesiones recientes',
     emptyTitle: 'Todavía no hay entrenos',
@@ -99,6 +126,7 @@ export const PROGRESS_COPY = {
     freeWorkout: 'Entrenamiento libre',
     durationLabel: 'Duración de la sesión',
     durationUnavailable: 'Duración no registrada',
+    volumeLabel: 'Volumen de la sesión',
     volumeUnavailable: 'Volumen no disponible',
   },
   states: {

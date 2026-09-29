@@ -65,6 +65,7 @@ Pegá el output en `.env`. **Nunca commitees `.env`** ni tokens reales.
 | `SESSION_SECRET` | placeholder o `openssl rand -hex 32` | HMAC de la cookie de sesión. **Obligatorio.** En producción no hay fallback público. |
 | `CRON_SECRET` | placeholder o `openssl rand -hex 32` | Bearer de `/api/cron/*`. Playwright CI inyecta `test-secret-for-e2e` en `webServer.env` — no lo saques del config. |
 | `TELEGRAM_BOT_TOKEN` | vacío | Vacío = sin HTTP saliente a `api.telegram.org`. |
+| `LOCAL_DB_BUSY_TIMEOUT_MS` | `5000` | Solo file DB. Espera (ms) por el lock de escritura antes de tirar `SQLITE_BUSY`. Entero decimal plano (`2.5`, `1e3`, `0x10` caen al default); techo 60000. Se ignora con `libsql://`. |
 | `TELEGRAM_WEBHOOK_SECRET` | vacío | En producción o con bot token: obligatorio y debe coincidir con el header. |
 | `ALLOW_INSECURE_TELEGRAM_WEBHOOK` | `true` | Solo local/test. Permite el stub/curl **sin** header si `NODE_ENV` no es `production` y no hay bot token. Ignorado en producción. |
 
