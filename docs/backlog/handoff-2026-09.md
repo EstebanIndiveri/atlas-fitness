@@ -160,13 +160,22 @@ No se corrige en este checkpoint y **no** se convierte en MUST de v0.10.0:
 3. No hay capa de retry de DB.
 4. El E2E sigue compartiendo `file:./local.db` en lugar de aislar DB por spec/worker.
 
-**NEXT MAJOR PRODUCT STEP — v0.10.0 Product Discovery + Architecture (NO implementación)**
+**WAVE v0.10.0 — INTEGRADA EN `develop`, NO PUBLICADA (truth sync 2026-09-29)**
 
-- v0.10.0 **no ha comenzado**, no tiene feature set aprobado.
-- Regla durable de arranque: hacer `git fetch origin`, exigir **worktree limpio** y tomar el **SHA vivo de `origin/develop`** justo antes de la discovery como baseline autoritativo. No confiar en SHAs fijos escritos en este documento.
-- SHA esperado al momento de este documento: `8ab59ba181a1c03df6107984dc956bc7be6a8b61`. `1728a14f6e7b04622498de3b0104d72d5ccd8381` queda solo como evidencia histórica pre-checkpoint documental.
-- Debe evaluar el backlog existente y las oportunidades de producto **antes** de elegir MUST/SHOULD/DEFER.
-- **No** se preselecciona Habit Builder ni ninguna otra feature como alcance del release. La investigación de **Liftoff** permanece como input de producto futuro separado y no debe influir silenciosamente en v0.10.0.
+- v0.10.0 ("días objetivo de hábitos") está **integrada en `develop`** mediante los workstreams A–F; **no está publicada**: `package.json`/`package-lock.json` siguen en **0.9.0**, no hay tag ni release `v0.10.0`. La release se ejecuta solo por el flujo de §6 y §17 del brief (corte `release/0.10.0`, bump, PR a `main`, tag, back-merge).
+- Baseline de esta wave: `0758166a55380796b79402f872d181a6a5f1a3ea` (merge final de F sobre `develop`). Es evidencia puntual; toda wave futura debe releer el HEAD vivo de `origin/develop`.
+- **Qué se entregó (verificado en código y tests):**
+  - Intención explícita versionada por días de la semana con vigencia Córdoba y sin backfill (`lib/db/migrations/0023_habit_target_schedules.sql`, `lib/db/schema.ts`, `lib/services/habit-targets.ts`).
+  - Create/update/deactivate explícitos con conflicto optimista `{ targetId, version }` (`409`), reemplazo del mismo día, cancelación transaccional de una versión creada hoy y preservación de historia (`lib/services/habit-targets.ts`, `app/api/habit-targets/**`).
+  - Cumplimiento `N de M días objetivo` con `configurationState`/`metricState` independientes y `no_expected_days` sin ratio (`lib/services/habit-target-adherence.ts`, `types/habit-adherence.ts`, `app/api/stats/habit-adherence/route.ts`, `components/progress/HabitTargetAdherenceCard.tsx`).
+  - Configuración y read-back en Hábitos, señal "Objetivo de hoy" y marks diarios (`components/habits/**`, `components/today/TodayHabitsCard.tsx`, `hooks/useHabitTargets.ts`, `hooks/useHabitAdherence.ts`).
+  - Honestidad de Progreso: botones inertes retirados y volumen real por sesión (`components/progress/ProgressHeader.tsx`, `lib/services/progress-summary.ts`, `components/progress/RecentSessionsCard.tsx`).
+  - Evidencia E2E del loop completo en `e2e/habit-targets.spec.ts` (13 casos: configuración/persistencia, contrato de cumplimiento, aislamiento cross-user, honestidad de Progreso y golden path mobile).
+- **Qué NO se entregó (sigue `DEFER`/`EXCLUDE`, no describir como shipped):**
+  - `DEFER`: hábitos creados/renombrados/reordenados por el usuario; targets cuantitativos (litros, minutos, pasos); reminders, quiet hours y push/email/Telegram nudges; backdating/corrección histórica; hábitos dentro del streak existente; Coach/Plan consumiendo activity o adherence; context assembler de preferencias/plan/historia; eliminar hardcodes de improve-plan; bienestar histórico en Progress; DB tooling residual y branch protection.
+  - `EXCLUDE`: gamificación (quests, XP, niveles, badges, recompensas, Liftoff parity); composite habit+training scores; inferir targets desde registros pasados; mutación silenciosa por AI/cron; release/version bump dentro de la implementación de features.
+  - **Coach no aprende**: v0.10 no agrega inputs de adherence a Coach ni cambia prompts/adapters; los schedules son intención explícita, no aprendizaje. **No hay soporte de reminders.**
+- **Regla durable**: no describir ninguna entrada planificada como publicada. La versión publicada sigue siendo **v0.9.0** y `package.json` permanece en **0.9.0** hasta el corte de `release/0.10.0`.
 
 ## 7. Backlog restante
 
@@ -184,7 +193,7 @@ Coach Context no aprende de las preferencias ni modifica el plan activo al edita
 
 ### UX gaps conocidos / validaciones pendientes
 
-- **Defectos de honestidad de datos de v0.9.0 (#3 y #4) — verificados en el código de `develop`, abiertos:** botones de `components/progress/ProgressHeader.tsx` sin `onClick`; y “Volumen no disponible” impreso incondicionalmente en `components/progress/RecentSessionsCard.tsx:57` aunque el volumen se computa en `lib/services/strength-progress.ts`. El defecto **#5 quedó cerrado**: el row de Settings que promete “Ver actividad y hábitos” (`app/dashboard/settings/page.tsx:279`) ya tiene read path histórico en su destino (`app/dashboard/habits/page.tsx:21`); lo que queda ahí es una imprecisión de copy, no una promesa rota. Evidencia `archivo:línea`, estado y cambio mínimo que cerraría #3 y #4 en [`deferred-defects-2026-09.md`](./deferred-defects-2026-09.md).
+- **Defectos de honestidad de datos de Progreso (#3 y #4) — resueltos por v0.10.0 en `develop`, no publicados:** los botones de `components/progress/ProgressHeader.tsx` sin acción se retiraron y las sesiones recientes ahora muestran el volumen real por sesión cuando existen sets elegibles, con "Volumen no disponible" solo cuando realmente falta (`lib/services/progress-summary.ts`, `components/progress/RecentSessionsCard.tsx`, evidencia E2E en `e2e/habit-targets.spec.ts`). El defecto **#5 ya estaba cerrado** por el read path histórico de actividad. El registro histórico `deferred-defects-2026-09.md` conserva la evidencia `archivo:línea` y el estado verificado de la wave v0.9.0 como registro de esa wave.
 - **Progreso de fuerza — validación QA real pendiente, no bug confirmado:** código y tests sintéticos soportan que una sesión elegible se muestre como “Punto de partida”. Todavía falta validar contra historial QA real. No marcar como resuelto ni como backlog stale.
 - Perfil conserva valores "No configurado" por diseño honesto; convertirlos en flows reales solo si PO prioriza.
 
@@ -217,4 +226,4 @@ Ver [`AGENTS.md`](../../AGENTS.md) antes de tocar código. Resumen operativo:
 4. **Auditar copy de honestidad**: cualquier “Atlas sabe/aprende/recuperación” debe mapear a datos reales o cambiarse a “Atlas usa tu plan/check-in/historial”. No describir las preferencias guardadas como aprendizaje, ni atribuir la propuesta a datos que el brief no incluye.
 5. **Branch protection sigue siendo riesgo organizacional**: documentar como bloqueado hasta que el owner del repo active reglas y CI requerida.
 6. **Mantener docs vivas**: actualizar este handoff y changelog en cada release menor; si cambia un contrato público, actualizar ADR/engineering docs relacionados.
-7. **Próximo paso mayor — v0.10.0 Product Discovery + Architecture, no implementación**: v0.10.0 **no ha comenzado** y no tiene feature set aprobado. Debe arrancar con `git fetch origin`, **worktree limpio** y el **SHA vivo de `origin/develop`** como baseline autoritativo de discovery (ver §6, “Checkpoint de desarrollo actual”); el SHA esperado al momento de este documento es `8ab59ba`, y `1728a14f` queda solo como evidencia histórica pre-checkpoint documental. Evaluar primero el backlog y las oportunidades de producto, y recién entonces elegir MUST/SHOULD/DEFER. No preseleccionar Habit Builder ni ninguna otra feature. La deuda de DB de §6 queda DEFERRED/NON-BLOCKING. La investigación de Liftoff es un input de producto futuro separado y no debe influir silenciosamente en v0.10.0.
+7. **Estado de v0.10.0 — integrada en `develop`, no publicada**: la wave de días objetivo de hábitos (workstreams A–F) ya está integrada y verificada, pero **no está publicada**; `package.json` sigue en 0.9.0 y no hay tag `v0.10.0`. La release se ejecuta solo por el flujo de §6 y §17 del brief. No describir ninguna entrada planificada (`DEFER`/`EXCLUDE`) como shipped. La deuda de DB de §6 queda DEFERRED/NON-BLOCKING. La investigación de Liftoff es un input de producto futuro separado y no debe influir silenciosamente en ninguna wave.

@@ -4,6 +4,26 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Este
 
 ## [Unreleased]
 
+> **Estado: v0.10.0 integrado en `develop`, no publicado.** `package.json` y `package-lock.json` siguen en `0.9.0`; no existe tag ni release v0.10.0. Las entradas de abajo describen comportamiento verificable en el código integrado y sus tests, no una versión publicada. Toda métrica citada tiene evidencia en `lib/**`, `app/**`, `components/**`, `hooks/**` o `e2e/**`.
+
+### Added
+
+- **Intención explícita por días objetivo de hábitos.** Para cada hábito del catálogo fijo (`hydration`, `walk`, `mobility`, `sleep`), el usuario puede declarar en qué días de la semana espera registrarlo. Cada versión tiene vigencia por fecha en hora de Córdoba (`effective_from`/`effective_to`), `version` monotónica y **no hay backfill**: los logs previos al primer objetivo siguen siendo actividad observada y quedan fuera del cumplimiento. Tablas nuevas `habit_target_schedules` + `habit_target_days` (migración `0023_habit_target_schedules`, `lib/db/schema.ts`) y ciclo de vida transaccional con compare-and-swap (`lib/services/habit-targets.ts`).
+- **Crear, actualizar y desactivar explícitos con conflicto optimista.** El token es el par `{ targetId, version }` (nunca un timestamp); un token obsoleto responde `409` sin tocar el estado del servidor. Una edición del mismo día reemplaza la versión de hoy; desactivar una versión creada hoy la elimina de forma transaccional (único hard delete permitido) sin borrar historia previa, y desactivar una versión anterior la cierra el día anterior incrementando `version`. Repetir la misma intención es idempotente (`lib/services/habit-targets.ts`).
+- **API de días objetivo y de cumplimiento.** `GET /api/habit-targets`, `PUT`/`DELETE /api/habit-targets/[habitKey]` y `GET /api/stats/habit-adherence?period=week|month|quarter`, con parsers totales en `lib/api/habit-targets.ts` y `lib/api/habit-adherence.ts`, hooks `hooks/useHabitTargets.ts`/`hooks/useHabitAdherence.ts` y card dedicada en Progreso (`components/progress/HabitTargetAdherenceCard.tsx`).
+- **Cumplimiento contra intención: `N de M días objetivo`.** El numerador son los habit-days esperados transcurridos con registro (`done = true`) y el denominador los habit-days esperados transcurridos en la ventana. `configurationState` (intención vigente) y `metricState` (denominador de la ventana) son **independientes**: un objetivo terminado puede dar `not_configured` junto a un resultado histórico. Si el denominador es `0`, el estado es `no_expected_days` y no se emite ratio. Dominio puro en `lib/services/habit-target-adherence.ts` y tipos en `types/habit-adherence.ts`.
+- **Configuración y señal "Objetivo de hoy".** Sección "Mis días objetivo" con selector accesible de lunes a domingo y resumen de vigencia en `components/habits/**`; mark diario que distingue esperado-completado, esperado-sin-registro, extra-registrado, no-esperado y futuro; y la señal "Objetivo de hoy" sin ocultar ni impedir registros extra (`components/today/TodayHabitsCard.tsx`, `components/habits/HabitTargetTodayBadge.tsx`).
+
+### Changed
+
+- **Actividad y cumplimiento quedan explícitamente separados.** `/api/stats/habits` y su card de Progreso siguen siendo observacionales (contrato v0.9 sin cambios); el cumplimiento contra días objetivo vive en su propio endpoint, su propia card y su propio copy.
+- **Progreso más honesto.** Se retiraron los botones inertes de Notificaciones/Compartir del header (`components/progress/ProgressHeader.tsx`) y las sesiones recientes muestran el volumen real por sesión cuando existen sets elegibles (`lib/services/progress-summary.ts`, `components/progress/RecentSessionsCard.tsx`).
+
+### Fixed
+
+- Las sesiones recientes de Progreso ya no imprimen "Volumen no disponible" cuando el volumen de la sesión existe.
+- El header de Progreso ya no muestra controles habilitados sin acción.
+
 ## [0.9.0] - 2026-09-27
 
 ### Added
