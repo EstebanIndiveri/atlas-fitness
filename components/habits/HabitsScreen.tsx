@@ -3,10 +3,13 @@
 import type { JSX } from 'react';
 
 import { HABIT_PREVIEWS, countCompletedHabits } from '@/components/habits/habit-catalog';
+import { HabitTargetAdherenceHistory } from '@/components/habits/HabitTargetAdherenceHistory';
+import { HabitTargetSettings } from '@/components/habits/HabitTargetSettings';
 import { HabitPreviewRow } from '@/components/today/HabitPreviewRow';
 import { HydrationHabitRow } from '@/components/today/HydrationHabitRow';
 import { Card } from '@/components/ui/Card';
 import { ErrorState, LoadingState } from '@/components/ui/states';
+import { useHabitTargets } from '@/hooks/useHabitTargets';
 import { useHabits } from '@/hooks/useHabits';
 import { PROGRESS_COPY } from '@/lib/copy/progress';
 import { isQuantitativeHabitKey } from '@/types/habit';
@@ -17,16 +20,20 @@ const COPY = {
 } as const;
 
 /**
- * Dedicated view of today's manually recorded habits.
+ * Dedicated view of today's manually recorded habits plus the target loop.
  *
- * Uses the same hook, catalog, rows, and completion calculation as Today.
- * When data is unavailable, it hides default values so they are not presented
- * as real empty-day data.
- * @returns Today's habit controls or their loading/unavailable state.
+ * Uses the same hook, catalog, rows, and completion calculation as Today. When
+ * data is unavailable, it hides default values so they are not presented as real
+ * empty-day data. Below today's controls it renders `Mis días objetivo` and the
+ * adherence read-back; a habit that is not an objective today is still shown and
+ * remains recordable, and only the `Objetivo de hoy` marker distinguishes it.
+ * @returns Today's habit controls, the configuration and its read-back, or their
+ * loading/unavailable state.
  */
 export function HabitsScreen(): JSX.Element {
   const { doneByKey, amountByKey, loading, saving, error, reload, toggle, addAmount, clearAmount } =
     useHabits();
+  const targets = useHabitTargets();
 
   if (loading) {
     return (
@@ -54,44 +61,51 @@ export function HabitsScreen(): JSX.Element {
   const completedCount = countCompletedHabits(doneByKey);
 
   return (
-    <Card className="space-y-3 rounded-[1.75rem] p-5">
-      <div className="flex min-w-0 items-start justify-between gap-4">
-        <h2 className="min-w-0 font-serif text-xl font-semibold text-ink">Hábitos Diarios</h2>
-        <p className="shrink-0 text-right text-sm font-semibold text-ink-muted">
-          {COPY.completed(completedCount, HABIT_PREVIEWS.length)}
+    <>
+      <Card className="space-y-3 rounded-[1.75rem] p-5">
+        <div className="flex min-w-0 items-start justify-between gap-4">
+          <h2 className="min-w-0 font-serif text-xl font-semibold text-ink">Hábitos Diarios</h2>
+          <p className="shrink-0 text-right text-sm font-semibold text-ink-muted">
+            {COPY.completed(completedCount, HABIT_PREVIEWS.length)}
+          </p>
+        </div>
+
+        <ul className="min-w-0 divide-y divide-line" data-testid="habits-list">
+          {HABIT_PREVIEWS.map((habit) =>
+            isQuantitativeHabitKey(habit.id) ? (
+              <HydrationHabitRow
+                key={habit.id}
+                habit={habit}
+                amount={amountByKey[habit.id]}
+                expectedToday={targets.expectedTodayByKey[habit.id]}
+                onAdd={addAmount}
+                onClear={clearAmount}
+                disabled={saving}
+              />
+            ) : (
+              <HabitPreviewRow
+                key={habit.id}
+                habit={habit}
+                done={doneByKey[habit.id]}
+                expectedToday={targets.expectedTodayByKey[habit.id]}
+                onToggle={toggle}
+                disabled={saving}
+              />
+            ),
+          )}
+        </ul>
+
+        <p className="text-xs leading-relaxed text-ink-muted">
+          Atlas muestra solo valores registrados manualmente. No hay metas ni métricas automáticas.
         </p>
-      </div>
 
-      <ul className="min-w-0 divide-y divide-line" data-testid="habits-list">
-        {HABIT_PREVIEWS.map((habit) =>
-          isQuantitativeHabitKey(habit.id) ? (
-            <HydrationHabitRow
-              key={habit.id}
-              habit={habit}
-              amount={amountByKey[habit.id]}
-              onAdd={addAmount}
-              onClear={clearAmount}
-              disabled={saving}
-            />
-          ) : (
-            <HabitPreviewRow
-              key={habit.id}
-              habit={habit}
-              done={doneByKey[habit.id]}
-              onToggle={toggle}
-              disabled={saving}
-            />
-          ),
-        )}
-      </ul>
+        <p className="text-xs leading-relaxed text-ink-muted">
+          {PROGRESS_COPY.habits.todayOnly(completedCount, HABIT_PREVIEWS.length)}
+        </p>
+      </Card>
 
-      <p className="text-xs leading-relaxed text-ink-muted">
-        Atlas muestra solo valores registrados manualmente. No hay metas ni métricas automáticas.
-      </p>
-
-      <p className="text-xs leading-relaxed text-ink-muted">
-        {PROGRESS_COPY.habits.todayOnly(completedCount, HABIT_PREVIEWS.length)}
-      </p>
-    </Card>
+      <HabitTargetSettings targets={targets} />
+      <HabitTargetAdherenceHistory refreshKey={targets.revision} />
+    </>
   );
 }
