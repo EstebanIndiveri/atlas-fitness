@@ -2,6 +2,7 @@ import type { JSX } from 'react';
 
 import { MetricValue } from '@/components/ui/MetricValue';
 import type { HabitPreview } from '@/components/habits/habit-catalog';
+import { HabitTargetTodayBadge } from '@/components/habits/HabitTargetTodayBadge';
 import { formatHydrationLiters } from '@/lib/format/hydration';
 import { cn } from '@/lib/ui/cn';
 import { isQuantitativeHabitKey } from '@/types/habit';
@@ -22,6 +23,8 @@ interface HydrationHabitRowProps {
   onAdd: (habitKey: QuantitativeHabitKey) => void;
   onClear: (habitKey: QuantitativeHabitKey) => void;
   disabled?: boolean;
+  /** Marks the habit as an objective for today without changing its recordability. */
+  expectedToday?: boolean;
 }
 
 /**
@@ -42,6 +45,7 @@ export function HydrationHabitRow({
   onAdd,
   onClear,
   disabled = false,
+  expectedToday = false,
 }: HydrationHabitRowProps): JSX.Element {
   const hasAmount = amount !== null;
 
@@ -81,6 +85,11 @@ export function HydrationHabitRow({
         <span className="block truncate text-xs text-ink-muted">
           {hasAmount ? COPY.registered : COPY.empty}
         </span>
+        {expectedToday ? (
+          <span className="mt-1 block">
+            <HabitTargetTodayBadge habitKey={habit.id} />
+          </span>
+        ) : null}
       </span>
 
       <span className="flex shrink-0 items-center gap-1.5">
