@@ -394,15 +394,19 @@ describe('getExerciseProgression — cohort isolation', () => {
   });
 
   it('isolates owners and never includes another user’s rows', async () => {
-    // User B has a huge all-time best; user A must not see it.
+    // User B interleaves huge amounts before and between user A's workouts.
     await seedClosedWorkoutWithSet(2000, USER_B, EX_A, '999', 1);
-    await seedClosedWorkoutWithSet(2001, USER_B, EX_A, '999', 2);
-    await seedClosedWorkoutWithSet(1000, USER_A, EX_A, '100', 3);
+    await seedClosedWorkoutWithSet(1000, USER_A, EX_A, '100', 2);
+    await seedClosedWorkoutWithSet(2001, USER_B, EX_A, '999', 3);
+    await seedClosedWorkoutWithSet(1001, USER_A, EX_A, '110', 4);
 
     const result = await run();
-    expect(result.currentBest?.weightKg).toBe('100');
-    expect(result.comparison).toBe('baseline');
-    expect(result.history.items.every((item) => item.workoutId !== 2000 && item.workoutId !== 2001)).toBe(true);
+    expect(result.currentRepresentative?.workoutId).toBe(1001);
+    expect(result.previousComparableRepresentative?.workoutId).toBe(1000);
+    expect(result.previousComparableRepresentative?.weightKg).toBe('100');
+    expect(result.currentBest?.weightKg).toBe('110');
+    expect(result.comparison).toBe('new_pr');
+    expect(result.history.items.every((item) => item.workoutId < 2000)).toBe(true);
   });
 });
 
@@ -504,5 +508,98 @@ describe('getExerciseProgression — recomputation, pagination and decimal order
     });
     expect(result.currentRepresentative?.endedAt).toMatch(/Z$/);
     expect(result.currentRepresentative?.localDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it('selects the all-time best by exact decimal value, not lexicographically', async () => {
+    await seedClosedWorkoutWithSet(1000, USER_A, EX_A, '9.9', 1);
+    await seedClosedWorkoutWithSet(1001, USER_A, EX_A, '10', 2);
+
+    const result = await run();
+    // A string/lexicographic max would return "9.9" here.
+    expect(result.currentBest?.weightKg).toBe('10');
+    expect(result.currentRepresentative?.weightKg).toBe('10');
+  });
+
+  it('compares against the exact best before current, not a lexicographic maximum', async () => {
+    await seedClosedWorkoutWithSet(1000, USER_A, EX_A, '9.9', 1);
+    await seedClosedWorkoutWithSet(1001, USER_A, EX_A, '10', 2);
+    await seedClosedWorkoutWithSet(1002, USER_A, EX_A, '10', 3);
+
+    const result = await run();
+    // Exact best-before is 10, so the latest 10 is a tie; a lexicographic
+    // aggregate would find "9.9" and wrongly report a new PR.
+    expect(result.comparison).toBe('ties_best');
+  });
+
+  it('recomputes the SQL all-time best after a deletion', async () => {
+    await seedClosedWorkoutWithSet(1000, USER_A, EX_A, '9.9', 1);
+    await seedWorkout(1001, USER_A, {
+      startedAt: new Date(1_700_000_100_000),
+      endedAt: new Date(1_700_000_100_000),
+    });
+    const bestSetId = await seedSet(1001, EX_A, { weightKg: '10' });
+
+    expect((await run()).currentBest?.weightKg).toBe('10');
+
+    await db.update(workoutSets).set({ deletedAt: new Date() }).where(eq(workoutSets.id, bestSetId));
+    expect((await run()).currentBest?.weightKg).toBe('9.9');
+  });
+
+  it('excludes an incompatible capture version from the cohort and the best', async () => {
+    await seedClosedWorkoutWithSet(1000, USER_A, EX_A, '100', 1);
+    await seedWorkout(1001, USER_A, {
+      startedAt: new Date(1_700_000_100_000),
+      endedAt: new Date(1_700_000_100_000),
+    });
+    // A future/unknown version is accepted by the DB CHECK but must never
+    // compare under rule 1.
+    await db.insert(workoutSets).values({
+      workoutId: 1001,
+      exerciseId: EX_A,
+      setIndex: 1,
+      reps: REPS,
+      weightKg: '999',
+      completed: true,
+      semanticCaptureVersion: 2,
+      loadMode: 'external',
+      amountBasis: 'total',
+      side: 'bilateral',
+      setPurpose: 'working',
+      repCountBasis: null,
+    });
+
+    const result = await run();
+    expect(result.currentRepresentative?.workoutId).toBe(1000);
+    expect(result.currentBest?.weightKg).toBe('100');
+    expect(result.comparison).toBe('baseline');
+  });
+
+  it('excludes a non-canonical stored amount and falls back to the eligible workout', async () => {
+    await seedClosedWorkoutWithSet(1000, USER_A, EX_A, '100', 1);
+    await seedWorkout(1001, USER_A, {
+      startedAt: new Date(1_700_000_100_000),
+      endedAt: new Date(1_700_000_100_000),
+    });
+    // '0999' has a redundant leading zero; the read path must not rank it as the
+    // all-time best (a raw SQL max would).
+    await db.insert(workoutSets).values({
+      workoutId: 1001,
+      exerciseId: EX_A,
+      setIndex: 1,
+      reps: REPS,
+      weightKg: '0999',
+      completed: true,
+      semanticCaptureVersion: 1,
+      loadMode: 'external',
+      amountBasis: 'total',
+      side: 'bilateral',
+      setPurpose: 'working',
+      repCountBasis: null,
+    });
+
+    const result = await run();
+    expect(result.currentRepresentative?.workoutId).toBe(1000);
+    expect(result.currentBest?.weightKg).toBe('100');
+    expect(result.comparison).toBe('baseline');
   });
 });
