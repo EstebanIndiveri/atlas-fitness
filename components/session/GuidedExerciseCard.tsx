@@ -6,11 +6,14 @@ import { ExerciseMedia } from '@/components/exercises/ExerciseMedia';
 import { Card } from '@/components/ui/Card';
 import { MetricValue } from '@/components/ui/MetricValue';
 import { ExerciseNotePanel } from '@/components/session/ExerciseNotePanel';
+import { ExerciseProgressionPanel } from '@/components/session/ExerciseProgressionPanel';
 import { LastCompletedPanel } from '@/components/session/LastCompletedPanel';
 import { SetCheckList } from '@/components/session/SetCheckList';
 import { SessionCompleteSetBar } from '@/components/session/SessionCompleteSetBar';
 import { useExerciseSessionMemory } from '@/hooks/useExerciseSessionMemory';
+import { PROGRESSION_COPY } from '@/lib/copy/exercise-progression';
 import { SESSION_COPY } from '@/lib/copy/session';
+import { resolveProgressionSupport } from '@/lib/session/progression-cohort';
 import { cn } from '@/lib/ui/cn';
 import { metric } from '@/types/metric';
 import type { RoutineExerciseItem } from '@/types/routine';
@@ -49,7 +52,7 @@ type CompletedSet = {
   repCountBasis?: string | null;
 };
 
-type SecondaryPanel = 'technique' | 'replace' | 'notes' | 'last';
+type SecondaryPanel = 'technique' | 'replace' | 'notes' | 'last' | 'progression';
 
 function ActionChip({
   children,
@@ -108,6 +111,16 @@ export function GuidedExerciseCard({
 }: GuidedExerciseCardProps) {
   const [panel, setPanel] = useState<SecondaryPanel | null>(null);
   const memory = useExerciseSessionMemory({ workoutId, exerciseId: exercise.exerciseId });
+  const repsValue = Number.parseInt(reps, 10);
+  // The comparable cohort comes only from the current *visible* declared
+  // semantics; an unsupported selection yields a truthful non-comparable state.
+  const progressionSupport = resolveProgressionSupport({
+    loadMode: semantics?.draft.loadMode ?? '',
+    amountBasis: semantics?.draft.amountBasis ?? '',
+    side: semantics?.draft.side ?? '',
+    setPurpose: semantics?.draft.setPurpose ?? '',
+    reps: Number.isFinite(repsValue) ? repsValue : 0,
+  });
   const safeCompletedCount = Math.min(completedCount, exercise.targetSets);
   const activeSet = Math.min(safeCompletedCount + 1, exercise.targetSets);
   const canCompleteSet = safeCompletedCount < exercise.targetSets;
@@ -163,6 +176,13 @@ export function GuidedExerciseCard({
             >
               {`↺ ${SESSION_COPY.lastTimeChip}`}
             </ActionChip>
+            <ActionChip
+              ariaLabel={PROGRESSION_COPY.showAria}
+              active={panel === 'progression'}
+              onClick={() => togglePanel('progression')}
+            >
+              {PROGRESSION_COPY.chip}
+            </ActionChip>
           </div>
         </div>
         {panel === 'technique' ? (
@@ -201,6 +221,12 @@ export function GuidedExerciseCard({
             loading={memory.loading}
             error={memory.error}
             onRetry={memory.reload}
+          />
+        ) : null}
+        {panel === 'progression' ? (
+          <ExerciseProgressionPanel
+            exerciseId={exercise.exerciseId}
+            support={progressionSupport}
           />
         ) : null}
         {panel === 'replace' ? (
