@@ -1,6 +1,7 @@
 import { describe, expect, it, jest } from '@jest/globals';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { SessionCloseScreen } from './SessionCloseScreen';
+import { SESSION_COPY } from '@/lib/copy/session';
 import { MetricSourceLabel } from '@/types/metric';
 import type { DiscomfortEntry, WorkoutSensation } from '@/lib/services/post-workout-feedback';
 
@@ -142,7 +143,11 @@ describe('SessionCloseScreen', () => {
       />,
     );
 
-    expect(screen.getByText('Atlas usa este feedback para calibrar la recuperación y tus próximas cargas.')).toBeTruthy();
+    // v0.11 copy correction: feedback is persisted, not used to calibrate recovery/loads.
+    expect(screen.getByText(SESSION_COPY.feedbackHelper)).toBeTruthy();
+    expect(screen.getByText(SESSION_COPY.feedbackHelper).textContent).not.toMatch(
+      /calibrar la recuperación|próximas cargas/i,
+    );
     expect(screen.getByTestId('close-effort-exigente').textContent).toContain('RPE 8.5');
     expect(screen.queryByTestId('close-effort-8')).toBeNull();
     expect(screen.getByTestId('close-mood-bad')).toBeTruthy();
