@@ -207,7 +207,6 @@ interface WorkoutRepresentativeResult {
 async function loadWorkoutRepresentative(
   filters: CohortFilters,
   workoutId: number,
-  endedAt: Date,
 ): Promise<WorkoutRepresentativeResult | null> {
   const rows: EvidenceRow[] = await workoutCohortRowsQuery(filters, workoutId);
 
@@ -258,7 +257,7 @@ async function loadLatestEligibleWorkout(
     if (!row.endedAt) {
       continue;
     }
-    const representative = await loadWorkoutRepresentative(filters, row.workoutId, row.endedAt);
+    const representative = await loadWorkoutRepresentative(filters, row.workoutId);
     if (representative) {
       return { workoutId: row.workoutId, endedAt: row.endedAt, representative };
     }
