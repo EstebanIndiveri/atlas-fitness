@@ -66,9 +66,13 @@ it never contains a value or free-form payload.
   fixture cleanup succeeded, and the session was revoked. `overallResult: PASS`.
 - **`FAIL` (exit `1`)** — a definitive failure of a target, auth, assertion, or
   cleanup step. Not a partial pass; the release gate stays pending.
-- **`INCOMPLETE` (exit `2`)** — no verdict could be reached: missing/invalid
-  configuration (no network calls; all step results `SKIP`) or HTTP `429` with
-  `retryAfterSeconds`. Retry only after `mode: recovery` confirms no orphan.
+- **`INCOMPLETE` (exit `2`)** — no verdict could be reached. For
+  missing/invalid configuration the run makes no network calls: `targetResult` is
+  `INCOMPLETE` (`detail: configuration_incomplete`) and the remaining phases
+  (`authResult`, `reauthResult`, `historyResult`, `noteResult`, `casResult`,
+  `cleanupResult`) are `SKIP` — not all step results. For HTTP `429` the result is
+  `INCOMPLETE` with `retryAfterSeconds` guidance. Retry only after `mode: recovery`
+  confirms no orphan (a `429` may occur after fixture creation).
 
 A `PASS` requires clean auth, the exact-production target, the assertions, and
 product-visible fixture cleanup. `SKIP` appears on phases not exercised (for

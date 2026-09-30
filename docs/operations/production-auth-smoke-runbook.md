@@ -36,23 +36,62 @@ runtime deployment dependency.
 
 Before any dispatch, confirm all of the following:
 
-1. **H1 controls exist.** `main` is protected; the `production-qa` GitHub
+1. **The harness exists on the repository DEFAULT branch (`main`).** The H2
+   runner (`scripts/production-smoke/**`) and the H3 workflow
+   (`.github/workflows/production-auth-smoke.yml`) must be merged to `main`
+   **before** H5 dispatch. GitHub only permits `workflow_dispatch` for a workflow
+   that is present on the default branch, so a workflow that exists only on
+   `develop` cannot be dispatched. See §2.1 for the required promotion path.
+2. **H1 controls exist.** `main` is protected; the `production-qa` GitHub
    Environment exists with the controls in §3. Evidence:
    [`2026-09-30-production-smoke-h1-platform-evidence.md`](./2026-09-30-production-smoke-h1-platform-evidence.md).
-2. **`production-qa` Environment exists** with required reviewers and self-review
+3. **`production-qa` Environment exists** with required reviewers and self-review
    prevention (§3).
-3. **`main` is trusted and protected** (§4).
-4. **The workflow is manual only.** `.github/workflows/production-auth-smoke.yml`
+4. **`main` is trusted and protected** (§4).
+5. **The workflow is manual only.** `.github/workflows/production-auth-smoke.yml`
    triggers solely on `workflow_dispatch`; there is no `push`, `pull_request`,
    `schedule`, or `workflow_run` trigger. Never add one.
-5. **The runner and its tests are green** (`npx jest scripts/production-smoke --runInBand`)
+6. **The runner and its tests are green** (`npx jest scripts/production-smoke --runInBand`)
    on the exact ref you intend to dispatch from.
-6. **A QA review** of the run plan and **PO** confirmation of release scope, per
+7. **A QA review** of the run plan and **PO** confirmation of release scope, per
    `AGENTS.md` §2 / §5.
 
 If any prerequisite fails, **stop**: do not store a password or dispatch. The
 architecture §5 requires these platform controls before a password is placed or a
 production run is enabled.
+
+### 2.1 Promote the harness to `main` (required before H5 dispatch)
+
+`workflow_dispatch` is only offered for workflows that exist on the repository
+**default branch**. Today the harness lives on `develop` in its entirety:
+
+| Ref | Commit | Contains harness? |
+|---|---|---|
+| `origin/main` (default) | `b1ee766b…` | **No** |
+| `origin/develop` | `fbe4383` | Yes (H2 runner + H3 workflow) |
+
+Dispatching from `develop` is **not** a workaround:
+
+- the job is guarded to `github.ref == 'refs/heads/main'` (workflow `if:`), so a
+  `develop` dispatch skips the only job; and
+- the `production-qa` Environment branch policy allows only `main`, so a
+  `develop` deployment cannot be approved even if the guard were absent.
+
+Required promotion path (per `AGENTS.md` §3 / §5): `develop` → `release/x.y.z` →
+`main`, through pull requests with CI and review. Concretely:
+
+1. Ensure the H2 runner and H3 workflow are integrated on `develop`.
+2. Open the release-candidate / release PR that carries them to `main` and take it
+   through the normal review and CI gates.
+3. Confirm the workflow and runner are present on `main` (for example, the Actions
+   tab shows **Production Auth Smoke** with a **Run workflow** button only after
+   the merge).
+4. Only then proceed to the one-time provisioning (§5) and the first H5 dispatch
+   (§8).
+
+Do **not** move or recreate the `v0.11.0` tag, do **not** bump the package, and do
+**not** repeat the v0.11 release merge. Promotion is a forward merge of the harness
+itself, nothing more.
 
 ## 3. Environment `production-qa` (platform controls)
 
@@ -68,8 +107,14 @@ weaken it.
 | `deployment_branch_policy.protected_branches` | `false` |
 | `deployment_branch_policy.custom_branch_policies` | `true` |
 | Custom branch policy | exactly one: `main` (type `branch`) |
-| Environment secrets | only `ATLAS_PROD_SMOKE_PASSWORD` (§6) |
-| Environment variables | `ATLAS_PROD_SMOKE_EMAIL` (§6) |
+| Environment secrets — **required target state** | `ATLAS_PROD_SMOKE_PASSWORD` only (§6). H1 recorded **no** environment secret; the operator must provision it at H5. |
+| Environment variables — **required target state** | `ATLAS_PROD_SMOKE_EMAIL` only (§6). H1 recorded **none**; the operator must provision it at H5. |
+
+> **Required target state, not current state.** H1 created the Environment with
+> **no** secrets or variables ([H1 §3](./2026-09-30-production-smoke-h1-platform-evidence.md)).
+> This workstream (H4) does not create them. §6 lists what the operator must
+> provision at H5; until then the secret row above is a requirement, not an
+> observation.
 
 The explicit `main`-only custom branch policy is deliberate (architecture §5):
 do not rely on "protected branches only" while the branch policy configuration is
@@ -92,12 +137,20 @@ exact protected SHA. The `if` guard and checkout are defense in depth; the GitHu
 platform protection of `main` and `production-qa` is the required control, not the
 workflow YAML alone.
 
+The workflow requests only `permissions: contents: read`. This was empirically
+confirmed sufficient to read the GitHub Deployments API for this public repository
+(a temporary check returned HTTP `200` with a `contents: read` token), so no extra
+permission is required.
+
 ## 5. One-time QA identity provisioning (operator, at H5 — not in H4)
 
 Provision **exactly one** ordinary production user for the smoke. Steps:
 
 1. Create **one** ordinary production user (via the product's ordinary
    registration/owner maintenance path), controlled by the release operator.
+   Registration requires a `name` (`users.name` is `notNull`): enter a
+   **synthetic, non-personal name** (for example `Atlas QA Smoke`), never a real
+   person's name, consistent with "no personal data".
 2. Its email is a controlled operational identifier and **must be DISTINCT from
    `qa@atlas.test`**. `qa@atlas.test` is local/CI-only and forbidden in production
    (`docs/engineering/local-dev.md`).
@@ -140,18 +193,39 @@ Owner (as recorded in H1 §4): **Release/Infra — `EstebanIndiveri`**.
 
 The repository contains **no user-facing password-change/reset API**, and the
 smoke workflow **cannot revoke sessions**. Rotation and emergency invalidation are
-therefore **out-of-band owner maintenance actions** (e.g., owner-controlled
-account maintenance that resets the credential and revokes the identity's
-sessions), never SQL executed by the smoke workflow and never a QA-only endpoint.
+therefore **out-of-band, owner-run** actions using the owner's own privileged
+production database access (Turso console/CLI). They are **never** performed by the
+smoke workflow.
 
-Out-of-band rotation procedure:
+Mechanism (owner, out of band):
 
-1. Disable the workflow (§13) so no dispatch can run mid-rotation.
-2. Rotate the credential through the owner maintenance procedure.
-3. Revoke all sessions for the QA identity.
-4. Update the `production-qa` environment secret `ATLAS_PROD_SMOKE_PASSWORD`.
-5. Re-enable, then run `mode: recovery` (§11) to confirm no orphan remains.
-6. Retain rotation evidence (see §14).
+- **Rotate the credential:** set a new bcrypt `users.password_hash` value for the
+  QA identity in `lib/db/schema.ts` (`users.name`, `users.email`,
+  `users.password_hash`); or deprovision and re-provision the identity through the
+  product's ordinary flow and re-set the hash. Use the bcrypt parameters the
+  application expects.
+- **Invalidate all sessions:** call `revokeAllUserSessions(userId)` from
+  `lib/auth/session-store.ts` (owner-run privileged script/console), or directly
+  set `sessions.revoked_at` for every non-revoked row of that `userId`. This kills
+  **all** sessions for the QA user.
+
+Sequence:
+
+1. **Disable the workflow** (§13, step 1) so no dispatch can run mid-rotation.
+2. **Rotate the credential** out of band (new `users.password_hash` for the QA
+   identity, or deprovision + re-provision).
+3. **Invalidate all QA sessions** out of band (`revokeAllUserSessions(userId)` or
+   `sessions.revoked_at`).
+4. **Update the `production-qa` environment secret** `ATLAS_PROD_SMOKE_PASSWORD`
+   to the new value — rotate the stored value in place and **never commit it**.
+5. **Verify:** a fresh login with the new credential succeeds, and the old
+   sessions are dead (a replayed pre-rotation cookie is rejected with `401`).
+6. **Re-enable** the workflow; optionally run `mode: recovery` (§11) to confirm no
+   orphan remains.
+7. Retain rotation evidence (see §14).
+
+The smoke workflow itself **never** performs credential or session maintenance: it
+only logs in with the identity and revokes its own run session on logout.
 
 ## 8. How to dispatch
 
@@ -228,7 +302,7 @@ Exit codes: `PASS = 0`, `FAIL = 1`, `INCOMPLETE = 2`.
 | Result | Exit | Meaning | Operator action |
 |---|---|---|---|
 | `FAIL` | 1 | A target/auth/assertion/cleanup step definitively failed (unexpected HTTP status, wrong user, marker/ownership mismatch, clean-up failed). | Treat as a failed release gate. Run `mode: recovery` (§11). Do not claim `PASS`. |
-| `INCOMPLETE` | 2 | The run could not reach a verdict: missing/invalid configuration, or HTTP `429` (login rate limit). `retryAfterSeconds` may be set; no fixture may have been created. | Fix configuration or wait out `retryAfterSeconds`, then re-dispatch after `mode: recovery` confirms no orphan. |
+| `INCOMPLETE` | 2 | The run could not reach a verdict: missing/invalid configuration (no network calls; `targetResult: INCOMPLETE`, remaining phases `SKIP`), or HTTP `429` (login rate limit; `retryAfterSeconds` may be set). A `429` can occur **after** fixture creation, so INCOMPLETE does **not** guarantee that no fixture was created. | Fix configuration, or wait out `retryAfterSeconds`, then re-dispatch after `mode: recovery` confirms no orphan. A mid-run `429` is still covered by the `always()` cleanup pass (§11). |
 
 A `FAIL` or `INCOMPLETE` is **never** partial success. Cleanup failure is never a
 success. The workflow's final gate (`Enforce smoke and cleanup results`) fails the
@@ -289,8 +363,8 @@ days); next dispatch begins with preflight reconciliation.
    the `workflow_dispatch` trigger in a reviewed PR).
 2. **Remove/revoke the environment secret** `ATLAS_PROD_SMOKE_PASSWORD` from
    `production-qa`.
-3. **Invalidate the QA credential and all sessions** via the owner maintenance
-   procedure (§7) — not through the smoke workflow.
+3. **Invalidate the QA credential and all sessions** via the out-of-band rotation
+   / session-invalidation procedure (§7) — not through the smoke workflow.
 4. **Clean visible QA artifacts:** soft-delete any visible QA-owned workouts via
    `mode: recovery`, and delete the active note when possible.
 5. **Verify list/active:** `GET /api/workouts` contains no QA smoke ids and
@@ -300,7 +374,7 @@ days); next dispatch begins with preflight reconciliation.
 ## 14. Incident response (leaked password or session)
 
 1. **Disable the job** (§13 steps 1–2).
-2. **Rotate the credential and invalidate all sessions** via the owner maintenance
+2. **Rotate the credential and invalidate all sessions** via the out-of-band
    procedure (§7). Assume the leaked secret is burned.
 3. **Review access logs** (login anomalies, `429`, GitHub audit log) for
    unexplained QA-identity access.
@@ -310,8 +384,8 @@ days); next dispatch begins with preflight reconciliation.
    unexpected workout/artifact and quarantine ambiguity rather than deleting by
    guess.
 
-Emergency invalidation of all account sessions belongs to the owner maintenance
-procedure, not to the smoke workflow.
+Emergency invalidation of all account sessions belongs to the out-of-band
+procedure in §7, not to the smoke workflow.
 
 ## 15. `longestStreak` residual (accepted)
 
