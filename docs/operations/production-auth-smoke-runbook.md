@@ -6,10 +6,12 @@
 **Date:** 2026-09-30 (America/Argentina/Cordoba).
 
 This runbook tells the release operator how to run the authorized production
-authenticated smoke (workstream H5) **without inventing steps**. It changes no
-release status: the v0.11 authenticated production smoke remains **NOT PERFORMED**
-until an actual, reviewed run produces sanitized evidence. Editing this document
-does not execute the smoke, create the QA account, or store any secret.
+authenticated smoke (workstream H5) **without inventing steps**. The v0.11
+authenticated production smoke has been executed and **PASSed** (2026-09-30); the
+execution record is
+[`2026-09-30-production-smoke-h5-execution-evidence.md`](./2026-09-30-production-smoke-h5-execution-evidence.md).
+This runbook remains the procedure for future releases. Editing this document does
+not execute the smoke, create the QA account, or store any secret.
 
 Machine-readable field definitions live in
 [`production-auth-smoke-evidence-schema.md`](./production-auth-smoke-evidence-schema.md).
@@ -45,8 +47,8 @@ Before any dispatch, confirm all of the following:
 2. **H1 controls exist.** `main` is protected; the `production-qa` GitHub
    Environment exists with the controls in §3. Evidence:
    [`2026-09-30-production-smoke-h1-platform-evidence.md`](./2026-09-30-production-smoke-h1-platform-evidence.md).
-3. **`production-qa` Environment exists** with required reviewers and self-review
-   prevention (§3).
+3. **`production-qa` Environment exists** with a `main`-only deployment branch policy
+   and no required reviewers / no self-review step (single-owner model, §3).
 4. **`main` is trusted and protected** (§4).
 5. **The workflow is manual only.** `.github/workflows/production-auth-smoke.yml`
    triggers solely on `workflow_dispatch`; there is no `push`, `pull_request`,
@@ -101,26 +103,30 @@ weaken it.
 | Control | Value |
 |---|---|
 | Environment name | `production-qa` |
-| `can_admins_bypass` | `false` (protection rules are mandatory, including for admins) |
-| `prevent_self_review` | `true` |
-| Required reviewers | `EstebanIndiveri` (id `54692138`), `estebanindiveriraven` (id `158518760`) |
+| `can_admins_bypass` | `false` (environment protection configuration is mandatory, including for admins) |
+| `prevent_self_review` | `false` — not applicable (no required reviewers) |
+| Required reviewers | **none** (no `required_reviewers` protection rule) |
 | `deployment_branch_policy.protected_branches` | `false` |
 | `deployment_branch_policy.custom_branch_policies` | `true` |
 | Custom branch policy | exactly one: `main` (type `branch`) |
-| Environment secrets — **required target state** | `ATLAS_PROD_SMOKE_PASSWORD` only (§6). H1 recorded **no** environment secret; the operator must provision it at H5. |
-| Environment variables — **required target state** | `ATLAS_PROD_SMOKE_EMAIL` only (§6). H1 recorded **none**; the operator must provision it at H5. |
+| Environment secrets | `ATLAS_PROD_SMOKE_PASSWORD` only (§6). Present in the environment (provisioned by the owner at H5; value never read/printed/rotated). |
+| Environment variables | `ATLAS_PROD_SMOKE_EMAIL` only (§6). Present in the environment (nonsecret operational id). |
 
-> **Required target state, not current state.** H1 created the Environment with
-> **no** secrets or variables ([H1 §3](./2026-09-30-production-smoke-h1-platform-evidence.md)).
-> This workstream (H4) does not create them. §6 lists what the operator must
-> provision at H5; until then the secret row above is a requirement, not an
-> observation.
+> **Provisioning state.** H1 created the Environment with **no** secrets or variables
+> ([H1 §3](./2026-09-30-production-smoke-h1-platform-evidence.md)). At the H5 closure
+> (2026-09-30) the owner provisioned the environment secret `ATLAS_PROD_SMOKE_PASSWORD`
+> and the environment variable `ATLAS_PROD_SMOKE_EMAIL` shown above. Rotation re-sets
+> the stored value in place (§7); a secret value is never committed, read or printed.
 
 The explicit `main`-only custom branch policy is deliberate (architecture §5):
 do not rely on "protected branches only" while the branch policy configuration is
-what enforces the restriction. Because `can_admins_bypass=false` and
-`prevent_self_review=true`, an approved run cannot be silently self-approved by
-the dispatcher: a **different** authorized reviewer must approve it.
+what enforces the restriction. `can_admins_bypass` remains `false`. Under the owner
+decision of 2026-09-30 (single-owner authorization model) the environment has **no
+required reviewers** and **no self-review step**: an explicit `workflow_dispatch` is
+the authorization to run. The security boundary is the mandatory PR gate on trusted
+`main` plus the explicit manual dispatch, not a second approval identity. See
+[`2026-09-30-production-smoke-h5-execution-evidence.md`](./2026-09-30-production-smoke-h5-execution-evidence.md) §1
+and the architecture owner-policy update.
 
 ## 4. Trusted `main`
 
@@ -240,8 +246,9 @@ only logs in with the identity and revokes its own run session on logout.
 | `mode` | yes | `smoke` (default) or `recovery`. |
 | `confirmation` | yes | Type exactly `run-production-smoke`. The workflow rejects any other value. |
 
-4. Submit. A required reviewer other than the dispatcher must approve the
-   `production-qa` environment deployment.
+4. Submit. No environment reviewer approval is required (single-owner model, §3);
+   the job proceeds directly. If GitHub reports "Waiting for approval", the
+   environment policy is misconfigured — stop and fix it before retrying.
 
 **Target derivation (no URL input).** Before login, the workflow resolves the
 target from the GitHub Deployments API: it requires exactly one `Production`

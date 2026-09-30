@@ -10,6 +10,14 @@ This document records the platform prerequisites required by the approved archit
 It is the only artifact produced by H1. No application/runtime/workflow/runner code,
 schema, secret, account, or release status was changed.
 
+> **Superseded control (2026-09-30).** The required-reviewer / self-review-prevention
+> requirement recorded in §3 below was replaced by the owner's single-owner
+> authorization model: `production-qa` now has **no required reviewers** and
+> `prevent_self_review` is not applicable, while the explicit `main`-only branch policy
+> and `can_admins_bypass=false` remain. The §3 reviewer values are the **historical H1
+> snapshot**. See runbook §3, the architecture owner-policy update, and
+> [`2026-09-30-production-smoke-h5-execution-evidence.md`](./2026-09-30-production-smoke-h5-execution-evidence.md).
+
 ## 1. Scope actually changed
 
 | Area | Before | After |
@@ -45,7 +53,7 @@ Verification readback:
 
 These are the **only** governance changes made. No unrelated protection/ruleset was added.
 
-## 3. `production-qa` GitHub Environment
+## 3. `production-qa` GitHub Environment (historical H1 snapshot)
 
 Created via `PUT /repos/{owner}/{repo}/environments/production-qa`.
 
