@@ -4,7 +4,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Este
 
 ## [Unreleased]
 
-> **Estado: implementado y revisado en `develop`, NO publicado.** El trabajo de **v0.11.0 "Memoria de ejercicio"** (workstreams A–F) está integrado en `develop` tras los PR #191–#195 más esta sincronización documental, pero **no es un release**: no hay PR de release, no existe tag `v0.11.0`, `package.json`/`package-lock.json` no se tocaron (siguen en **0.10.0**) y la última versión publicada es **v0.10.0**. Nada de esta sección debe describirse como publicado. El plan de release (corte de `release/0.11.0`, bump de versión, tag y deployment) sigue siendo plan en `docs/superpowers/specs/2026-09-29-v0.11.0-product-architecture-brief.md` §30 y no se ejecutó.
+Sin cambios pendientes de publicar.
+
+## [0.11.0] - 2026-09-29
+
+> **Estado: release candidate (2026-09-29).** El trabajo de **v0.11.0 "Memoria de ejercicio"** (workstreams A–F) está implementado y revisado en `develop` (PR #191–#196). Esta entrada finaliza los metadatos de release en `release/0.11.0`: `package.json` y `package-lock.json` pasan a **0.11.0**. El corte a `main`, el tag anotado `v0.11.0` y el deployment de producción se registran en la sincronización de publicación posterior. Este repo publica mediante tag anotado, no mediante GitHub Releases.
 
 ### Added
 
