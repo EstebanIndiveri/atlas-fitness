@@ -60,6 +60,12 @@ const finishedSets: WorkoutSet[] = [
     weightKg: '40.5',
     completed: true,
     deletedAt: null,
+    semanticCaptureVersion: null,
+    loadMode: null,
+    amountBasis: null,
+    side: null,
+    setPurpose: null,
+    repCountBasis: null,
   },
   {
     id: 2,
@@ -70,6 +76,12 @@ const finishedSets: WorkoutSet[] = [
     weightKg: '42.5',
     completed: true,
     deletedAt: null,
+    semanticCaptureVersion: null,
+    loadMode: null,
+    amountBasis: null,
+    side: null,
+    setPurpose: null,
+    repCountBasis: null,
   },
 ];
 
