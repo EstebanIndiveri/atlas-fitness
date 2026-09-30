@@ -70,6 +70,13 @@ describe('resolveProgressionSupport', () => {
     });
   });
 
+  it('only accepts an explicit working purpose', () => {
+    expect(resolveProgressionSupport(input({ setPurpose: 'other' }))).toEqual({
+      status: 'unsupported',
+      reason: 'missing_selection',
+    });
+  });
+
   it('requires a positive integer rep count', () => {
     expect(resolveProgressionSupport(input({ reps: 0 }))).toEqual({
       status: 'unsupported',

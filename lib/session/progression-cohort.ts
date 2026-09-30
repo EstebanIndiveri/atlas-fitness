@@ -61,6 +61,11 @@ export function resolveProgressionSupport(input: ProgressionSupportInput): Progr
   if (setPurpose === 'warmup') {
     return { status: 'unsupported', reason: 'warmup' };
   }
+  if (setPurpose !== 'working') {
+    // Only an explicit working purpose is comparable; anything unexpected is
+    // treated as an incomplete selection rather than silently accepted.
+    return { status: 'unsupported', reason: 'missing_selection' };
+  }
   if (loadMode !== 'external') {
     return { status: 'unsupported', reason: 'unsupported_load_mode' };
   }
