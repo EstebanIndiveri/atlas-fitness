@@ -16,6 +16,17 @@ async function startManualWorkout(page: import('@playwright/test').Page): Promis
   return created.id;
 }
 
+/**
+ * v0.12: a new set needs a complete explicit semantic tuple before Save is
+ * enabled. These chips are the visible capture controls on the legacy editor.
+ */
+async function selectExternalSemantics(page: import('@playwright/test').Page): Promise<void> {
+  await page.getByTestId('semantics-loadMode-external').click();
+  await page.getByTestId('semantics-amountBasis-total').click();
+  await page.getByTestId('semantics-side-bilateral').click();
+  await page.getByTestId('semantics-purpose-working').click();
+}
+
 test.describe('Workout Flow', () => {
   test.beforeEach(async ({ page }) => {
     // Generate unique email for each test run
@@ -81,6 +92,7 @@ test.describe('Workout Flow', () => {
     await page.fill('[data-testid="reps-input"]', '10');
     await page.fill('[data-testid="weight-input"]', '100');
     
+    await selectExternalSemantics(page);
     await Promise.all([
       page.waitForResponse((resp) => resp.url().includes('/sets') && resp.status() === 201),
       page.getByTestId('save-set-button').click(),
@@ -108,6 +120,7 @@ test.describe('Workout Flow', () => {
     await page.selectOption('[data-testid="exercise-select"]', { index: 1 });
     await page.fill('[data-testid="reps-input"]', '8');
     await page.fill('[data-testid="weight-input"]', '110');
+    await selectExternalSemantics(page);
     await Promise.all([
       page.waitForResponse((resp) => resp.url().includes('/sets') && resp.status() === 201),
       page.getByTestId('save-set-button').click(),
@@ -165,6 +178,7 @@ test.describe('Workout Flow', () => {
     await page.selectOption('[data-testid="exercise-select"]', { index: 1 });
     await page.fill('[data-testid="reps-input"]', '10');
     await page.fill('[data-testid="weight-input"]', '100');
+    await selectExternalSemantics(page);
     await Promise.all([
       page.waitForResponse((resp) => resp.url().includes('/sets') && resp.status() === 201),
       page.getByTestId('save-set-button').click(),
@@ -189,6 +203,7 @@ test.describe('Workout Flow', () => {
     await page.selectOption('[data-testid="exercise-select"]', { index: 1 });
     await page.fill('[data-testid="reps-input"]', '10');
     await page.fill('[data-testid="weight-input"]', '95');
+    await selectExternalSemantics(page);
     await Promise.all([
       page.waitForResponse((resp) => resp.url().includes('/sets') && resp.status() === 201),
       page.getByTestId('save-set-button').click(),
@@ -202,6 +217,7 @@ test.describe('Workout Flow', () => {
     await page.selectOption('[data-testid="exercise-select"]', { index: 1 });
     await page.fill('[data-testid="reps-input"]', '8');
     await page.fill('[data-testid="weight-input"]', '105');
+    await selectExternalSemantics(page);
     await Promise.all([
       page.waitForResponse((resp) => resp.url().includes('/sets') && resp.status() === 201),
       page.getByTestId('save-set-button').click(),
@@ -219,6 +235,7 @@ test.describe('Workout Flow', () => {
     await page.selectOption('[data-testid="exercise-select"]', { index: 1 });
     await page.fill('[data-testid="reps-input"]', '10');
     await page.fill('[data-testid="weight-input"]', '100');
+    await selectExternalSemantics(page);
     await Promise.all([
       page.waitForResponse((resp) => resp.url().includes('/sets') && resp.status() === 201),
       page.getByTestId('save-set-button').click(),
@@ -271,6 +288,7 @@ test.describe('Workout Flow', () => {
     await page.selectOption('[data-testid="exercise-select"]', { index: 1 });
     await page.fill('[data-testid="reps-input"]', '10');
     await page.fill('[data-testid="weight-input"]', '100');
+    await selectExternalSemantics(page);
     await Promise.all([
       page.waitForResponse((resp) => resp.url().includes('/sets') && resp.status() === 201),
       page.getByTestId('save-set-button').click(),

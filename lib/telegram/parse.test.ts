@@ -1,5 +1,6 @@
 import { describe, it, expect } from '@jest/globals';
 import { parseCallbackData, parseLogArgs, parseMessageText } from './parse';
+import { TELEGRAM_COPY } from './copy';
 import { CALLBACK_END_WORKOUT } from '@/types/telegram';
 
 describe('parseMessageText', () => {
@@ -124,6 +125,26 @@ describe('parseLogArgs', () => {
   it('returns null for missing positional args', () => {
     expect(parseLogArgs('/log')).toBeNull();
     expect(parseLogArgs('/log press banca mode=external side=bilateral purpose=working')).toBeNull();
+  });
+
+  it('ships help examples that actually parse', () => {
+    const externalExample =
+      '/log press banca 80 10 mode=external basis=total side=bilateral purpose=working';
+    const bodyweightExample =
+      '/log dominadas 0 8 mode=bodyweight side=bilateral purpose=working';
+
+    expect(TELEGRAM_COPY.help).toContain(externalExample);
+    expect(TELEGRAM_COPY.help).toContain(bodyweightExample);
+
+    expect(parseLogArgs(externalExample)).toMatchObject({
+      exerciseQuery: 'press banca',
+      weightKg: '80',
+      reps: 10,
+      semantics: { loadMode: 'external', amountBasis: 'total', side: 'bilateral', setPurpose: 'working' },
+    });
+    expect(parseLogArgs(bodyweightExample)).toMatchObject({
+      semantics: { loadMode: 'bodyweight', amountBasis: null },
+    });
   });
 });
 

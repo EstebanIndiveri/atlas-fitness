@@ -103,7 +103,7 @@ test.describe('Telegram link + webhook', () => {
       message: {
         message_id: 2,
         date: Math.floor(Date.now() / 1000),
-        text: '/log press banca 80.5 10',
+        text: '/log press banca 80.5 10 mode=external basis=total side=bilateral purpose=working',
         from: { id: telegramUserId, is_bot: false, first_name: 'Tito' },
         chat: { id: telegramUserId, type: 'private' },
       },

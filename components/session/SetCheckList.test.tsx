@@ -28,7 +28,7 @@ describe('SetCheckList', () => {
     expect(screen.getByText('ESTADO')).toBeTruthy();
     expect(screen.getByText('SERIE 2 EN CURSO')).toBeTruthy();
     expect(screen.getByText('Objetivo: 8 reps')).toBeTruthy();
-    expect(screen.getByText('70.0')).toBeTruthy();
+    expect(screen.getByText(/70\.0/)).toBeTruthy();
     expect(screen.getByText('10')).toBeTruthy();
     expect(screen.getByText('+ Añadir serie')).toBeTruthy();
     expect(screen.getByText('Calentamiento')).toBeTruthy();
@@ -78,7 +78,7 @@ describe('SetCheckList', () => {
       />,
     );
 
-    expect(screen.getByText('82.5')).toBeTruthy();
+    expect(screen.getByText(/82\.5/)).toBeTruthy();
     expect(screen.getByText('6')).toBeTruthy();
     expect(screen.getByText('SERIE 2 EN CURSO')).toBeTruthy();
   });

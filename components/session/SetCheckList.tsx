@@ -41,7 +41,7 @@ function completedAmountLabel(set: CompletedSet | undefined): string {
     return '—';
   }
   if (set.semanticCaptureVersion === undefined || set.semanticCaptureVersion === null) {
-    return set.weightKg;
+    return `${set.weightKg} · ${SESSION_COPY.legacyAmountShort}`;
   }
   const canonical = canonicalSemantics(set.semanticCaptureVersion, {
     loadMode: set.loadMode ?? null,
@@ -51,7 +51,7 @@ function completedAmountLabel(set: CompletedSet | undefined): string {
     repCountBasis: set.repCountBasis ?? null,
   });
   if (canonical.status !== 'canonical') {
-    return set.weightKg;
+    return `${set.weightKg} · ${SESSION_COPY.legacyAmountShort}`;
   }
   return formatCompactAmount(canonical.tuple, set.weightKg);
 }

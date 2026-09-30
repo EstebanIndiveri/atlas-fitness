@@ -111,7 +111,7 @@ describe('GuidedExerciseCard', () => {
     );
 
     expect(screen.getByText('Serie 2 de 3')).toBeTruthy();
-    expect(screen.getByText('70.0')).toBeTruthy();
+    expect(screen.getByText(/70\.0/)).toBeTruthy();
   });
 
   it('renders Figma exercise metadata and functional exclusive action chips', () => {

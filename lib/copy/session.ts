@@ -25,6 +25,7 @@ export const SESSION_COPY = {
   semanticsRequired: 'Elegí tipo de carga, lado y propósito para guardar.',
   bodyweightNoLoad: 'Sin carga externa (peso corporal)',
   legacyAmountLabel: 'Carga registrada (sin contexto)',
+  legacyAmountShort: 'sin contexto',
   errorSemantics: 'Completá el tipo de carga, el lado y el propósito antes de guardar la serie.',
   restTitle: 'DESCANSO SUGERIDO',
   addSet: '+ Añadir serie',

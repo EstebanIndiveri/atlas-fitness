@@ -309,6 +309,9 @@ export function useGuidedSession(workoutId: string) {
         throw new Error('set');
       }
       const updated = await load();
+      // The confirmed tuple becomes the explicit draft for the next set of the
+      // same exercise, visibly marked as reused until the user changes it.
+      setSemanticReused(true);
       const nextCount = updated.sets.filter((set) => set.exerciseId === current.exerciseId).length;
       let wentToClose = false;
       if (nextCount >= current.targetSets) {

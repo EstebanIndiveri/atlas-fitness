@@ -585,6 +585,27 @@ describe('Workout Sets Service', () => {
       expect(after?.loadMode).toBeNull();
     });
 
+    it('accepts a legacy nonsemantic edit that echoes the six null columns', async () => {
+      const workout = await createWorkout(testUserId);
+      const legacy = await insertLegacySet(workout.id, testExerciseId);
+
+      const updated = await workoutSetsService.updateWorkoutSet({
+        setId: legacy.id,
+        userId: testUserId,
+        reps: 11,
+        semanticCaptureVersion: null,
+        loadMode: null,
+        amountBasis: null,
+        side: null,
+        setPurpose: null,
+        repCountBasis: null,
+      });
+
+      expect(updated.reps).toBe(11);
+      expect(updated.semanticCaptureVersion).toBeNull();
+      expect(updated.loadMode).toBeNull();
+    });
+
     it('should throw VALIDATION when updating a set on a finished workout', async () => {
       const workout = await createWorkout(testUserId);
       const set = await workoutSetsService.createWorkoutSet({

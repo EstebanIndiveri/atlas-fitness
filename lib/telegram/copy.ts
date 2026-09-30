@@ -9,7 +9,7 @@ export const TELEGRAM_COPY = {
     `Hola, ${name}. Ya estás vinculado. Usá /log, /entreno, /resumen o /recordatorio.`,
   help: [
     'Comandos Atlas Fitness:',
-    '/log <ejercicio> <peso|0> <reps> mode=<external|bodyweight|bodyweight_added|assisted> side=<bilateral|left|right|alternating> purpose=<working|warmup> [basis=total|per_side] [repbasis=total|per_side] — registrar una serie',
+    '/log <ejercicio> <peso|0> <reps> mode=<external|bodyweight|bodyweight_added|assisted> side=<bilateral|left|right|alternating> purpose=<working|warmup> basis=<total|per_side> (salvo peso corporal) [repbasis=<total|per_side> si alternado] — registrar una serie',
     'Ejemplo: /log press banca 80 10 mode=external basis=total side=bilateral purpose=working',
     'Peso corporal: /log dominadas 0 8 mode=bodyweight side=bilateral purpose=working',
     '/entreno — igual que /log pero además cierra el entrenamiento',
@@ -25,7 +25,7 @@ export const TELEGRAM_COPY = {
   linkExpired: 'Ese código venció. Pedí uno nuevo en Ajustes (válido 10 minutos).',
   linkConflict: 'Este Telegram ya está vinculado a otra cuenta.',
   logUsage:
-    'Usá: /log <ejercicio> <peso|0> <reps> mode=<external|bodyweight|bodyweight_added|assisted> side=<bilateral|left|right|alternating> purpose=<working|warmup> [basis=total|per_side] [repbasis=total|per_side]\nEjemplo: /log press banca 80 10 mode=external basis=total side=bilateral purpose=working',
+    'Usá: /log <ejercicio> <peso|0> <reps> mode=<external|bodyweight|bodyweight_added|assisted> side=<bilateral|left|right|alternating> purpose=<working|warmup> basis=<total|per_side> (salvo peso corporal) [repbasis=<total|per_side> si alternado]\nEjemplo: /log press banca 80 10 mode=external basis=total side=bilateral purpose=working',
   logOk: (input: {
     exercise: string;
     reps: number;

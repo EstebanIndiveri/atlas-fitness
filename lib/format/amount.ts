@@ -52,23 +52,24 @@ export const SET_PURPOSE_LABELS: Readonly<Record<CanonicalSemantics['setPurpose'
  */
 export function describeRecordedAmount(canonical: CanonicalSemantics, weightKg: string): string {
   const { loadMode, amountBasis, side, repCountBasis } = canonical;
+  const perSide = amountBasis === 'per_side';
+  const alternatingSuffix =
+    side === 'alternating'
+      ? ` (alternado, ${repCountBasis === 'per_side' ? 'reps por lado' : 'reps totales'})`
+      : '';
 
   if (loadMode === 'bodyweight') {
     return 'peso corporal (sin carga externa)';
   }
   if (loadMode === 'assisted') {
-    return `asistencia ${weightKg} kg`;
+    return `asistencia ${weightKg} kg${perSide ? ' por lado' : ''}${alternatingSuffix}`;
   }
   if (loadMode === 'bodyweight_added') {
-    return `+${weightKg} kg agregados`;
+    return `+${weightKg} kg agregados${perSide ? ' por lado' : ''}${alternatingSuffix}`;
   }
 
-  const base = amountBasis === 'per_side' ? `${weightKg} kg por lado` : `${weightKg} kg`;
-  if (side === 'alternating') {
-    const repLabel = repCountBasis === 'per_side' ? 'reps por lado' : 'reps totales';
-    return `${base} (alternado, ${repLabel})`;
-  }
-  return base;
+  const base = perSide ? `${weightKg} kg por lado` : `${weightKg} kg`;
+  return `${base}${alternatingSuffix}`;
 }
 
 /**
@@ -77,14 +78,15 @@ export function describeRecordedAmount(canonical: CanonicalSemantics, weightKg: 
  */
 export function formatCompactAmount(canonical: CanonicalSemantics, weightKg: string): string {
   const { loadMode, amountBasis } = canonical;
+  const perSide = amountBasis === 'per_side' ? '/lado' : '';
   if (loadMode === 'bodyweight') {
     return 'PC';
   }
   if (loadMode === 'assisted') {
-    return `asist. ${weightKg}`;
+    return `asist. ${weightKg}${perSide}`;
   }
   if (loadMode === 'bodyweight_added') {
-    return `+${weightKg}`;
+    return `+${weightKg}${perSide}`;
   }
-  return amountBasis === 'per_side' ? `${weightKg}/lado` : weightKg;
+  return `${weightKg}${perSide}`;
 }

@@ -41,6 +41,15 @@ describe('describeRecordedAmount', () => {
       '40 kg (alternado, reps por lado)',
     );
   });
+
+  it('marks per-side for assisted and added load', () => {
+    expect(describeRecordedAmount(canonical({ loadMode: 'assisted', amountBasis: 'per_side' }), '10')).toBe(
+      'asistencia 10 kg por lado',
+    );
+    expect(
+      describeRecordedAmount(canonical({ loadMode: 'bodyweight_added', amountBasis: 'per_side' }), '10'),
+    ).toBe('+10 kg agregados por lado');
+  });
 });
 
 describe('formatCompactAmount', () => {
@@ -49,6 +58,9 @@ describe('formatCompactAmount', () => {
     expect(formatCompactAmount(canonical({ amountBasis: 'per_side' }), '20')).toBe('20/lado');
     expect(formatCompactAmount(canonical({ loadMode: 'bodyweight', amountBasis: null }), '0')).toBe('PC');
     expect(formatCompactAmount(canonical({ loadMode: 'assisted' }), '25')).toBe('asist. 25');
+    expect(formatCompactAmount(canonical({ loadMode: 'assisted', amountBasis: 'per_side' }), '25')).toBe(
+      'asist. 25/lado',
+    );
   });
 });
 

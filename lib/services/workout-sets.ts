@@ -87,15 +87,20 @@ function persistedSemantics(set: WorkoutSet): WorkoutSetSemanticFields {
   };
 }
 
-function hasSemanticInput(input: UpdateWorkoutSetInput): boolean {
-  return (
-    input.semanticCaptureVersion !== undefined ||
-    input.loadMode !== undefined ||
-    input.amountBasis !== undefined ||
-    input.side !== undefined ||
-    input.setPurpose !== undefined ||
-    input.repCountBasis !== undefined
-  );
+/**
+ * True when the PATCH actually declares any non-null semantic value. Echoing
+ * the six columns as explicit `null` on a legacy row is a no-op, not an
+ * upgrade attempt; only a non-null value is rejected.
+ */
+function hasDeclaredSemanticInput(input: UpdateWorkoutSetInput): boolean {
+  return [
+    input.semanticCaptureVersion,
+    input.loadMode,
+    input.amountBasis,
+    input.side,
+    input.setPurpose,
+    input.repCountBasis,
+  ].some((value) => value !== undefined && value !== null);
 }
 
 function validateCapture(
@@ -208,88 +213,93 @@ export async function updateWorkoutSet(input: UpdateWorkoutSetInput): Promise<Wo
     throw new AppError('VALIDATION', 'Las repeticiones deben ser mayor a 0');
   }
 
-  const set = await db.query.workoutSets.findFirst({
-    where: eq(workoutSets.id, input.setId),
-  });
+  // The read-modify-write runs in one transaction so the resulting tuple is
+  // validated and persisted atomically; the B CHECK constraints are the final
+  // backstop.
+  return db.transaction(async (tx) => {
+    const set = await tx.query.workoutSets.findFirst({
+      where: eq(workoutSets.id, input.setId),
+    });
 
-  if (!set || set.deletedAt) {
-    throw new AppError('NOT_FOUND', 'Serie no encontrada');
-  }
-
-  // Verify workout ownership
-  const workout = await db.query.workouts.findFirst({
-    where: eq(workouts.id, set.workoutId),
-  });
-
-  if (!workout || workout.deletedAt) {
-    throw new AppError('NOT_FOUND', 'Entrenamiento no encontrado');
-  }
-
-  if (workout.userId !== input.userId) {
-    throw new AppError('FORBIDDEN', 'No tienes permiso para modificar esta serie');
-  }
-
-  assertWorkoutAllowsSetMutation(workout, 'update');
-
-  const updateData: Partial<typeof workoutSets.$inferInsert> = {};
-  if (input.exerciseId !== undefined) {
-    await requireAccessibleExercise(input.exerciseId, input.userId);
-    updateData.exerciseId = input.exerciseId;
-  }
-  if (input.setIndex !== undefined) updateData.setIndex = input.setIndex;
-  if (input.reps !== undefined) updateData.reps = input.reps;
-
-  if (isLegacySemanticRow(set)) {
-    if (hasSemanticInput(input)) {
-      throw new AppError(
-        'VALIDATION',
-        'No se puede agregar semántica v1 a una serie antigua. Registrá una serie nueva.',
-      );
+    if (!set || set.deletedAt) {
+      throw new AppError('NOT_FOUND', 'Serie no encontrada');
     }
-    if (input.weightKg !== undefined) {
-      if (!isValidWeightKg(input.weightKg)) {
-        throw new AppError('VALIDATION', 'Peso inválido');
+
+    // Verify workout ownership
+    const workout = await tx.query.workouts.findFirst({
+      where: eq(workouts.id, set.workoutId),
+    });
+
+    if (!workout || workout.deletedAt) {
+      throw new AppError('NOT_FOUND', 'Entrenamiento no encontrado');
+    }
+
+    if (workout.userId !== input.userId) {
+      throw new AppError('FORBIDDEN', 'No tienes permiso para modificar esta serie');
+    }
+
+    assertWorkoutAllowsSetMutation(workout, 'update');
+
+    const updateData: Partial<typeof workoutSets.$inferInsert> = {};
+    if (input.exerciseId !== undefined) {
+      await requireAccessibleExercise(input.exerciseId, input.userId);
+      updateData.exerciseId = input.exerciseId;
+    }
+    if (input.setIndex !== undefined) updateData.setIndex = input.setIndex;
+    if (input.reps !== undefined) updateData.reps = input.reps;
+
+    if (isLegacySemanticRow(set)) {
+      if (hasDeclaredSemanticInput(input)) {
+        throw new AppError(
+          'VALIDATION',
+          'No se puede agregar semántica v1 a una serie antigua. Registrá una serie nueva.',
+        );
       }
-      updateData.weightKg = parseWeightKg(input.weightKg);
+      if (input.weightKg !== undefined) {
+        if (!isValidWeightKg(input.weightKg)) {
+          throw new AppError('VALIDATION', 'Peso inválido');
+        }
+        updateData.weightKg = parseWeightKg(input.weightKg);
+      }
+    } else {
+      const stored = persistedSemantics(set);
+      const finalFields: WorkoutSetSemanticFields = {
+        semanticCaptureVersion:
+          input.semanticCaptureVersion !== undefined
+            ? input.semanticCaptureVersion
+            : stored.semanticCaptureVersion,
+        loadMode: input.loadMode !== undefined ? input.loadMode : stored.loadMode,
+        amountBasis: input.amountBasis !== undefined ? input.amountBasis : stored.amountBasis,
+        side: input.side !== undefined ? input.side : stored.side,
+        setPurpose: input.setPurpose !== undefined ? input.setPurpose : stored.setPurpose,
+        repCountBasis:
+          input.repCountBasis !== undefined ? input.repCountBasis : stored.repCountBasis,
+      };
+      const finalReps = input.reps !== undefined ? input.reps : set.reps;
+      const finalWeight = input.weightKg !== undefined ? input.weightKg : set.weightKg;
+
+      const validation = validateCapture(finalFields, finalWeight, finalReps);
+      if (!validation.ok) {
+        throw new AppError('VALIDATION', captureFailureMessage(validation.reason));
+      }
+
+      updateData.weightKg = normalizeExactDecimal(finalWeight);
+      updateData.semanticCaptureVersion = finalFields.semanticCaptureVersion;
+      updateData.loadMode = validation.canonical.loadMode;
+      updateData.amountBasis = validation.canonical.amountBasis;
+      updateData.side = validation.canonical.side;
+      updateData.setPurpose = validation.canonical.setPurpose;
+      updateData.repCountBasis = validation.canonical.repCountBasis;
     }
-  } else {
-    const stored = persistedSemantics(set);
-    const finalFields: WorkoutSetSemanticFields = {
-      semanticCaptureVersion:
-        input.semanticCaptureVersion !== undefined
-          ? input.semanticCaptureVersion
-          : stored.semanticCaptureVersion,
-      loadMode: input.loadMode !== undefined ? input.loadMode : stored.loadMode,
-      amountBasis: input.amountBasis !== undefined ? input.amountBasis : stored.amountBasis,
-      side: input.side !== undefined ? input.side : stored.side,
-      setPurpose: input.setPurpose !== undefined ? input.setPurpose : stored.setPurpose,
-      repCountBasis:
-        input.repCountBasis !== undefined ? input.repCountBasis : stored.repCountBasis,
-    };
-    const finalReps = input.reps !== undefined ? input.reps : set.reps;
-    const finalWeight = input.weightKg !== undefined ? input.weightKg : set.weightKg;
 
-    const validation = validateCapture(finalFields, finalWeight, finalReps);
-    if (!validation.ok) {
-      throw new AppError('VALIDATION', captureFailureMessage(validation.reason));
-    }
+    const [updated] = await tx
+      .update(workoutSets)
+      .set(updateData)
+      .where(eq(workoutSets.id, input.setId))
+      .returning();
 
-    updateData.weightKg = normalizeExactDecimal(finalWeight);
-    updateData.semanticCaptureVersion = finalFields.semanticCaptureVersion;
-    updateData.loadMode = validation.canonical.loadMode;
-    updateData.amountBasis = validation.canonical.amountBasis;
-    updateData.side = validation.canonical.side;
-    updateData.setPurpose = validation.canonical.setPurpose;
-    updateData.repCountBasis = validation.canonical.repCountBasis;
-  }
-
-  const [updated] = await db
-    .update(workoutSets)
-    .set(updateData)
-    .where(eq(workoutSets.id, input.setId))
-    .returning();
-
-  return updated;
+    return updated;
+  });
 }
 
 /**
