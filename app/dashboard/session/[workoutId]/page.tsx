@@ -233,6 +233,7 @@ export default function GuidedSessionPlayerPage() {
             {session.current ? (
               <>
                 <GuidedExerciseCard
+                  workoutId={session.workout.id}
                   exercise={session.current}
                   completedCount={session.completedCount}
                   completedSets={completedSetsForCurrent}

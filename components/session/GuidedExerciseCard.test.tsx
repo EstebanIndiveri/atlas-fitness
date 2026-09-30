@@ -1,7 +1,8 @@
-import { describe, expect, it, jest } from '@jest/globals';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { GuidedExerciseCard } from './GuidedExerciseCard';
 import { SESSION_COPY } from '@/lib/copy/session';
+import type { ExerciseSessionContext } from '@/types/exercise-session-memory';
 import type { RoutineExerciseItem } from '@/types/routine';
 
 function exercise(overrides: Partial<RoutineExerciseItem> = {}): RoutineExerciseItem {
@@ -21,7 +22,35 @@ function exercise(overrides: Partial<RoutineExerciseItem> = {}): RoutineExercise
   };
 }
 
+const emptyContext: ExerciseSessionContext = {
+  workoutId: 1,
+  exerciseId: 10,
+  currentNote: null,
+  lastCompletedSets: null,
+  lastCompletedNote: null,
+};
+
+const originalFetch = global.fetch;
+
+function mockContextFetch(context: ExerciseSessionContext = emptyContext): void {
+  global.fetch = jest.fn(async () => ({
+    ok: true,
+    status: 200,
+    text: async () => JSON.stringify(context),
+  })) as unknown as typeof fetch;
+}
+
+beforeEach(() => {
+  // Pending by default so unrelated tests do not flush async state updates.
+  global.fetch = jest.fn(() => new Promise<Response>(() => {})) as unknown as typeof fetch;
+});
+
+afterEach(() => {
+  global.fetch = originalFetch;
+});
+
 const cardProps = {
+  workoutId: 1,
   completedCount: 0,
   weight: '40',
   onWeightChange: jest.fn(),
@@ -111,7 +140,7 @@ describe('GuidedExerciseCard', () => {
     expect(screen.getByText('Serie 3 de 4')).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Press de banca con barra' })).toBeTruthy();
     expect(screen.queryByText(/Ejercicio compuesto/)).toBeNull();
-    expect(screen.queryByText(/Última vez/)).toBeNull();
+    expect(screen.getByRole('button', { name: SESSION_COPY.showLastTime })).toBeTruthy();
     expect(screen.queryByText('RPE 8.5')).toBeNull();
     expect(screen.queryByTestId('guided-exercise-image')).toBeNull();
 
@@ -130,7 +159,7 @@ describe('GuidedExerciseCard', () => {
     expect(technique.getAttribute('aria-pressed')).toBe('false');
     expect(notes.getAttribute('aria-pressed')).toBe('true');
     expect(screen.queryByTestId('guided-exercise-image')).toBeNull();
-    expect(screen.getByPlaceholderText('Sin notas cargadas para este ejercicio.')).toBeTruthy();
+    expect(screen.getByPlaceholderText(SESSION_COPY.notesPlaceholder)).toBeTruthy();
 
     fireEvent.click(replace);
     expect(notes.getAttribute('aria-pressed')).toBe('false');
@@ -141,19 +170,48 @@ describe('GuidedExerciseCard', () => {
     expect(onHold).toHaveBeenCalledTimes(1);
   });
 
-  it('lets the user type a session-local note from the Notas panel', () => {
+  it('persists the note from the Notas panel with explicit save and no native maxLength', async () => {
+    mockContextFetch();
     render(<GuidedExerciseCard exercise={exercise()} {...cardProps} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Mostrar notas' }));
 
-    const notes = screen.getByLabelText('Nota de la sesión para Press Banca') as HTMLTextAreaElement;
+    const notes = (await screen.findByLabelText(
+      'Nota de la sesión para Press Banca',
+    )) as HTMLTextAreaElement;
+    await waitFor(() => expect(notes.readOnly).toBe(false));
     expect(notes.tagName).toBe('TEXTAREA');
-    expect(notes.maxLength).toBe(280);
-    expect(notes.placeholder).toBe('Sin notas cargadas para este ejercicio.');
+    expect(notes.getAttribute('maxlength')).toBeNull();
+    expect(notes.placeholder).toBe(SESSION_COPY.notesPlaceholder);
+    expect(screen.getByRole('button', { name: SESSION_COPY.notesSave })).toBeTruthy();
 
     fireEvent.change(notes, { target: { value: 'Subir a 42.5 kg si sale liviano.' } });
 
     expect(notes.value).toBe('Subir a 42.5 kg si sale liviano.');
+  });
+
+  it('shows the honest empty state in the Última vez panel', async () => {
+    mockContextFetch();
+    render(<GuidedExerciseCard exercise={exercise()} {...cardProps} />);
+
+    fireEvent.click(screen.getByRole('button', { name: SESSION_COPY.showLastTime }));
+
+    expect(await screen.findByText(SESSION_COPY.lastTimeEmpty)).toBeTruthy();
+    expect(screen.queryByTestId('last-time-set')).toBeNull();
+  });
+
+  it('keeps set logging usable when the context request fails', async () => {
+    global.fetch = jest.fn(async () => {
+      throw new Error('network down');
+    }) as unknown as typeof fetch;
+
+    render(<GuidedExerciseCard exercise={exercise()} {...cardProps} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Mostrar notas' }));
+
+    expect(await screen.findByText(SESSION_COPY.notesLoadError)).toBeTruthy();
+    expect(screen.getByTestId('set-checklist')).toBeTruthy();
+    expect(screen.getByTestId('complete-set-button')).toBeTruthy();
   });
 
   it('keeps the exercise card free of rest-timer UI', () => {
