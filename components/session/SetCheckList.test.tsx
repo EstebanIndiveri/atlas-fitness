@@ -23,7 +23,7 @@ describe('SetCheckList', () => {
     );
 
     expect(screen.getByText('SERIE')).toBeTruthy();
-    expect(screen.getByText('CARGA (KG)')).toBeTruthy();
+    expect(screen.getByText('CARGA')).toBeTruthy();
     expect(screen.getByText('REPS')).toBeTruthy();
     expect(screen.getByText('ESTADO')).toBeTruthy();
     expect(screen.getByText('SERIE 2 EN CURSO')).toBeTruthy();

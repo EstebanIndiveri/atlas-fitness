@@ -1,5 +1,5 @@
 import { describe, expect, it } from '@jest/globals';
-import { motivatorForSet, formatImprovement, SESSION_COPY } from './session';
+import { motivatorForSet, SESSION_COPY } from './session';
 
 describe('SESSION_COPY', () => {
   it('uses es-AR product copy for the guided flow', () => {
@@ -28,13 +28,13 @@ describe('motivatorForSet', () => {
   });
 });
 
-describe('formatImprovement', () => {
-  it('renders es-AR deltas from decimal strings', () => {
-    expect(
-      formatImprovement({ exerciseName: 'Press Banca', direction: 'up', deltaKg: '2.5' }),
-    ).toBe('Press Banca: +2.5 kg vs la última sesión.');
-    expect(
-      formatImprovement({ exerciseName: 'Sentadilla', direction: 'none', deltaKg: null }),
-    ).toBe(SESSION_COPY.improvementNone);
+describe('SESSION_COPY close summary', () => {
+  it('no longer exposes bare-weight improvement or volume copy', () => {
+    const copy = SESSION_COPY as unknown as Record<string, unknown>;
+    expect(copy.improvementUp).toBeUndefined();
+    expect(copy.improvementDown).toBeUndefined();
+    expect(copy.improvementSame).toBeUndefined();
+    expect(copy.improvementNone).toBeUndefined();
+    expect(copy.closeStatsVolume).toBeUndefined();
   });
 });

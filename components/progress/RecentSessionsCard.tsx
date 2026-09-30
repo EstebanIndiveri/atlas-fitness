@@ -53,22 +53,6 @@ export function RecentSessionsCard({ sessions }: RecentSessionsCardProps) {
                     <p className="mt-1 text-sm text-ink-muted">
                       {formatSessionDate(session.startedAt)}
                     </p>
-                    {session.totalVolumeKg === null ? (
-                      <p className="mt-1 text-xs text-ink-muted">
-                        {PROGRESS_COPY.sessions.volumeUnavailable}
-                      </p>
-                    ) : (
-                      <p
-                        className="mt-1 text-xs text-ink-muted"
-                        aria-label={PROGRESS_COPY.sessions.volumeLabel}
-                      >
-                        <MetricValue
-                          metric={metric(`${session.totalVolumeKg} kg`, 'atlas_computed')}
-                          showSource
-                          className="text-xs"
-                        />
-                      </p>
-                    )}
                   </div>
                   {session.durationMinutes === null ? (
                     <span className="shrink-0 text-right text-xs font-medium text-ink-muted">

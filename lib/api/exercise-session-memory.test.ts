@@ -47,8 +47,32 @@ const CONTEXT = {
     localDate: '2026-09-16',
     endedAt: '2026-09-17T02:00:00.000Z',
     sets: [
-      { id: 1, exerciseId: 3, setIndex: 1, reps: 8, weightKg: '62.75' },
-      { id: 2, exerciseId: 3, setIndex: 2, reps: 6, weightKg: '70' },
+      {
+        id: 1,
+        exerciseId: 3,
+        setIndex: 1,
+        reps: 8,
+        weightKg: '62.75',
+        semanticCaptureVersion: null,
+        loadMode: null,
+        amountBasis: null,
+        side: null,
+        setPurpose: null,
+        repCountBasis: null,
+      },
+      {
+        id: 2,
+        exerciseId: 3,
+        setIndex: 2,
+        reps: 6,
+        weightKg: '70',
+        semanticCaptureVersion: null,
+        loadMode: null,
+        amountBasis: null,
+        side: null,
+        setPurpose: null,
+        repCountBasis: null,
+      },
     ],
   },
   // Independent source: different workout and date than the sets source.
@@ -79,6 +103,35 @@ describe('exercise-session memory client', () => {
 
     await expect(fetchExerciseSessionContext(7, 3)).resolves.toEqual(CONTEXT);
     expect(global.fetch).toHaveBeenCalledWith('/api/workouts/7/exercises/3/context');
+  });
+
+  it('preserves a declared bodyweight zero sentinel and its semantics', async () => {
+    const body = {
+      ...CONTEXT,
+      lastCompletedSets: {
+        ...CONTEXT.lastCompletedSets,
+        sets: [
+          {
+            id: 1,
+            exerciseId: 3,
+            setIndex: 1,
+            reps: 8,
+            weightKg: '0',
+            semanticCaptureVersion: 1,
+            loadMode: 'bodyweight',
+            amountBasis: null,
+            side: 'bilateral',
+            setPurpose: 'working',
+            repCountBasis: null,
+          },
+        ],
+      },
+    };
+    global.fetch = jest.fn(async () => jsonResponse(body)) as unknown as typeof fetch;
+
+    const context = await fetchExerciseSessionContext(7, 3);
+    expect(context.lastCompletedSets?.sets[0].weightKg).toBe('0');
+    expect(context.lastCompletedSets?.sets[0].loadMode).toBe('bodyweight');
   });
 
   it('rejects a context whose local date does not match the endedAt instant', async () => {

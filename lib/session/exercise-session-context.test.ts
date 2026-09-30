@@ -16,8 +16,27 @@ function validSet(overrides: Record<string, unknown> = {}): Record<string, unkno
     setIndex: 1,
     reps: 8,
     weightKg: '82.5',
+    semanticCaptureVersion: null,
+    loadMode: null,
+    amountBasis: null,
+    side: null,
+    setPurpose: null,
+    repCountBasis: null,
     ...overrides,
   };
+}
+
+/** A complete v1 external/total/bilateral working set. */
+function declaredSet(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return validSet({
+    weightKg: '82.5',
+    semanticCaptureVersion: 1,
+    loadMode: 'external',
+    amountBasis: 'total',
+    side: 'bilateral',
+    setPurpose: 'working',
+    ...overrides,
+  });
 }
 
 function validLastSets(overrides: Record<string, unknown> = {}): Record<string, unknown> {
@@ -86,6 +105,75 @@ describe('parseExerciseSessionSet', () => {
   it('rejects unknown fields', () => {
     expect(parseExerciseSessionSet(validSet({ rpe: 8 }))).toBeNull();
     expect(parseExerciseSessionSet(validSet({ completed: true }))).toBeNull();
+  });
+
+  it('keeps a legacy all-null tuple as an explicit unknown', () => {
+    const parsed = parseExerciseSessionSet(validSet());
+    expect(parsed).not.toBeNull();
+    expect(parsed?.semanticCaptureVersion).toBeNull();
+    expect(parsed?.loadMode).toBeNull();
+  });
+
+  it('accepts a declared bodyweight zero sentinel without inferring load', () => {
+    const parsed = parseExerciseSessionSet(
+      declaredSet({
+        weightKg: '0',
+        loadMode: 'bodyweight',
+        amountBasis: null,
+        side: 'bilateral',
+        setPurpose: 'working',
+      }),
+    );
+    expect(parsed).not.toBeNull();
+    expect(parsed?.weightKg).toBe('0');
+    expect(parsed?.loadMode).toBe('bodyweight');
+  });
+
+  it('accepts declared assisted and per-side rows', () => {
+    const assisted = parseExerciseSessionSet(
+      declaredSet({
+        weightKg: '30',
+        loadMode: 'assisted',
+        amountBasis: 'total',
+        setPurpose: 'working',
+      }),
+    );
+    expect(assisted?.loadMode).toBe('assisted');
+
+    const perSide = parseExerciseSessionSet(
+      declaredSet({
+        weightKg: '20',
+        loadMode: 'external',
+        amountBasis: 'per_side',
+      }),
+    );
+    expect(perSide?.amountBasis).toBe('per_side');
+  });
+
+  it('rejects a non-zero bodyweight amount and a declared zero external amount', () => {
+    expect(
+      parseExerciseSessionSet(
+        declaredSet({ weightKg: '5', loadMode: 'bodyweight', amountBasis: null }),
+      ),
+    ).toBeNull();
+    expect(parseExerciseSessionSet(declaredSet({ weightKg: '0' }))).toBeNull();
+  });
+
+  it('rejects a partial or corrupt semantic tuple instead of inferring it', () => {
+    // Declared version but a missing required field.
+    expect(
+      parseExerciseSessionSet(
+        declaredSet({ loadMode: null }),
+      ),
+    ).toBeNull();
+    // Legacy version null but a stray semantic field.
+    expect(parseExerciseSessionSet(validSet({ loadMode: 'external' }))).toBeNull();
+    // Unknown enum value.
+    expect(parseExerciseSessionSet(declaredSet({ loadMode: 'magic' }))).toBeNull();
+    // Structurally invalid combination: left side with per_side.
+    expect(
+      parseExerciseSessionSet(declaredSet({ side: 'left', amountBasis: 'per_side' })),
+    ).toBeNull();
   });
 });
 

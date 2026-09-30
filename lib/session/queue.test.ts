@@ -19,6 +19,12 @@ function setSnapshot(exerciseId: number, weightKg: string): WorkoutQueueSetSnaps
     setIndex: 1,
     reps: 8,
     weightKg,
+    semanticCaptureVersion: null,
+    loadMode: null,
+    amountBasis: null,
+    side: null,
+    setPurpose: null,
+    repCountBasis: null,
   };
 }
 

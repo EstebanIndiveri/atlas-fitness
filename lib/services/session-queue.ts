@@ -215,6 +215,12 @@ function toSetSnapshots(
     setIndex: number;
     reps: number;
     weightKg: string;
+    semanticCaptureVersion: number | null;
+    loadMode: string | null;
+    amountBasis: string | null;
+    side: string | null;
+    setPurpose: string | null;
+    repCountBasis: string | null;
   }[],
 ): WorkoutQueueSetSnapshot[] {
   return sets.map((set) => ({
@@ -223,6 +229,12 @@ function toSetSnapshots(
     setIndex: set.setIndex,
     reps: set.reps,
     weightKg: set.weightKg,
+    semanticCaptureVersion: set.semanticCaptureVersion,
+    loadMode: set.loadMode,
+    amountBasis: set.amountBasis,
+    side: set.side,
+    setPurpose: set.setPurpose,
+    repCountBasis: set.repCountBasis,
   }));
 }
 

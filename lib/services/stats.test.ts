@@ -18,10 +18,16 @@ import {
   botMessages,
 } from '@/lib/db/schema';
 
+/**
+ * Raw exercise-history compatibility surface (v0.12).
+ *
+ * The legacy `getPersonalRecords`/`isPR` contract was retired: there must be no
+ * bare-weight PR truth in this module. Its removal is asserted by the absence of
+ * the exports in the type system and by the progression service tests.
+ */
 describe('Stats Service', () => {
   let testUserId: number;
   let exercise1Id: number;
-  let exercise2Id: number;
 
   beforeEach(async () => {
     // Clean up test data - delete in order respecting foreign keys
@@ -49,7 +55,7 @@ describe('Stats Service', () => {
       .returning();
     testUserId = user.id;
 
-    // Create test exercises
+    // Create test exercise
     const [ex1] = await db
       .insert(exercises)
       .values({
@@ -61,191 +67,6 @@ describe('Stats Service', () => {
       })
       .returning();
     exercise1Id = ex1.id;
-
-    const [ex2] = await db
-      .insert(exercises)
-      .values({
-        slug: 'squat',
-        name: 'Sentadilla',
-        muscleGroup: 'Piernas',
-        instructions: 'Test',
-        isSystem: true,
-      })
-      .returning();
-    exercise2Id = ex2.id;
-  });
-
-  describe('getPersonalRecords', () => {
-    it('should return empty array if user has no sets', async () => {
-      const prs = await statsService.getPersonalRecords(testUserId);
-      expect(prs).toEqual([]);
-    });
-
-    it('should calculate PR correctly with lexicographic-resistant weights', async () => {
-      // This tests the fix for MAX(text) being lexicographic in SQLite
-      // Weights: "9", "80", "80.5" → PR should be "80.5" (not "9" which is lexicographically largest)
-
-      const workout1 = await workoutsService.createWorkout(testUserId);
-      await new Promise((resolve) => setTimeout(resolve, 100)); // Ensure different timestamps
-
-      // Add set with weight "9"
-      await workoutSetsService.createWorkoutSet({
-        workoutId: workout1.id,
-        userId: testUserId,
-        exerciseId: exercise1Id,
-        setIndex: 1,
-        reps: 10,
-        weightKg: '9',
-        semanticCaptureVersion: 1,
-        loadMode: 'external',
-        amountBasis: 'total',
-        side: 'bilateral',
-        setPurpose: 'working',
-        repCountBasis: null,
-      });
-
-      await workoutsService.updateWorkout(workout1.id, testUserId, { endedAt: new Date() });
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      const workout2 = await workoutsService.createWorkout(testUserId);
-
-      // Add set with weight "80"
-      await workoutSetsService.createWorkoutSet({
-        workoutId: workout2.id,
-        userId: testUserId,
-        exerciseId: exercise1Id,
-        setIndex: 1,
-        reps: 10,
-        weightKg: '80',
-        semanticCaptureVersion: 1,
-        loadMode: 'external',
-        amountBasis: 'total',
-        side: 'bilateral',
-        setPurpose: 'working',
-        repCountBasis: null,
-      });
-
-      await workoutsService.updateWorkout(workout2.id, testUserId, { endedAt: new Date() });
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      const workout3 = await workoutsService.createWorkout(testUserId);
-
-      // Add set with weight "80.5"
-      await workoutSetsService.createWorkoutSet({
-        workoutId: workout3.id,
-        userId: testUserId,
-        exerciseId: exercise1Id,
-        setIndex: 1,
-        reps: 10,
-        weightKg: '80.5',
-        semanticCaptureVersion: 1,
-        loadMode: 'external',
-        amountBasis: 'total',
-        side: 'bilateral',
-        setPurpose: 'working',
-        repCountBasis: null,
-      });
-
-      const prs = await statsService.getPersonalRecords(testUserId);
-
-      expect(prs).toHaveLength(1);
-      expect(prs[0].exerciseId).toBe(exercise1Id);
-      expect(prs[0].maxWeightKg).toBe('80.5');
-    });
-
-    it('should handle tie on weight with most recent workout winning', async () => {
-      const workout1 = await workoutsService.createWorkout(testUserId);
-      await new Promise((resolve) => setTimeout(resolve, 100)); // Ensure different timestamps
-
-      await workoutSetsService.createWorkoutSet({
-        workoutId: workout1.id,
-        userId: testUserId,
-        exerciseId: exercise1Id,
-        setIndex: 1,
-        reps: 10,
-        weightKg: '100',
-        semanticCaptureVersion: 1,
-        loadMode: 'external',
-        amountBasis: 'total',
-        side: 'bilateral',
-        setPurpose: 'working',
-        repCountBasis: null,
-      });
-
-      await workoutsService.updateWorkout(workout1.id, testUserId, { endedAt: new Date() });
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      const workout2 = await workoutsService.createWorkout(testUserId);
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      await workoutSetsService.createWorkoutSet({
-        workoutId: workout2.id,
-        userId: testUserId,
-        exerciseId: exercise1Id,
-        setIndex: 1,
-        reps: 8,
-        weightKg: '100', // Same weight
-        semanticCaptureVersion: 1,
-        loadMode: 'external',
-        amountBasis: 'total',
-        side: 'bilateral',
-        setPurpose: 'working',
-        repCountBasis: null,
-      });
-
-      const prs = await statsService.getPersonalRecords(testUserId);
-
-      expect(prs).toHaveLength(1);
-      expect(prs[0].maxWeightKg).toBe('100');
-      // Verify most recent workout wins the tie
-      expect(prs[0].workoutId).toBeGreaterThan(workout1.id);
-    });
-
-    it('should return PRs grouped by exercise', async () => {
-      const workout = await workoutsService.createWorkout(testUserId);
-
-      // Exercise 1 PR
-      await workoutSetsService.createWorkoutSet({
-        workoutId: workout.id,
-        userId: testUserId,
-        exerciseId: exercise1Id,
-        setIndex: 1,
-        reps: 10,
-        weightKg: '120.5',
-        semanticCaptureVersion: 1,
-        loadMode: 'external',
-        amountBasis: 'total',
-        side: 'bilateral',
-        setPurpose: 'working',
-        repCountBasis: null,
-      });
-
-      // Exercise 2 PR
-      await workoutSetsService.createWorkoutSet({
-        workoutId: workout.id,
-        userId: testUserId,
-        exerciseId: exercise2Id,
-        setIndex: 2,
-        reps: 10,
-        weightKg: '150',
-        semanticCaptureVersion: 1,
-        loadMode: 'external',
-        amountBasis: 'total',
-        side: 'bilateral',
-        setPurpose: 'working',
-        repCountBasis: null,
-      });
-
-      const prs = await statsService.getPersonalRecords(testUserId);
-
-      expect(prs).toHaveLength(2);
-
-      const pr1 = prs.find((pr) => pr.exerciseId === exercise1Id);
-      expect(pr1?.maxWeightKg).toBe('120.5');
-
-      const pr2 = prs.find((pr) => pr.exerciseId === exercise2Id);
-      expect(pr2?.maxWeightKg).toBe('150');
-    });
   });
 
   describe('getExerciseHistory', () => {
@@ -330,58 +151,9 @@ describe('Stats Service', () => {
     });
   });
 
-  describe('isPR', () => {
-    it('should return true if weight equals or exceeds current PR', async () => {
-      const workout = await workoutsService.createWorkout(testUserId);
-
-      await workoutSetsService.createWorkoutSet({
-        workoutId: workout.id,
-        userId: testUserId,
-        exerciseId: exercise1Id,
-        setIndex: 1,
-        reps: 10,
-        weightKg: '120',
-        semanticCaptureVersion: 1,
-        loadMode: 'external',
-        amountBasis: 'total',
-        side: 'bilateral',
-        setPurpose: 'working',
-        repCountBasis: null,
-      });
-
-      const isEqual = await statsService.isPR(testUserId, exercise1Id, '120');
-      const isExceeds = await statsService.isPR(testUserId, exercise1Id, '125');
-
-      expect(isEqual).toBe(true);
-      expect(isExceeds).toBe(true);
-    });
-
-    it('should return false if weight is less than current PR', async () => {
-      const workout = await workoutsService.createWorkout(testUserId);
-
-      await workoutSetsService.createWorkoutSet({
-        workoutId: workout.id,
-        userId: testUserId,
-        exerciseId: exercise1Id,
-        setIndex: 1,
-        reps: 10,
-        weightKg: '120',
-        semanticCaptureVersion: 1,
-        loadMode: 'external',
-        amountBasis: 'total',
-        side: 'bilateral',
-        setPurpose: 'working',
-        repCountBasis: null,
-      });
-
-      const result = await statsService.isPR(testUserId, exercise1Id, '115');
-
-      expect(result).toBe(false);
-    });
-
-    it('should return true if no previous PR exists', async () => {
-      const result = await statsService.isPR(testUserId, exercise1Id, '100');
-      expect(result).toBe(true);
-    });
+  it('exposes no bare-weight PR truth (getPersonalRecords/isPR retired)', () => {
+    const service = statsService as unknown as Record<string, unknown>;
+    expect(service.getPersonalRecords).toBeUndefined();
+    expect(service.isPR).toBeUndefined();
   });
 });

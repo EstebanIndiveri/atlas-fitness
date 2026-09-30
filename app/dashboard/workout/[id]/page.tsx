@@ -9,7 +9,6 @@ import { Input, TextArea, fieldClassName } from '@/components/ui/Input';
 import { EmptyState, LoadingState } from '@/components/ui/states';
 import { SetSemanticsControls } from '@/components/session/SetSemanticsControls';
 import { UI_COPY } from '@/lib/copy/ui';
-import { compareDecimal } from '@/lib/format/decimal';
 import { describeRecordedAmount, LEGACY_AMOUNT_LABEL } from '@/lib/format/amount';
 import { canonicalSemantics } from '@/lib/progression/semantics';
 import {
@@ -35,14 +34,6 @@ interface WorkoutWithSets {
   sets: WorkoutSet[];
 }
 
-interface PersonalRecord {
-  exerciseId: number;
-  exerciseName: string;
-  maxWeightKg: string;
-  recordDate: Date;
-  workoutId: number;
-}
-
 export default function WorkoutSessionPage() {
   const params = useParams();
   const router = useRouter();
@@ -50,7 +41,6 @@ export default function WorkoutSessionPage() {
 
   const [workout, setWorkout] = useState<WorkoutWithSets | null>(null);
   const [exercises, setExercises] = useState<Exercise[]>([]);
-  const [prs, setPrs] = useState<PersonalRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddSet, setShowAddSet] = useState(false);
   const [showEndWorkout, setShowEndWorkout] = useState(false);
@@ -95,10 +85,9 @@ export default function WorkoutSessionPage() {
 
   const fetchData = useCallback(async () => {
     try {
-      const [workoutRes, exercisesRes, prsRes] = await Promise.all([
+      const [workoutRes, exercisesRes] = await Promise.all([
         fetch(`/api/workouts/${workoutId}`),
         fetch('/api/exercises'),
-        fetch('/api/stats/prs'),
       ]);
 
       if (workoutRes.ok) {
@@ -111,11 +100,6 @@ export default function WorkoutSessionPage() {
       if (exercisesRes.ok) {
         const exercisesData = await exercisesRes.json();
         setExercises(exercisesData);
-      }
-
-      if (prsRes.ok) {
-        const prsData = await prsRes.json();
-        setPrs(prsData);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -257,12 +241,6 @@ export default function WorkoutSessionPage() {
   const startRestTimer = (seconds: number) => {
     setRestTimer(seconds);
     setTimerActive(true);
-  };
-
-  const isPR = (exerciseId: number, weightKg: string): boolean => {
-    const pr = prs.find((p) => p.exerciseId === exerciseId);
-    if (!pr) return true;
-    return compareDecimal(weightKg, pr.maxWeightKg) >= 0;
   };
 
   if (loading) {
@@ -416,14 +394,10 @@ export default function WorkoutSessionPage() {
                 canonical?.status === 'canonical'
                   ? describeRecordedAmount(canonical.tuple, set.weightKg)
                   : `${set.weightKg} kg · ${LEGACY_AMOUNT_LABEL}`;
-              // Only a declared external working set may carry a PR badge; new
-              // bodyweight/assisted/warmup rows never become more misleading.
-              const comparable =
-                canonical?.status === 'canonical' &&
-                canonical.tuple.loadMode === 'external' &&
-                canonical.tuple.setPurpose === 'working' &&
-                canonical.tuple.side !== 'alternating';
-              const isNewPR = (set.semanticCaptureVersion === null || comparable) && isPR(set.exerciseId, set.weightKg);
+
+              // An open workout set is never classified as a record: v0.12 only
+              // derives a PR from the versioned progression read model over
+              // closed workouts, so this page shows raw recorded sets only.
 
               return (
                 <div
@@ -437,14 +411,6 @@ export default function WorkoutSessionPage() {
                     </p>
                     <p className="text-xs text-ink-muted">
                       {set.reps} reps · {amountLabel}
-                      {isNewPR && (
-                        <span
-                          className="ml-2 rounded-md bg-warning-muted px-2 py-0.5 text-xs font-medium text-warning"
-                          data-testid="pr-badge"
-                        >
-                          🏆 PR
-                        </span>
-                      )}
                     </p>
                   </div>
                   {!isEnded && (

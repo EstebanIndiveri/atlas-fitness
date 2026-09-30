@@ -63,6 +63,65 @@ describe('parseWorkoutQueueActionResponse', () => {
     expect(parsed?.action).toBe('skip');
     expect(parsed?.sets?.[0].weightKg).toBe('40.5');
     expect(parsed?.suggestion.nextExerciseId).toBe(20);
+    // An omitted tuple is an explicit unknown, never inferred.
+    expect(parsed?.sets?.[0].semanticCaptureVersion).toBeNull();
+    expect(parsed?.sets?.[0].loadMode).toBeNull();
+  });
+
+  it('preserves a declared semantic tuple through the transport', () => {
+    const parsed = parseWorkoutQueueActionResponse({
+      action: 'hold',
+      clientMutationId: 'mut-2',
+      duplicate: false,
+      queue: { pendingExerciseIds: [10], skippedExerciseIds: [], heldExerciseIds: [] },
+      suggestion: { source: 'fallback', isLast: false, nextExerciseId: 10, message: 'x' },
+      sets: [
+        {
+          id: 2,
+          exerciseId: 10,
+          setIndex: 1,
+          reps: 8,
+          weightKg: '0',
+          semanticCaptureVersion: 1,
+          loadMode: 'bodyweight',
+          amountBasis: null,
+          side: 'bilateral',
+          setPurpose: 'working',
+          repCountBasis: null,
+        },
+      ],
+    });
+
+    expect(parsed?.sets?.[0].semanticCaptureVersion).toBe(1);
+    expect(parsed?.sets?.[0].loadMode).toBe('bodyweight');
+    expect(parsed?.sets?.[0].amountBasis).toBeNull();
+  });
+
+  it('rejects a malformed semantic tuple instead of inventing semantics', () => {
+    const parsed = parseWorkoutQueueActionResponse({
+      action: 'skip',
+      clientMutationId: 'mut-3',
+      duplicate: false,
+      queue: { pendingExerciseIds: [10], skippedExerciseIds: [], heldExerciseIds: [] },
+      suggestion: { source: 'fallback', isLast: false, nextExerciseId: 10, message: 'x' },
+      sets: [
+        {
+          id: 3,
+          exerciseId: 10,
+          setIndex: 1,
+          reps: 8,
+          weightKg: '50',
+          semanticCaptureVersion: 1,
+          loadMode: 5,
+          amountBasis: null,
+          side: null,
+          setPurpose: null,
+          repCountBasis: null,
+        },
+      ],
+    });
+
+    expect(parsed).toBeNull();
   });
 });
 

@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { UI_COPY } from '@/lib/copy/ui';
 import type { ProgressPeriod, ProgressSessionSummary, ProgressSummary } from '@/lib/services/progress-summary';
-import type { StrengthProgressSummary, StrengthVolumePoint } from '@/lib/services/strength-progress';
 import type { WeekConsistency, WeekDayConsistency } from '@/types/week';
 
 type UseProgressResult = {
@@ -30,30 +29,7 @@ function isSessionSummary(value: unknown): value is ProgressSessionSummary {
     Number.isInteger(value.workoutId) &&
     typeof value.startedAt === 'string' &&
     (Number.isInteger(value.durationMinutes) || value.durationMinutes === null) &&
-    (typeof value.routineName === 'string' || value.routineName === null) &&
-    (typeof value.totalVolumeKg === 'string' || value.totalVolumeKg === null)
-  );
-}
-
-function isStrengthVolumePoint(value: unknown): value is StrengthVolumePoint {
-  return (
-    isRecord(value) &&
-    Number.isInteger(value.workoutId) &&
-    typeof value.startedAt === 'string' &&
-    typeof value.localDate === 'string' &&
-    typeof value.totalVolumeKg === 'string' &&
-    Number.isInteger(value.completedSets)
-  );
-}
-
-function isStrengthProgressSummary(value: unknown): value is StrengthProgressSummary {
-  return (
-    isRecord(value) &&
-    typeof value.hasLoggedSets === 'boolean' &&
-    (typeof value.latestVolumeKg === 'string' || value.latestVolumeKg === null) &&
-    typeof value.trendLabel === 'string' &&
-    Array.isArray(value.points) &&
-    value.points.every(isStrengthVolumePoint)
+    (typeof value.routineName === 'string' || value.routineName === null)
   );
 }
 
@@ -65,7 +41,6 @@ function isProgressSummary(value: unknown): value is ProgressSummary {
     typeof value.toLocalDate === 'string' &&
     Number.isInteger(value.completedSessions) &&
     Number.isInteger(value.totalDurationMinutes) &&
-    (!('strength' in value) || isStrengthProgressSummary(value.strength)) &&
     Array.isArray(value.sessions) &&
     value.sessions.every(isSessionSummary)
   );

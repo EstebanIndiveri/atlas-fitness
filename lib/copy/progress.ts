@@ -39,15 +39,6 @@ export const PROGRESS_COPY = {
     emptyTitle: 'Sin consistencia semanal',
     emptyBody: 'Cuando haya datos reales de esta semana, Atlas los va a mostrar acá.',
   },
-  strength: {
-    title: 'Evolución de fuerza',
-    volumeLabel: 'Volumen de la última sesión',
-    chartLabel: 'Evolución de volumen por sesión',
-    startingPointBody: 'Primer punto real: seguí registrando para ver la tendencia.',
-    emptyTitle: 'Sin gráfico de fuerza todavía',
-    emptyBody: 'Todavía no hay series completadas para graficar tu fuerza.',
-    emptyWhy: 'Atlas solo muestra volumen real calculado desde series guardadas: peso × repeticiones.',
-  },
   wellbeing: {
     title: 'Bienestar registrado',
     moodLabel: 'Ánimo registrado',
@@ -126,8 +117,6 @@ export const PROGRESS_COPY = {
     freeWorkout: 'Entrenamiento libre',
     durationLabel: 'Duración de la sesión',
     durationUnavailable: 'Duración no registrada',
-    volumeLabel: 'Volumen de la sesión',
-    volumeUnavailable: 'Volumen no disponible',
   },
   states: {
     loading: 'Cargando…',

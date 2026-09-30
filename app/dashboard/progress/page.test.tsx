@@ -168,8 +168,7 @@ describe('ProgressPage', () => {
         toLocalDate: '2026-09-30',
         completedSessions: 14,
         totalDurationMinutes: 915,
-        strength: { hasLoggedSets: false, latestVolumeKg: null, trendLabel: 'Sin datos de fuerza', points: [] },
-        sessions: [{ workoutId: 3, startedAt: '2026-09-20T12:00:00.000Z', durationMinutes: 50, routineName: 'Empuje', totalVolumeKg: null }],
+        sessions: [{ workoutId: 3, startedAt: '2026-09-20T12:00:00.000Z', durationMinutes: 50, routineName: 'Empuje' }],
       },
     });
 
@@ -181,7 +180,7 @@ describe('ProgressPage', () => {
     expect(screen.getByRole('heading', { name: 'Resumen del mes' })).toBeTruthy();
     expect(screen.getByLabelText('Consistencia').textContent).toContain('Sin datos');
     expect(screen.getByRole('heading', { name: 'Consistencia semanal' })).toBeTruthy();
-    expect(screen.getByRole('heading', { name: 'Evolución de fuerza' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Evolución de fuerza' })).toBeNull();
     expect(screen.getByRole('heading', { name: 'Bienestar registrado' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Actividad de hábitos registrada' })).toBeTruthy();
     expect(screen.getByText('Registraste hábitos en 5 de los 30 días transcurridos.')).toBeTruthy();
@@ -191,7 +190,7 @@ describe('ProgressPage', () => {
     expect(screen.getByText('7 de 10 días objetivo')).toBeTruthy();
     expect(useHabitTargetAdherence).toHaveBeenCalledWith('month');
     expect(screen.getByRole('heading', { name: 'Sesiones recientes' })).toBeTruthy();
-    expect(screen.getByText('Todavía no hay series completadas para graficar tu fuerza.')).toBeTruthy();
+    expect(screen.queryByText('Todavía no hay series completadas para graficar tu fuerza.')).toBeNull();
   });
 
   it('keeps observed habit activity and target adherence as separate cards with separate numbers', () => {
@@ -218,7 +217,6 @@ describe('ProgressPage', () => {
         toLocalDate: '2026-09-30',
         completedSessions: 14,
         totalDurationMinutes: 915,
-        strength: { hasLoggedSets: false, latestVolumeKg: null, trendLabel: 'Sin datos de fuerza', points: [] },
         sessions: [],
       },
     });
@@ -256,18 +254,6 @@ describe('ProgressPage', () => {
         toLocalDate: '2026-09-20',
         completedSessions: 2,
         totalDurationMinutes: 120,
-        strength: {
-          hasLoggedSets: true,
-          latestVolumeKg: '810',
-          trendLabel: 'Punto de partida',
-          points: [{
-            workoutId: 3,
-            startedAt: '2026-09-20T12:00:00.000Z',
-            localDate: '2026-09-20',
-            totalVolumeKg: '810',
-            completedSets: 4,
-          }],
-        },
         sessions: [],
       },
     });
@@ -276,7 +262,8 @@ describe('ProgressPage', () => {
 
     expect(screen.getByRole('heading', { name: 'Resumen de la semana' })).toBeTruthy();
     expect(screen.getByLabelText('Consistencia').textContent).toContain('57%');
-    expect(screen.getByLabelText('Volumen de la última sesión').textContent).toContain('810 kg');
+    expect(screen.queryByLabelText('Volumen de la última sesión')).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Evolución de fuerza' })).toBeNull();
   });
 
   it('renders empty state when progress summary has no sessions', () => {
@@ -292,7 +279,6 @@ describe('ProgressPage', () => {
         toLocalDate: '2026-09-20',
         completedSessions: 0,
         totalDurationMinutes: 0,
-        strength: { hasLoggedSets: false, latestVolumeKg: null, trendLabel: 'Sin datos de fuerza', points: [] },
         sessions: [],
       },
     });
@@ -333,7 +319,6 @@ describe('ProgressPage', () => {
         toLocalDate: '2026-09-30',
         completedSessions: 30,
         totalDurationMinutes: 1500,
-        strength: { hasLoggedSets: false, latestVolumeKg: null, trendLabel: 'Sin datos de fuerza', points: [] },
         sessions: [],
       },
     });

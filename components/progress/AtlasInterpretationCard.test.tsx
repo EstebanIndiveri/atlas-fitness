@@ -12,7 +12,6 @@ const summary: ProgressSummary = {
   toLocalDate: '2026-09-30',
   completedSessions: 6,
   totalDurationMinutes: 385,
-  strength: { hasLoggedSets: false, latestVolumeKg: null, trendLabel: 'Sin datos de fuerza', points: [] },
   sessions: [],
 };
 

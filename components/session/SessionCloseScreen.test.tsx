@@ -20,11 +20,9 @@ const baseProps = {
 
 const summary = {
   streak: { currentStreak: 3, longestStreak: 5, lastActiveDate: '2026-09-20' },
-  improvements: [],
   stats: {
     durationMinutes: 48,
     completedSets: 2,
-    totalVolumeKg: '0.7',
   },
 };
 
@@ -42,18 +40,24 @@ describe('SessionCloseScreen', () => {
     expect(screen.getByText('Full body exprés')).toBeTruthy();
     expect(screen.getByLabelText('Duración').textContent).toContain('48 min');
     expect(screen.getByLabelText('Series').textContent).toContain('2 completadas');
-    expect(screen.getByLabelText('Volumen').textContent).toContain('0.7 kg');
-    expect(screen.getAllByText(MetricSourceLabel.atlas_computed)).toHaveLength(3);
+    expect(screen.getAllByText(MetricSourceLabel.atlas_computed)).toHaveLength(2);
   });
 
-  it('lays out close stats as readable mobile cards instead of cramped three-up cards', () => {
+  it('never renders a mixed-mode volume or bare-weight improvement claim', () => {
+    render(<SessionCloseScreen {...baseProps} summary={summary} />);
+
+    expect(screen.queryByLabelText('Volumen')).toBeNull();
+    expect(screen.queryByTestId('close-improvement')).toBeNull();
+    expect(screen.queryByText(/menos que la última sesión/)).toBeNull();
+  });
+
+  it('lays out close stats as readable mobile cards', () => {
     render(<SessionCloseScreen {...baseProps} summary={summary} />);
 
     const stats = screen.getByTestId('close-stats');
     expect(stats.className).toContain('grid-cols-1');
     expect(stats.className).toContain('min-[380px]:grid-cols-2');
     expect(screen.getByLabelText('Series').className).toContain('items-start');
-    expect(screen.getByLabelText('Volumen').textContent).toContain('0.7 kg');
   });
 
   it('omits duration when the summary cannot honestly derive it', () => {
@@ -69,7 +73,6 @@ describe('SessionCloseScreen', () => {
 
     expect(screen.queryByLabelText('Duración')).toBeNull();
     expect(screen.getByLabelText('Series').textContent).toContain('2 completadas');
-    expect(screen.getByLabelText('Volumen').textContent).toContain('0.7 kg');
   });
 
   it('keeps save disabled until effort and sensation are selected', () => {

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { MetricValue } from '@/components/ui/MetricValue';
 import { PostWorkoutFeedbackForm } from '@/components/session/PostWorkoutFeedbackForm';
-import { formatImprovement, SESSION_COPY } from '@/lib/copy/session';
+import { SESSION_COPY } from '@/lib/copy/session';
 import { metric } from '@/types/metric';
 import type {
   DiscomfortEntry,
@@ -88,12 +88,6 @@ export function SessionCloseScreen({
           </p>
         ) : null}
 
-        {summary?.improvements.map((item) => (
-          <p key={item.exerciseId} className="text-sm text-ink" data-testid="close-improvement">
-            {formatImprovement(item)}
-          </p>
-        ))}
-
         <PostWorkoutFeedbackForm
           effort={effort}
           onEffort={onEffort}
@@ -131,10 +125,6 @@ function CloseStats({ summary }: { summary: GuidedCloseSummary }) {
     {
       label: SESSION_COPY.closeStatsSeries,
       value: SESSION_COPY.closeStatsCompleted(summary.stats.completedSets),
-    },
-    {
-      label: SESSION_COPY.closeStatsVolume,
-      value: `${summary.stats.totalVolumeKg} kg`,
     },
   ].filter((item) => item !== null);
 
