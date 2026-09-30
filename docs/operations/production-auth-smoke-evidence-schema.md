@@ -95,10 +95,11 @@ verbose mode, screenshots, or raw response artifacts around a production run.
 
 ## 5. Linking evidence to release truth (later only)
 
-This section documents the procedure. **It does not change v0.11 release status
-now.** Today, the v0.11 authenticated production smoke is `NOT PERFORMED` and the
-release truth in `CHANGELOG.md` / `docs/backlog/handoff-2026-09.md` must not be
-edited by this workstream.
+This section documents the procedure. The v0.11 authenticated production smoke has
+been executed and **PASSed** (2026-09-30; workflow run `36747341881`), and the
+release truth in `CHANGELOG.md` / `docs/backlog/handoff-2026-09.md` now records that
+closure. See
+[`2026-09-30-production-smoke-h5-execution-evidence.md`](./2026-09-30-production-smoke-h5-execution-evidence.md).
 
 After an actual, reviewed run (H5), the release owner may:
 
