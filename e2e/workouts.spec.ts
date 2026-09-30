@@ -90,9 +90,9 @@ test.describe('Workout Flow', () => {
     // Select exercise (assuming Press Banca exists from seed)
     await page.selectOption('[data-testid="exercise-select"]', { index: 1 });
     await page.fill('[data-testid="reps-input"]', '10');
+    await selectExternalSemantics(page);
     await page.fill('[data-testid="weight-input"]', '100');
     
-    await selectExternalSemantics(page);
     await Promise.all([
       page.waitForResponse((resp) => resp.url().includes('/sets') && resp.status() === 201),
       page.getByTestId('save-set-button').click(),
@@ -119,8 +119,8 @@ test.describe('Workout Flow', () => {
     await page.click('[data-testid="add-set-button"]');
     await page.selectOption('[data-testid="exercise-select"]', { index: 1 });
     await page.fill('[data-testid="reps-input"]', '8');
-    await page.fill('[data-testid="weight-input"]', '110');
     await selectExternalSemantics(page);
+    await page.fill('[data-testid="weight-input"]', '110');
     await Promise.all([
       page.waitForResponse((resp) => resp.url().includes('/sets') && resp.status() === 201),
       page.getByTestId('save-set-button').click(),
@@ -177,8 +177,8 @@ test.describe('Workout Flow', () => {
     await page.click('[data-testid="add-set-button"]');
     await page.selectOption('[data-testid="exercise-select"]', { index: 1 });
     await page.fill('[data-testid="reps-input"]', '10');
-    await page.fill('[data-testid="weight-input"]', '100');
     await selectExternalSemantics(page);
+    await page.fill('[data-testid="weight-input"]', '100');
     await Promise.all([
       page.waitForResponse((resp) => resp.url().includes('/sets') && resp.status() === 201),
       page.getByTestId('save-set-button').click(),
@@ -202,8 +202,8 @@ test.describe('Workout Flow', () => {
     await page.click('[data-testid="add-set-button"]');
     await page.selectOption('[data-testid="exercise-select"]', { index: 1 });
     await page.fill('[data-testid="reps-input"]', '10');
-    await page.fill('[data-testid="weight-input"]', '95');
     await selectExternalSemantics(page);
+    await page.fill('[data-testid="weight-input"]', '95');
     await Promise.all([
       page.waitForResponse((resp) => resp.url().includes('/sets') && resp.status() === 201),
       page.getByTestId('save-set-button').click(),
@@ -216,8 +216,8 @@ test.describe('Workout Flow', () => {
     await page.click('[data-testid="add-set-button"]');
     await page.selectOption('[data-testid="exercise-select"]', { index: 1 });
     await page.fill('[data-testid="reps-input"]', '8');
-    await page.fill('[data-testid="weight-input"]', '105');
     await selectExternalSemantics(page);
+    await page.fill('[data-testid="weight-input"]', '105');
     await Promise.all([
       page.waitForResponse((resp) => resp.url().includes('/sets') && resp.status() === 201),
       page.getByTestId('save-set-button').click(),
@@ -234,8 +234,8 @@ test.describe('Workout Flow', () => {
     await page.click('[data-testid="add-set-button"]');
     await page.selectOption('[data-testid="exercise-select"]', { index: 1 });
     await page.fill('[data-testid="reps-input"]', '10');
-    await page.fill('[data-testid="weight-input"]', '100');
     await selectExternalSemantics(page);
+    await page.fill('[data-testid="weight-input"]', '100');
     await Promise.all([
       page.waitForResponse((resp) => resp.url().includes('/sets') && resp.status() === 201),
       page.getByTestId('save-set-button').click(),
@@ -287,8 +287,8 @@ test.describe('Workout Flow', () => {
     await page.click('[data-testid="add-set-button"]');
     await page.selectOption('[data-testid="exercise-select"]', { index: 1 });
     await page.fill('[data-testid="reps-input"]', '10');
-    await page.fill('[data-testid="weight-input"]', '100');
     await selectExternalSemantics(page);
+    await page.fill('[data-testid="weight-input"]', '100');
     await Promise.all([
       page.waitForResponse((resp) => resp.url().includes('/sets') && resp.status() === 201),
       page.getByTestId('save-set-button').click(),
