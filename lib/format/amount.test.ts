@@ -28,6 +28,15 @@ describe('describeRecordedAmount', () => {
     );
   });
 
+  it('keeps the alternating rep basis for bodyweight', () => {
+    expect(
+      describeRecordedAmount(
+        canonical({ loadMode: 'bodyweight', amountBasis: null, side: 'alternating', repCountBasis: 'total' }),
+        '0',
+      ),
+    ).toBe('peso corporal (sin carga externa) (alternado, reps totales)');
+  });
+
   it('labels assistance as assistance', () => {
     expect(describeRecordedAmount(canonical({ loadMode: 'assisted' }), '25')).toBe('asistencia 25 kg');
   });

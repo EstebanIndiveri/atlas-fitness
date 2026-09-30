@@ -59,7 +59,7 @@ export function describeRecordedAmount(canonical: CanonicalSemantics, weightKg: 
       : '';
 
   if (loadMode === 'bodyweight') {
-    return 'peso corporal (sin carga externa)';
+    return `peso corporal (sin carga externa)${alternatingSuffix}`;
   }
   if (loadMode === 'assisted') {
     return `asistencia ${weightKg} kg${perSide ? ' por lado' : ''}${alternatingSuffix}`;

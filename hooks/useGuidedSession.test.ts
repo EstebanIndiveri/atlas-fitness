@@ -338,6 +338,7 @@ describe('useGuidedSession skip/hold', () => {
     ]);
     expect(result.current.completedCount).toBe(1);
     expect(result.current.reps).toBe('8');
+    expect(result.current.semantics.reused).toBe(true);
   });
 
   it('adds one local set to the current exercise without changing another exercise', async () => {
