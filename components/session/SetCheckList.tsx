@@ -130,7 +130,7 @@ export function SetCheckList({
       >
         <span role="columnheader">SERIE</span>
         <span className="min-w-0 text-center" role="columnheader">
-          CARGA (KG)
+          CARGA
         </span>
         <span className="text-center" role="columnheader">
           REPS
