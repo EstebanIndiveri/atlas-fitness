@@ -9,6 +9,12 @@ type SessionCompleteSetBarProps = {
   reps: string;
   busy: boolean;
   nextExerciseName?: string | null;
+  /**
+   * When provided, overrides the legacy positive-weight gate. The guided player
+   * passes the result of the same pure capture validator the API uses, so
+   * bodyweight zero and a complete semantic tuple enable the CTA correctly.
+   */
+  canComplete?: boolean;
   onCompleteSet: () => void;
 };
 
@@ -31,10 +37,12 @@ export function SessionCompleteSetBar({
   reps,
   busy,
   nextExerciseName,
+  canComplete,
   onCompleteSet,
 }: SessionCompleteSetBarProps) {
   const completeLabel = `COMPLETAR SERIE ${activeSet}`;
   const completeAriaLabel = `Completar serie ${activeSet}`;
+  const enabled = canComplete ?? (isValidWeightKg(weight.trim()) && hasValidReps(reps));
 
   return (
     <div
@@ -45,7 +53,7 @@ export function SessionCompleteSetBar({
         size="lg"
         className="min-h-12 rounded-xl bg-brand text-base font-black tracking-[0.02em] text-brand-foreground hover:bg-brand-hover disabled:bg-brand/60 disabled:text-brand-foreground disabled:opacity-100"
         onClick={onCompleteSet}
-        disabled={busy || !isValidWeightKg(weight.trim()) || !hasValidReps(reps)}
+        disabled={busy || !enabled}
         data-testid="complete-set-button"
         aria-label={completeAriaLabel}
       >

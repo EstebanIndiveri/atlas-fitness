@@ -96,6 +96,12 @@ describe('Stats Service', () => {
         setIndex: 1,
         reps: 10,
         weightKg: '9',
+        semanticCaptureVersion: 1,
+        loadMode: 'external',
+        amountBasis: 'total',
+        side: 'bilateral',
+        setPurpose: 'working',
+        repCountBasis: null,
       });
 
       await workoutsService.updateWorkout(workout1.id, testUserId, { endedAt: new Date() });
@@ -111,6 +117,12 @@ describe('Stats Service', () => {
         setIndex: 1,
         reps: 10,
         weightKg: '80',
+        semanticCaptureVersion: 1,
+        loadMode: 'external',
+        amountBasis: 'total',
+        side: 'bilateral',
+        setPurpose: 'working',
+        repCountBasis: null,
       });
 
       await workoutsService.updateWorkout(workout2.id, testUserId, { endedAt: new Date() });
@@ -126,6 +138,12 @@ describe('Stats Service', () => {
         setIndex: 1,
         reps: 10,
         weightKg: '80.5',
+        semanticCaptureVersion: 1,
+        loadMode: 'external',
+        amountBasis: 'total',
+        side: 'bilateral',
+        setPurpose: 'working',
+        repCountBasis: null,
       });
 
       const prs = await statsService.getPersonalRecords(testUserId);
@@ -146,6 +164,12 @@ describe('Stats Service', () => {
         setIndex: 1,
         reps: 10,
         weightKg: '100',
+        semanticCaptureVersion: 1,
+        loadMode: 'external',
+        amountBasis: 'total',
+        side: 'bilateral',
+        setPurpose: 'working',
+        repCountBasis: null,
       });
 
       await workoutsService.updateWorkout(workout1.id, testUserId, { endedAt: new Date() });
@@ -161,6 +185,12 @@ describe('Stats Service', () => {
         setIndex: 1,
         reps: 8,
         weightKg: '100', // Same weight
+        semanticCaptureVersion: 1,
+        loadMode: 'external',
+        amountBasis: 'total',
+        side: 'bilateral',
+        setPurpose: 'working',
+        repCountBasis: null,
       });
 
       const prs = await statsService.getPersonalRecords(testUserId);
@@ -182,6 +212,12 @@ describe('Stats Service', () => {
         setIndex: 1,
         reps: 10,
         weightKg: '120.5',
+        semanticCaptureVersion: 1,
+        loadMode: 'external',
+        amountBasis: 'total',
+        side: 'bilateral',
+        setPurpose: 'working',
+        repCountBasis: null,
       });
 
       // Exercise 2 PR
@@ -192,6 +228,12 @@ describe('Stats Service', () => {
         setIndex: 2,
         reps: 10,
         weightKg: '150',
+        semanticCaptureVersion: 1,
+        loadMode: 'external',
+        amountBasis: 'total',
+        side: 'bilateral',
+        setPurpose: 'working',
+        repCountBasis: null,
       });
 
       const prs = await statsService.getPersonalRecords(testUserId);
@@ -217,6 +259,12 @@ describe('Stats Service', () => {
         setIndex: 1,
         reps: 10,
         weightKg: '100',
+        semanticCaptureVersion: 1,
+        loadMode: 'external',
+        amountBasis: 'total',
+        side: 'bilateral',
+        setPurpose: 'working',
+        repCountBasis: null,
       });
 
       await workoutSetsService.createWorkoutSet({
@@ -226,6 +274,12 @@ describe('Stats Service', () => {
         setIndex: 2,
         reps: 8,
         weightKg: '105',
+        semanticCaptureVersion: 1,
+        loadMode: 'external',
+        amountBasis: 'total',
+        side: 'bilateral',
+        setPurpose: 'working',
+        repCountBasis: null,
       });
 
       const history = await statsService.getExerciseHistory(exercise1Id, testUserId);
@@ -287,6 +341,12 @@ describe('Stats Service', () => {
         setIndex: 1,
         reps: 10,
         weightKg: '120',
+        semanticCaptureVersion: 1,
+        loadMode: 'external',
+        amountBasis: 'total',
+        side: 'bilateral',
+        setPurpose: 'working',
+        repCountBasis: null,
       });
 
       const isEqual = await statsService.isPR(testUserId, exercise1Id, '120');
@@ -306,6 +366,12 @@ describe('Stats Service', () => {
         setIndex: 1,
         reps: 10,
         weightKg: '120',
+        semanticCaptureVersion: 1,
+        loadMode: 'external',
+        amountBasis: 'total',
+        side: 'bilateral',
+        setPurpose: 'working',
+        repCountBasis: null,
       });
 
       const result = await statsService.isPR(testUserId, exercise1Id, '115');

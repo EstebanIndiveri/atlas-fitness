@@ -316,6 +316,12 @@ describe('applyWorkoutQueueAction', () => {
       setIndex: 1,
       reps: 5,
       weightKg: '40.5',
+      semanticCaptureVersion: 1,
+      loadMode: 'external',
+      amountBasis: 'total',
+      side: 'bilateral',
+      setPurpose: 'working',
+      repCountBasis: null,
     });
 
     const before = await listWorkoutSets(workout.id, userId);

@@ -802,7 +802,18 @@ test.describe('Habit targets — integration', () => {
       expect(withSetsResponse.status()).toBe(201);
       const withSets = (await withSetsResponse.json()) as { id: number };
       const setResponse = await page.request.post(`/api/workouts/${withSets.id}/sets`, {
-        data: { exerciseId, setIndex: 1, reps: 3, weightKg: '50.55' },
+        data: {
+          exerciseId,
+          setIndex: 1,
+          reps: 3,
+          weightKg: '50.55',
+          semanticCaptureVersion: 1,
+          loadMode: 'external',
+          amountBasis: 'total',
+          side: 'bilateral',
+          setPurpose: 'working',
+          repCountBasis: null,
+        },
       });
       expect(setResponse.status()).toBe(201);
       const closeWithSets = await page.request.patch(`/api/workouts/${withSets.id}`, {

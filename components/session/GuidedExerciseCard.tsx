@@ -14,6 +14,7 @@ import { SESSION_COPY } from '@/lib/copy/session';
 import { cn } from '@/lib/ui/cn';
 import { metric } from '@/types/metric';
 import type { RoutineExerciseItem } from '@/types/routine';
+import type { SessionSemanticsControls } from '@/lib/session/semantics-draft';
 
 type GuidedExerciseCardProps = {
   workoutId: number;
@@ -32,12 +33,20 @@ type GuidedExerciseCardProps = {
   resting?: boolean;
   readOnly?: boolean;
   nextExerciseName?: string | null;
+  semantics?: SessionSemanticsControls;
+  canSubmitSet?: boolean;
 };
 
 type CompletedSet = {
   setIndex: number;
   weightKg: string;
   reps: number;
+  semanticCaptureVersion?: number | null;
+  loadMode?: string | null;
+  amountBasis?: string | null;
+  side?: string | null;
+  setPurpose?: string | null;
+  repCountBasis?: string | null;
 };
 
 type SecondaryPanel = 'technique' | 'replace' | 'notes' | 'last';
@@ -94,6 +103,8 @@ export function GuidedExerciseCard({
   resting = false,
   readOnly = false,
   nextExerciseName,
+  semantics,
+  canSubmitSet,
 }: GuidedExerciseCardProps) {
   const [panel, setPanel] = useState<SecondaryPanel | null>(null);
   const memory = useExerciseSessionMemory({ workoutId, exerciseId: exercise.exerciseId });
@@ -232,6 +243,7 @@ export function GuidedExerciseCard({
             busy={busy}
             resting={resting}
             nextExerciseName={nextExerciseName}
+            semantics={semantics}
           />
         </div>
       </Card>
@@ -242,6 +254,7 @@ export function GuidedExerciseCard({
           reps={reps}
           busy={busy}
           nextExerciseName={nextExerciseName}
+          canComplete={canSubmitSet}
           onCompleteSet={onCompleteSet}
         />
       ) : null}

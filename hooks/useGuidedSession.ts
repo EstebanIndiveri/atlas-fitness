@@ -1,7 +1,17 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SESSION_COPY, motivatorForSet } from '@/lib/copy/session';
+import {
+  EMPTY_SEMANTIC_DRAFT,
+  applyLoadMode,
+  applySide,
+  defaultWeightForLoadMode,
+  draftFromConfirmedSet,
+  evaluateCapture,
+} from '@/lib/session/semantics-draft';
+import type { SemanticDraft, SessionSemanticsControls } from '@/lib/session/semantics-draft';
+import type { AmountBasis, LoadMode, RepCountBasis, SetPurpose, Side } from '@/types/progression';
 import {
   createClientMutationId,
   postWorkoutQueueAction,
@@ -45,6 +55,9 @@ export function useGuidedSession(workoutId: string) {
   const [actionError, setActionError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [weight, setWeight] = useState('');
+  const [semanticDraft, setSemanticDraft] = useState<SemanticDraft>(EMPTY_SEMANTIC_DRAFT);
+  const [semanticReused, setSemanticReused] = useState(false);
+  const prefilledExerciseRef = useRef<number | null>(null);
   const [repsDraft, setRepsDraft] = useState<{ key: string; value: string } | null>(null);
   const [suggestion, setSuggestion] = useState<NextExerciseSuggestion | null>(null);
   const [phase, setPhase] = useState<'train' | 'close'>('train');
@@ -131,6 +144,91 @@ export function useGuidedSession(workoutId: string) {
     return workout.sets.filter((set) => set.exerciseId === current.exerciseId).length;
   }, [current, workout]);
 
+  const currentExerciseId = current?.exerciseId ?? null;
+
+  // Restore the draft from the last explicitly confirmed v1 set of the same
+  // exercise in this workout. Legacy rows produce an empty draft, never a guess.
+  useEffect(() => {
+    if (currentExerciseId === null || !workout) {
+      return;
+    }
+    if (prefilledExerciseRef.current === currentExerciseId) {
+      return;
+    }
+    prefilledExerciseRef.current = currentExerciseId;
+    const confirmed = workout.sets
+      .filter((set) => set.exerciseId === currentExerciseId && set.semanticCaptureVersion !== null)
+      .sort((a, b) => a.setIndex - b.setIndex);
+    const lastConfirmed = confirmed.length > 0 ? confirmed[confirmed.length - 1] : null;
+    if (lastConfirmed) {
+      // Draft restoration is an external → React sync; the guard above keeps it
+      // idempotent per exercise.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSemanticDraft(
+        draftFromConfirmedSet({
+          loadMode: lastConfirmed.loadMode,
+          amountBasis: lastConfirmed.amountBasis,
+          side: lastConfirmed.side,
+          setPurpose: lastConfirmed.setPurpose,
+          repCountBasis: lastConfirmed.repCountBasis,
+        }),
+      );
+      setWeight(lastConfirmed.weightKg);
+      setSemanticReused(true);
+    } else {
+      setSemanticDraft(EMPTY_SEMANTIC_DRAFT);
+      setWeight('');
+      setSemanticReused(false);
+    }
+  }, [currentExerciseId, workout]);
+
+  const selectLoadMode = useCallback((mode: LoadMode) => {
+    setSemanticDraft((draft) => applyLoadMode(draft, mode));
+    setWeight(defaultWeightForLoadMode(mode));
+    setSemanticReused(false);
+  }, []);
+
+  const selectAmountBasis = useCallback((basis: AmountBasis) => {
+    setSemanticDraft((draft) => ({ ...draft, amountBasis: basis }));
+    setSemanticReused(false);
+  }, []);
+
+  const selectSide = useCallback((side: Side) => {
+    setSemanticDraft((draft) => applySide(draft, side));
+    setSemanticReused(false);
+  }, []);
+
+  const selectSetPurpose = useCallback((purpose: SetPurpose) => {
+    setSemanticDraft((draft) => ({ ...draft, setPurpose: purpose }));
+    setSemanticReused(false);
+  }, []);
+
+  const selectRepCountBasis = useCallback((basis: RepCountBasis) => {
+    setSemanticDraft((draft) => ({ ...draft, repCountBasis: basis }));
+    setSemanticReused(false);
+  }, []);
+
+  const semantics = useMemo<SessionSemanticsControls>(
+    () => ({
+      draft: semanticDraft,
+      reused: semanticReused,
+      onLoadMode: selectLoadMode,
+      onAmountBasis: selectAmountBasis,
+      onSide: selectSide,
+      onSetPurpose: selectSetPurpose,
+      onRepCountBasis: selectRepCountBasis,
+    }),
+    [
+      semanticDraft,
+      semanticReused,
+      selectLoadMode,
+      selectAmountBasis,
+      selectSide,
+      selectSetPurpose,
+      selectRepCountBasis,
+    ],
+  );
+
   const addSet = useCallback((): void => {
     if (!current || busy || current.targetSets >= MAX_TARGET_SETS) {
       return;
@@ -179,6 +277,12 @@ export function useGuidedSession(workoutId: string) {
 
   const completeSet = useCallback(async () => {
     if (!workout || !current || !routine) return;
+    const repsValue = parseReps(reps, current.targetReps);
+    const capture = evaluateCapture(semanticDraft, weight, repsValue);
+    if (!capture || !capture.ok) {
+      setActionError(SESSION_COPY.errorSemantics);
+      return null;
+    }
     setBusy(true);
     setActionError(null);
     try {
@@ -191,14 +295,23 @@ export function useGuidedSession(workoutId: string) {
         body: JSON.stringify({
           exerciseId: current.exerciseId,
           setIndex,
-          reps: parseReps(reps, current.targetReps),
+          reps: repsValue,
           weightKg: weight,
+          semanticCaptureVersion: 1,
+          loadMode: capture.canonical.loadMode,
+          amountBasis: capture.canonical.amountBasis,
+          side: capture.canonical.side,
+          setPurpose: capture.canonical.setPurpose,
+          repCountBasis: capture.canonical.repCountBasis,
         }),
       });
       if (!response.ok) {
         throw new Error('set');
       }
       const updated = await load();
+      // The confirmed tuple becomes the explicit draft for the next set of the
+      // same exercise, visibly marked as reused until the user changes it.
+      setSemanticReused(true);
       const nextCount = updated.sets.filter((set) => set.exerciseId === current.exerciseId).length;
       let wentToClose = false;
       if (nextCount >= current.targetSets) {
@@ -223,7 +336,7 @@ export function useGuidedSession(workoutId: string) {
     } finally {
       setBusy(false);
     }
-  }, [workout, current, routine, reps, weight, load, enterCloseIfNeeded, queue]);
+  }, [workout, current, routine, reps, weight, semanticDraft, load, enterCloseIfNeeded, queue]);
 
   const runQueueAction = useCallback(
     async (action: 'skip' | 'hold') => {
@@ -308,6 +421,8 @@ export function useGuidedSession(workoutId: string) {
     setWeight,
     reps,
     setReps,
+    semanticDraft,
+    semantics,
     busy,
     suggestion,
     phase,

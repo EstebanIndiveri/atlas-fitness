@@ -74,6 +74,28 @@ const mockSession = {
   setWeight: jest.fn(),
   reps: '8',
   setReps: jest.fn(),
+  semanticDraft: {
+    loadMode: 'external',
+    amountBasis: 'total',
+    side: 'bilateral',
+    setPurpose: 'working',
+    repCountBasis: '',
+  },
+  semantics: {
+    draft: {
+      loadMode: 'external',
+      amountBasis: 'total',
+      side: 'bilateral',
+      setPurpose: 'working',
+      repCountBasis: '',
+    },
+    reused: false,
+    onLoadMode: jest.fn(),
+    onAmountBasis: jest.fn(),
+    onSide: jest.fn(),
+    onSetPurpose: jest.fn(),
+    onRepCountBasis: jest.fn(),
+  },
   addSet: jest.fn(),
   completeSet: jest.fn(),
   skipCurrent: mockSkipCurrent,
@@ -163,7 +185,7 @@ describe('GuidedSessionPlayerPage', () => {
 
     expect(screen.getByText(/EJERCICIO 1 DE 2/)).toBeTruthy();
     expect(screen.getByText('SERIE 2 EN CURSO')).toBeTruthy();
-    expect(screen.getByText('70.0')).toBeTruthy();
+    expect(screen.getByText(/70\.0/)).toBeTruthy();
     fireEvent.click(screen.getByTestId('session-skip'));
     fireEvent.click(screen.getByTestId('session-hold'));
     await waitFor(() => expect(mockSkipCurrent).toHaveBeenCalledTimes(1));

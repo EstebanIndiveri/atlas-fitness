@@ -133,6 +133,12 @@ describe('suggestNextExerciseForWorkout', () => {
       setIndex: 1,
       reps: 5,
       weightKg: '60',
+      semanticCaptureVersion: 1,
+      loadMode: 'external',
+      amountBasis: 'total',
+      side: 'bilateral',
+      setPurpose: 'working',
+      repCountBasis: null,
     });
 
     const suggestion = await suggestNextExerciseForWorkout(workout.id, userId, {
@@ -153,6 +159,12 @@ describe('suggestNextExerciseForWorkout', () => {
       setIndex: 1,
       reps: 5,
       weightKg: '60',
+      semanticCaptureVersion: 1,
+      loadMode: 'external',
+      amountBasis: 'total',
+      side: 'bilateral',
+      setPurpose: 'working',
+      repCountBasis: null,
     });
 
     const suggestion = await suggestNextExerciseForWorkout(workout.id, userId, {
@@ -177,6 +189,12 @@ describe('suggestNextExerciseForWorkout', () => {
       setIndex: 1,
       reps: 5,
       weightKg: '60',
+      semanticCaptureVersion: 1,
+      loadMode: 'external',
+      amountBasis: 'total',
+      side: 'bilateral',
+      setPurpose: 'working',
+      repCountBasis: null,
     });
 
     const suggestion = await suggestNextExerciseForWorkout(workout.id, userId, {
@@ -310,6 +328,12 @@ describe('getGuidedCloseSummary', () => {
       setIndex: 1,
       reps: 5,
       weightKg: '80',
+      semanticCaptureVersion: 1,
+      loadMode: 'external',
+      amountBasis: 'total',
+      side: 'bilateral',
+      setPurpose: 'working',
+      repCountBasis: null,
     });
     const { updateWorkout } = await import('@/lib/services/workouts');
     await updateWorkout(previous.id, user.id, { endedAt: new Date() });
@@ -322,6 +346,12 @@ describe('getGuidedCloseSummary', () => {
       setIndex: 1,
       reps: 5,
       weightKg: '85',
+      semanticCaptureVersion: 1,
+      loadMode: 'external',
+      amountBasis: 'total',
+      side: 'bilateral',
+      setPurpose: 'working',
+      repCountBasis: null,
     });
 
     const summary = await getGuidedCloseSummary(current.id, user.id);
