@@ -1,9 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { GuidedExerciseCard } from './GuidedExerciseCard';
+import { PROGRESSION_COPY } from '@/lib/copy/exercise-progression';
 import { SESSION_COPY } from '@/lib/copy/session';
 import type { ExerciseSessionContext } from '@/types/exercise-session-memory';
 import type { RoutineExerciseItem } from '@/types/routine';
+import type { SessionSemanticsControls } from '@/lib/session/semantics-draft';
 
 function exercise(overrides: Partial<RoutineExerciseItem> = {}): RoutineExerciseItem {
   return {
@@ -251,5 +253,149 @@ describe('GuidedExerciseCard', () => {
     );
 
     expect(screen.queryByTestId('complete-set-bar')).toBeNull();
+  });
+
+  describe('comparable progression', () => {
+    function semanticsWith(
+      draft: Partial<SessionSemanticsControls['draft']> = {},
+    ): SessionSemanticsControls {
+      return {
+        draft: {
+          loadMode: 'external',
+          amountBasis: 'total',
+          side: 'bilateral',
+          setPurpose: 'working',
+          repCountBasis: '',
+          ...draft,
+        },
+        reused: false,
+        onLoadMode: jest.fn(),
+        onAmountBasis: jest.fn(),
+        onSide: jest.fn(),
+        onSetPurpose: jest.fn(),
+        onRepCountBasis: jest.fn(),
+      };
+    }
+
+    const READY = {
+      metricId: 'same_reps_external_load',
+      progressionRuleVersion: 1,
+      readStatus: 'ready',
+      cohort: {
+        exerciseId: 10,
+        loadMode: 'external',
+        amountBasis: 'total',
+        side: 'bilateral',
+        reps: 8,
+      },
+      currentRepresentative: {
+        setId: 11,
+        workoutId: 5,
+        setIndex: 1,
+        reps: 8,
+        weightKg: '80',
+        endedAt: '2026-09-20T12:00:00.000Z',
+        localDate: '2026-09-20',
+        semantics: {
+          semanticCaptureVersion: 1,
+          loadMode: 'external',
+          amountBasis: 'total',
+          side: 'bilateral',
+          setPurpose: 'working',
+          repCountBasis: null,
+        },
+        provenance: 'user_input',
+      },
+      previousComparableRepresentative: null,
+      currentBest: null,
+      comparison: 'new_pr',
+      reasons: ['eligible'],
+      history: { items: [], nextCursor: null, limit: 10, bounded: true },
+      provenance: 'atlas_computed',
+    };
+
+    function routedFetch(progression: unknown) {
+      return jest.fn(async (input: Parameters<typeof fetch>[0]) => {
+        const url = String(input);
+        if (url.includes('/progression')) {
+          return { ok: true, status: 200, text: async () => JSON.stringify(progression) } as Response;
+        }
+        return { ok: true, status: 200, text: async () => JSON.stringify(emptyContext) } as Response;
+      });
+    }
+
+    it('loads the comparable card for a valid external cohort', async () => {
+      const mock = routedFetch(READY);
+      global.fetch = mock as unknown as typeof fetch;
+
+      render(
+        <GuidedExerciseCard exercise={exercise()} {...cardProps} semantics={semanticsWith()} />,
+      );
+      fireEvent.click(screen.getByRole('button', { name: PROGRESSION_COPY.showAria }));
+
+      expect(await screen.findByTestId('progression-ready')).toBeTruthy();
+      expect(screen.getByTestId('progression-conclusion').textContent).toContain(
+        PROGRESSION_COPY.comparison.new_pr,
+      );
+      const urls = mock.mock.calls.map(([url]) => String(url));
+      expect(urls.some((url) => url === '/api/exercises/10/progression?reps=8&amountBasis=total&side=bilateral')).toBe(
+        true,
+      );
+    });
+
+    it.each([
+      ['bodyweight', { loadMode: 'bodyweight' as const, amountBasis: '' as const }],
+      ['bodyweight_added', { loadMode: 'bodyweight_added' as const }],
+      ['assisted', { loadMode: 'assisted' as const }],
+      ['alternating', { side: 'alternating' as const }],
+      ['warmup', { setPurpose: 'warmup' as const }],
+    ])('does not request an external cohort for %s', (_label, draft) => {
+      const mock = jest.fn();
+      global.fetch = mock as unknown as typeof fetch;
+
+      render(
+        <GuidedExerciseCard
+          exercise={exercise()}
+          {...cardProps}
+          semantics={semanticsWith(draft)}
+        />,
+      );
+      fireEvent.click(screen.getByRole('button', { name: PROGRESSION_COPY.showAria }));
+
+      expect(screen.getByTestId('progression-unsupported')).toBeTruthy();
+      expect(
+        mock.mock.calls.map(([url]) => String(url)).some((url) => url.includes('/progression')),
+      ).toBe(false);
+    });
+
+    it('keeps Última vez (raw memory) and comparable progression as distinct panels', async () => {
+      global.fetch = routedFetch({ ...READY, readStatus: 'no_history', comparison: null }) as unknown as typeof fetch;
+
+      render(
+        <GuidedExerciseCard exercise={exercise()} {...cardProps} semantics={semanticsWith()} />,
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: SESSION_COPY.showLastTime }));
+      expect(screen.getByTestId('last-time-panel')).toBeTruthy();
+      expect(screen.queryByTestId('exercise-progression-panel')).toBeNull();
+
+      fireEvent.click(screen.getByRole('button', { name: PROGRESSION_COPY.showAria }));
+      expect(screen.getByTestId('exercise-progression-panel')).toBeTruthy();
+      expect(screen.queryByTestId('last-time-panel')).toBeNull();
+    });
+
+    it('never labels the current open set as a record', () => {
+      render(
+        <GuidedExerciseCard
+          exercise={exercise()}
+          {...cardProps}
+          completedSets={[{ setIndex: 1, weightKg: '100', reps: 8 }]}
+          semantics={semanticsWith()}
+        />,
+      );
+
+      expect(screen.queryByTestId('pr-badge')).toBeNull();
+      expect(screen.queryByText('🏆 PR')).toBeNull();
+    });
   });
 });
