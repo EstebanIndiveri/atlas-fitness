@@ -9,5 +9,7 @@
 
 - Arranque local/Box (smoke sin red + integraciones reales opcionales): [`engineering/local-dev.md`](./engineering/local-dev.md)
 - Smoke autenticado de producción (controles de plataforma H1): [`operations/2026-09-30-production-smoke-h1-platform-evidence.md`](./operations/2026-09-30-production-smoke-h1-platform-evidence.md)
+- Smoke autenticado de producción (runbook del operador H4): [`operations/production-auth-smoke-runbook.md`](./operations/production-auth-smoke-runbook.md)
+- Smoke autenticado de producción (esquema de evidencia H4): [`operations/production-auth-smoke-evidence-schema.md`](./operations/production-auth-smoke-evidence-schema.md)
 
 Harness de agentes y branching: **`/AGENTS.md`** (raíz del repo).
