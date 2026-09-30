@@ -265,6 +265,12 @@ export const workouts = sqliteTable(
     uniqueActiveWorkout: uniqueIndex('workouts_user_id_active_unique')
       .on(table.userId)
       .where(sql`${table.endedAt} IS NULL AND ${table.deletedAt} IS NULL`),
+    // Additive partial index (v0.11) that orders a user's completed workouts by the
+    // canonical `ended_at DESC, id DESC` without a full-history sort. It changes no
+    // existing column, row or workout semantic.
+    userEndedIdx: index('workouts_user_id_ended_at_idx')
+      .on(table.userId, sql`${table.endedAt} DESC`, sql`${table.id} DESC`)
+      .where(sql`${table.deletedAt} IS NULL AND ${table.endedAt} IS NOT NULL`),
   }),
 );
 
@@ -335,7 +341,53 @@ export const workoutSets = sqliteTable(
     uniqueWorkoutSet: uniqueIndex('workout_sets_workout_id_set_index_unique')
       .on(table.workoutId, table.setIndex)
       .where(sql`${table.deletedAt} IS NULL`),
+    // Additive partial index (v0.11) for the bounded "last completed sets" lookup:
+    // exact exercise across the user's completed workouts. It changes no existing
+    // column, row or set semantic.
+    exerciseLookupIdx: index('workout_sets_exercise_lookup_idx')
+      .on(table.exerciseId, table.workoutId, table.setIndex, table.id)
+      .where(sql`${table.deletedAt} IS NULL AND ${table.completed} = 1`),
   })
+);
+
+/**
+ * Per-workout, per-exercise user notes — the explicit exercise-session memory (v0.11).
+ *
+ * One row per `(workout_id, exercise_id)`; `version` is the monotonic compare-and-swap
+ * token and is never a timestamp. Rows are hard-deleted on explicit user DELETE and are
+ * never fabricated by Atlas. `user_id` mirrors the workout owner as defense in depth and
+ * is never accepted from a request body.
+ */
+export const workoutExerciseNotes = sqliteTable(
+  'workout_exercise_notes',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id),
+    workoutId: integer('workout_id')
+      .notNull()
+      .references(() => workouts.id),
+    exerciseId: integer('exercise_id')
+      .notNull()
+      .references(() => exercises.id),
+    note: text('note').notNull(),
+    version: integer('version').notNull().default(1),
+    createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+    updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  },
+  (table) => ({
+    uniqueWorkoutExercise: uniqueIndex('workout_exercise_notes_workout_exercise_unique').on(
+      table.workoutId,
+      table.exerciseId,
+    ),
+    userExerciseUpdatedIdx: index('workout_exercise_notes_user_exercise_updated_idx').on(
+      table.userId,
+      table.exerciseId,
+      table.updatedAt,
+    ),
+    versionValue: check('workout_exercise_notes_version_check', sql`${table.version} >= 1`),
+  }),
 );
 
 /**
@@ -683,6 +735,9 @@ export type NewCoachRecommendation = typeof coachRecommendations.$inferInsert;
 
 export type WorkoutSet = typeof workoutSets.$inferSelect;
 export type NewWorkoutSet = typeof workoutSets.$inferInsert;
+
+export type WorkoutExerciseNoteRow = typeof workoutExerciseNotes.$inferSelect;
+export type NewWorkoutExerciseNoteRow = typeof workoutExerciseNotes.$inferInsert;
 
 export type WorkoutQueueMutation = typeof workoutQueueMutations.$inferSelect;
 export type NewWorkoutQueueMutation = typeof workoutQueueMutations.$inferInsert;
