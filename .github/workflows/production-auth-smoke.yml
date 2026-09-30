@@ -1,0 +1,230 @@
+name: Production Auth Smoke
+
+# Manual-only production smoke for a trusted commit already on `main`.
+#
+# Contract (architecture 2026-09-30, §5-§7):
+#   - workflow_dispatch only; no pull_request/push/schedule/workflow_run trigger.
+#   - Trusted execution: the job is skipped unless github.ref is refs/heads/main,
+#     and it checks out the exact trusted github.sha with persisted credentials off.
+#   - Target proof: the Production deployment is resolved from the GitHub
+#     Deployments API (no provider token, no data-store credential). The base URL
+#     is derived from deployment metadata; it is never an operator input.
+#   - The only secret is the QA password from the `production-qa` environment.
+#
+# Recovery-only manual dispatch (cancellation safety net):
+#   If a run is cancelled before the always() recovery step executes, dispatch
+#   this same workflow manually with:
+#     - mode: recovery
+#     - release_sha: the affected 40-char SHA (must still have its Production deployment)
+#     - confirmation: run-production-smoke
+#   Recovery logs in with the dedicated QA identity and performs the same
+#   API-only cleanup; it never creates a fixture and needs no data-store credential.
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: 'Full 40-char lowercase Git SHA with a successful Production deployment.'
+        required: true
+        type: string
+      mode:
+        description: 'smoke = full authenticated smoke + cleanup; recovery = API-only cleanup only.'
+        required: true
+        default: smoke
+        type: choice
+        options:
+          - smoke
+          - recovery
+      confirmation:
+        description: 'Type exactly: run-production-smoke'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-auth-smoke
+  cancel-in-progress: false
+
+jobs:
+  production-auth-smoke:
+    name: Production authenticated smoke
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production-qa
+
+    steps:
+      - name: Checkout trusted main
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Validate dispatch inputs
+        shell: bash
+        env:
+          RELEASE_SHA_INPUT: ${{ inputs.release_sha }}
+          MODE_INPUT: ${{ inputs.mode }}
+          CONFIRMATION_INPUT: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          if [[ ! "${RELEASE_SHA_INPUT}" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::release_sha must be a full 40-char lowercase hex SHA."
+            exit 1
+          fi
+          case "${MODE_INPUT}" in
+            smoke | recovery) ;;
+            *)
+              echo "::error::mode must be 'smoke' or 'recovery'."
+              exit 1
+              ;;
+          esac
+          if [ "${CONFIRMATION_INPUT}" != "run-production-smoke" ]; then
+            echo "::error::confirmation phrase did not match the expected value."
+            exit 1
+          fi
+          echo "Dispatch inputs validated (mode=${MODE_INPUT})."
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Resolve Production deployment target
+        id: target
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          deployments_api="repos/${GITHUB_REPOSITORY}/deployments"
+
+          # Exactly one Production deployment for the requested SHA.
+          deployments_json="$(gh api -X GET "${deployments_api}" \
+            -f sha="${RELEASE_SHA}" \
+            -f environment="Production" \
+            -f per_page="100")"
+          count="$(printf '%s' "${deployments_json}" | jq 'length')"
+          if [ "${count}" -ne 1 ]; then
+            echo "::error::Expected exactly one Production deployment for ${RELEASE_SHA}, found ${count}."
+            exit 1
+          fi
+
+          deployment_id="$(printf '%s' "${deployments_json}" | jq -r '.[0].id')"
+          deployment_env="$(printf '%s' "${deployments_json}" | jq -r '.[0].environment')"
+          deployment_sha="$(printf '%s' "${deployments_json}" | jq -r '.[0].sha')"
+
+          if [ "${deployment_env}" != "Production" ]; then
+            echo "::error::Resolved deployment environment is not Production."
+            exit 1
+          fi
+          if [ "${deployment_sha}" != "${RELEASE_SHA}" ]; then
+            echo "::error::Resolved deployment SHA does not match the requested release SHA."
+            exit 1
+          fi
+
+          # Latest status must be a success and carries the immutable target URL.
+          latest_status="$(gh api -X GET "${deployments_api}/${deployment_id}/statuses" -f per_page="1")"
+          status_state="$(printf '%s' "${latest_status}" | jq -r '.[0].state // empty')"
+          if [ "${status_state}" != "success" ]; then
+            echo "::error::Latest deployment status is not success."
+            exit 1
+          fi
+
+          environment_url="$(printf '%s' "${latest_status}" | jq -r '.[0].environment_url // empty')"
+          if [ -z "${environment_url}" ]; then
+            echo "::error::Latest successful deployment has no environment_url."
+            exit 1
+          fi
+          case "${environment_url}" in
+            https://*) ;;
+            *)
+              echo "::error::Deployment target must be an https URL."
+              exit 1
+              ;;
+          esac
+
+          {
+            echo "base_url=${environment_url}"
+            echo "release_sha=${deployment_sha}"
+            echo "deployment_id=${deployment_id}"
+            echo "deployment_environment=${deployment_env}"
+            echo "deployment_url=${environment_url}"
+          } >> "${GITHUB_OUTPUT}"
+
+          echo "Resolved Production deployment ${deployment_id} for ${deployment_sha}."
+
+      - name: Run production authenticated smoke
+        id: smoke
+        if: ${{ inputs.mode == 'smoke' }}
+        continue-on-error: true
+        env:
+          ATLAS_SMOKE_BASE_URL: ${{ steps.target.outputs.base_url }}
+          ATLAS_SMOKE_EMAIL: ${{ vars.ATLAS_PROD_SMOKE_EMAIL }}
+          ATLAS_SMOKE_PASSWORD: ${{ secrets.ATLAS_PROD_SMOKE_PASSWORD }}
+          ATLAS_SMOKE_EXPECTED_RELEASE_SHA: ${{ inputs.release_sha }}
+          ATLAS_SMOKE_ACTUAL_RELEASE_SHA: ${{ steps.target.outputs.release_sha }}
+          ATLAS_SMOKE_DEPLOYMENT_ID: ${{ steps.target.outputs.deployment_id }}
+          ATLAS_SMOKE_DEPLOYMENT_ENVIRONMENT: ${{ steps.target.outputs.deployment_environment }}
+          ATLAS_SMOKE_DEPLOYMENT_URL: ${{ steps.target.outputs.deployment_url }}
+          ATLAS_SMOKE_WORKFLOW_RUN_ID: ${{ github.run_id }}
+          ATLAS_SMOKE_EVIDENCE_PATH: production-smoke-evidence.json
+        run: |
+          set -euo pipefail
+          npx tsx scripts/production-smoke/index.ts
+
+      - name: Recover QA artifacts (API-only cleanup)
+        id: recovery
+        if: always()
+        continue-on-error: true
+        env:
+          ATLAS_SMOKE_BASE_URL: ${{ steps.target.outputs.base_url }}
+          ATLAS_SMOKE_EMAIL: ${{ vars.ATLAS_PROD_SMOKE_EMAIL }}
+          ATLAS_SMOKE_PASSWORD: ${{ secrets.ATLAS_PROD_SMOKE_PASSWORD }}
+          ATLAS_SMOKE_EXPECTED_RELEASE_SHA: ${{ inputs.release_sha }}
+          ATLAS_SMOKE_ACTUAL_RELEASE_SHA: ${{ steps.target.outputs.release_sha }}
+          ATLAS_SMOKE_DEPLOYMENT_ID: ${{ steps.target.outputs.deployment_id }}
+          ATLAS_SMOKE_DEPLOYMENT_ENVIRONMENT: ${{ steps.target.outputs.deployment_environment }}
+          ATLAS_SMOKE_DEPLOYMENT_URL: ${{ steps.target.outputs.deployment_url }}
+          ATLAS_SMOKE_WORKFLOW_RUN_ID: ${{ github.run_id }}
+          ATLAS_SMOKE_RECOVERY_ONLY: '1'
+          ATLAS_SMOKE_EVIDENCE_PATH: production-smoke-recovery.json
+        run: |
+          set -euo pipefail
+          npx tsx scripts/production-smoke/index.ts
+
+      - name: Enforce smoke and cleanup results
+        if: always()
+        shell: bash
+        env:
+          MODE_INPUT: ${{ inputs.mode }}
+          SMOKE_OUTCOME: ${{ steps.smoke.outcome }}
+          RECOVERY_OUTCOME: ${{ steps.recovery.outcome }}
+        run: |
+          set -euo pipefail
+          if [ "${RECOVERY_OUTCOME}" != "success" ]; then
+            echo "::error::Recovery/cleanup did not succeed (outcome=${RECOVERY_OUTCOME}); refusing to report success."
+            exit 1
+          fi
+          if [ "${MODE_INPUT}" = "smoke" ] && [ "${SMOKE_OUTCOME}" != "success" ]; then
+            echo "::error::Production smoke did not PASS (outcome=${SMOKE_OUTCOME})."
+            exit 1
+          fi
+          echo "Smoke and recovery results satisfied the gate."
+
+      - name: Upload sanitized evidence
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: production-smoke-evidence
+          path: |
+            production-smoke-evidence.json
+            production-smoke-recovery.json
+          if-no-files-found: warn
+          retention-days: 14

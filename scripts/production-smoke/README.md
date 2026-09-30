@@ -83,6 +83,27 @@ ever included.
 npx tsx scripts/production-smoke/index.ts
 ```
 
+## CI workflow (`production-auth-smoke.yml`)
+
+`.github/workflows/production-auth-smoke.yml` invokes this runner. It is
+`workflow_dispatch` only, requires `github.ref == refs/heads/main`, checks out the
+exact trusted `github.sha`, and runs in the protected `production-qa` GitHub
+Environment (password only from `secrets.ATLAS_PROD_SMOKE_PASSWORD`; email from
+`vars.ATLAS_PROD_SMOKE_EMAIL`). It has no data-store credential.
+
+Before login it proves the target from the GitHub Deployments API: exactly one
+`Production` deployment for the requested 40-char SHA whose latest status is
+`success`, using its `environment_url` as `ATLAS_SMOKE_BASE_URL`. The URL is never
+an operator input. After the main smoke run an `always()` recovery-only pass
+(`ATLAS_SMOKE_RECOVERY_ONLY=1`, evidence `production-smoke-recovery.json`) is the
+cleanup safety net, and a final gate fails the job unless the smoke PASSed and the
+recovery succeeded.
+
+**Recovery-only manual dispatch (cancellation):** if a run is cancelled before the
+`always()` cleanup executes, dispatch the same workflow with `mode: recovery`, the
+affected `release_sha`, and the confirmation phrase. Recovery performs the same
+API-only cleanup, never creates a fixture, and still needs no data-store credential.
+
 ## Tests
 
 ```sh
