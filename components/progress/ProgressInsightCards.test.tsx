@@ -2,9 +2,9 @@ import { describe, expect, it } from '@jest/globals';
 import { render, screen } from '@testing-library/react';
 
 import type { DailyCheckInResponse } from '@/lib/api/checkin';
-import type { StrengthProgressSummary } from '@/lib/services/strength-progress';
 
-import { StrengthEvolutionCard, WellbeingCard } from './ProgressInsightCards';
+import * as insightCards from './ProgressInsightCards';
+import { WellbeingCard } from './ProgressInsightCards';
 
 const checkin: DailyCheckInResponse = {
   id: 1,
@@ -17,53 +17,10 @@ const checkin: DailyCheckInResponse = {
   updatedAt: '2026-09-20T12:00:00.000Z',
 };
 
-const strength: StrengthProgressSummary = {
-  hasLoggedSets: true,
-  latestVolumeKg: '360',
-  trendLabel: 'Subiendo',
-  points: [
-    {
-      workoutId: 10,
-      startedAt: '2026-09-22T12:00:00.000Z',
-      localDate: '2026-09-22',
-      totalVolumeKg: '270',
-      completedSets: 2,
-    },
-    {
-      workoutId: 11,
-      startedAt: '2026-09-24T12:00:00.000Z',
-      localDate: '2026-09-24',
-      totalVolumeKg: '360',
-      completedSets: 2,
-    },
-  ],
-};
-
 describe('ProgressInsightCards', () => {
-  it('renders an honest empty state for strength when no completed sets exist', () => {
-    render(<StrengthEvolutionCard strength={{ hasLoggedSets: false, latestVolumeKg: null, trendLabel: 'Sin datos de fuerza', points: [] }} />);
-
-    expect(screen.getByRole('heading', { name: 'Evolución de fuerza' })).toBeTruthy();
-    expect(screen.getByText('Todavía no hay series completadas para graficar tu fuerza.')).toBeTruthy();
-  });
-
-  it('renders a real volume chart from sourced strength progression points', () => {
-    render(<StrengthEvolutionCard strength={strength} />);
-
-    expect(screen.getByRole('heading', { name: 'Evolución de fuerza' })).toBeTruthy();
-    expect(screen.getByLabelText('Volumen de la última sesión').textContent).toContain('360 kg');
-    expect(screen.getByText('Subiendo')).toBeTruthy();
-    expect(screen.getByRole('img', { name: 'Evolución de volumen por sesión' })).toBeTruthy();
-    expect(screen.getByText('Ver ejercicios ▸')).toBeTruthy();
-    expect(screen.getByText('Última sesión: 360 kg · 2 series')).toBeTruthy();
-  });
-
-  it('labels a single strength session as a starting point instead of hiding it', () => {
-    render(<StrengthEvolutionCard strength={{ ...strength, trendLabel: 'Punto de partida', points: [strength.points[0]], latestVolumeKg: '270' }} />);
-
-    expect(screen.getByText('Punto de partida')).toBeTruthy();
-    expect(screen.getByTestId('strength-chart-series')).toBeTruthy();
-    expect(screen.getByText('Primer punto real: seguí registrando para ver la tendencia.')).toBeTruthy();
+  it('does not export the retired mixed-mode strength chart card', () => {
+    const cards = insightCards as unknown as Record<string, unknown>;
+    expect(cards.StrengthEvolutionCard).toBeUndefined();
   });
 
   it('summarizes today wellbeing check-in when real data is available', () => {

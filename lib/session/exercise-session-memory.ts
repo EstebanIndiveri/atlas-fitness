@@ -1,4 +1,10 @@
 import { isValidWeightKg } from '@/lib/format/weight';
+import {
+  isCanonicalPositiveDecimal,
+  isZeroDecimal,
+  normalizeExactDecimal,
+} from '@/lib/progression/decimal';
+import { canonicalSemantics } from '@/lib/progression/semantics';
 import { addLocalDateDays, cordobaLocalDate } from '@/lib/time/cordoba';
 import type {
   ExerciseNoteValidation,
@@ -36,7 +42,19 @@ const WORKOUT_NOTE_KEYS = [
   'updatedAt',
 ] as const;
 
-const SET_KEYS = ['id', 'exerciseId', 'setIndex', 'reps', 'weightKg'] as const;
+const SET_KEYS = [
+  'id',
+  'exerciseId',
+  'setIndex',
+  'reps',
+  'weightKg',
+  'semanticCaptureVersion',
+  'loadMode',
+  'amountBasis',
+  'side',
+  'setPurpose',
+  'repCountBasis',
+] as const;
 
 const LAST_COMPLETED_SETS_KEYS = [
   'workoutId',
@@ -165,11 +183,19 @@ export function parseWorkoutExerciseNote(value: unknown): WorkoutExerciseNote | 
   };
 }
 
+function isNullableString(value: unknown): value is string | null {
+  return value === null || typeof value === 'string';
+}
+
 /**
  * Parses one raw historical set for an exact exercise.
  *
  * `weightKg` is kept verbatim as the persisted decimal string; numbers are
- * rejected instead of coerced.
+ * rejected instead of coerced. A legacy row (semantic tuple all-null) keeps its
+ * raw positive amount and is marked unknown. A declared row must carry a
+ * complete, canonical tuple: bodyweight requires the canonical `"0"` sentinel,
+ * every other mode a positive canonical decimal. A partial/corrupt tuple is
+ * rejected rather than inferred.
  *
  * @param value Candidate value of any type.
  * @returns The set, or `null` when invalid.
@@ -180,6 +206,13 @@ export function parseExerciseSessionSet(value: unknown): ExerciseSessionSetSnaps
   }
 
   const { id, exerciseId, setIndex, reps, weightKg } = value;
+  // An omitted semantic key is an explicit unknown (legacy), never inferred.
+  const semanticCaptureVersion = value.semanticCaptureVersion ?? null;
+  const loadMode = value.loadMode ?? null;
+  const amountBasis = value.amountBasis ?? null;
+  const side = value.side ?? null;
+  const setPurpose = value.setPurpose ?? null;
+  const repCountBasis = value.repCountBasis ?? null;
 
   if (
     !isPositiveSafeInteger(id) ||
@@ -187,12 +220,67 @@ export function parseExerciseSessionSet(value: unknown): ExerciseSessionSetSnaps
     !isPositiveSafeInteger(setIndex) ||
     !isPositiveSafeInteger(reps) ||
     typeof weightKg !== 'string' ||
-    !isValidWeightKg(weightKg)
+    !isNullableString(loadMode) ||
+    !isNullableString(amountBasis) ||
+    !isNullableString(side) ||
+    !isNullableString(setPurpose) ||
+    !isNullableString(repCountBasis)
   ) {
     return null;
   }
 
-  return { id, exerciseId, setIndex, reps, weightKg };
+  if (semanticCaptureVersion === null) {
+    // Legacy/unknown: the whole tuple is null and only a raw positive amount is
+    // accepted. Zero is not a legacy value, so it is rejected rather than
+    // reinterpreted as bodyweight.
+    if (
+      loadMode !== null ||
+      amountBasis !== null ||
+      side !== null ||
+      setPurpose !== null ||
+      repCountBasis !== null
+    ) {
+      return null;
+    }
+    if (!isValidWeightKg(weightKg)) {
+      return null;
+    }
+  } else {
+    if (!isPositiveSafeInteger(semanticCaptureVersion)) {
+      return null;
+    }
+    const canonical = canonicalSemantics(semanticCaptureVersion, {
+      loadMode,
+      amountBasis,
+      side,
+      setPurpose,
+      repCountBasis,
+    });
+    if (canonical.status !== 'canonical') {
+      return null;
+    }
+    if (canonical.tuple.loadMode === 'bodyweight') {
+      if (!isZeroDecimal(weightKg) || normalizeExactDecimal(weightKg) !== '0') {
+        return null;
+      }
+    } else if (!isCanonicalPositiveDecimal(weightKg)) {
+      return null;
+    }
+  }
+
+  return {
+    id,
+    exerciseId,
+    setIndex,
+    reps,
+    weightKg,
+    semanticCaptureVersion,
+    loadMode,
+    amountBasis,
+    side,
+    setPurpose,
+    repCountBasis,
+  };
 }
 
 /**

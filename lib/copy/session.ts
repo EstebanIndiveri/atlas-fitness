@@ -98,7 +98,6 @@ export const SESSION_COPY = {
   closeDefaultSubtitle: 'Rutina finalizada',
   closeStatsDuration: 'Duración',
   closeStatsSeries: 'Series',
-  closeStatsVolume: 'Volumen',
   closeStatsCompleted: (sets: number) => `${sets} completadas`,
   streakLabel: 'Racha',
   streakDays: (n: number) => (n === 1 ? '1 día seguido' : `${n} días seguidos`),
@@ -118,10 +117,6 @@ export const SESSION_COPY = {
   discomfortMaxReached: 'Podés registrar hasta 5 molestias.',
   feedbackSaveError: 'No se pudo guardar el feedback post-entrenamiento. Probá de nuevo.',
   saveAndClose: 'Finalizar y guardar',
-  improvementNone: 'Sin dato previo para comparar.',
-  improvementSame: (name: string) => `${name}: mismo peso tope que la última sesión.`,
-  improvementUp: (name: string, delta: string) => `${name}: +${delta} kg vs la última sesión.`,
-  improvementDown: (name: string, delta: string) => `${name}: ${delta} kg menos que la última sesión.`,
   activeExists: 'Ya tenés una sesión activa. Continuá o finalizala antes de empezar otra.',
   errorLoad: 'No se pudo cargar la sesión guiada.',
   motivators: [
@@ -182,21 +177,4 @@ export function motivatorForSet(setNumber: number): string {
   const pool = SESSION_COPY.motivators;
   const index = Math.abs(setNumber - 1) % pool.length;
   return pool[index];
-}
-
-export function formatImprovement(item: {
-  exerciseName: string;
-  direction: 'up' | 'down' | 'same' | 'none';
-  deltaKg: string | null;
-}): string {
-  if (item.direction === 'up' && item.deltaKg) {
-    return SESSION_COPY.improvementUp(item.exerciseName, item.deltaKg);
-  }
-  if (item.direction === 'down' && item.deltaKg) {
-    return SESSION_COPY.improvementDown(item.exerciseName, item.deltaKg);
-  }
-  if (item.direction === 'same') {
-    return SESSION_COPY.improvementSame(item.exerciseName);
-  }
-  return SESSION_COPY.improvementNone;
 }

@@ -1,10 +1,37 @@
 'use client';
 
 import { SESSION_COPY } from '@/lib/copy/session';
-import { formatWeightKg } from '@/lib/format/weight';
+import { describeRecordedAmount, LEGACY_AMOUNT_LABEL } from '@/lib/format/amount';
+import { canonicalSemantics } from '@/lib/progression/semantics';
 import { cordobaDisplayDate } from '@/lib/time/cordoba';
 import type { ExerciseSessionMemoryError } from '@/hooks/useExerciseSessionMemory';
-import type { ExerciseSessionContext } from '@/types/exercise-session-memory';
+import type {
+  ExerciseSessionContext,
+  ExerciseSessionSetSnapshot,
+} from '@/types/exercise-session-memory';
+
+/**
+ * Mode-aware amount label for one remembered set. A declared bodyweight set
+ * shows "peso corporal", assistance shows the assistance magnitude and a
+ * per-side amount is not multiplied; a legacy row is labelled as a raw recorded
+ * amount with no inferred meaning. Never "kg lifted".
+ */
+function rememberedAmountLabel(set: ExerciseSessionSetSnapshot): string {
+  if (set.semanticCaptureVersion === null) {
+    return `${set.weightKg} kg · ${LEGACY_AMOUNT_LABEL}`;
+  }
+  const canonical = canonicalSemantics(set.semanticCaptureVersion, {
+    loadMode: set.loadMode,
+    amountBasis: set.amountBasis,
+    side: set.side,
+    setPurpose: set.setPurpose,
+    repCountBasis: set.repCountBasis,
+  });
+  if (canonical.status !== 'canonical') {
+    return `${set.weightKg} kg · ${LEGACY_AMOUNT_LABEL}`;
+  }
+  return describeRecordedAmount(canonical.tuple, set.weightKg);
+}
 
 export interface LastCompletedPanelProps {
   context: ExerciseSessionContext | null;
@@ -94,7 +121,7 @@ export function LastCompletedPanel({
                     <span className="tabular-nums text-ink">
                       <span>{SESSION_COPY.lastTimeReps(set.reps)}</span>
                       <span aria-hidden> · </span>
-                      <span>{formatWeightKg(set.weightKg)}</span>
+                      <span>{rememberedAmountLabel(set)}</span>
                     </span>
                   </li>
                 ))}

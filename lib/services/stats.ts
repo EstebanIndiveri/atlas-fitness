@@ -1,22 +1,22 @@
 import { eq, and, isNull, desc, gt, lt, or } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
-import { workouts, workoutSets, exercises } from '@/lib/db/schema';
+import { workouts, workoutSets } from '@/lib/db/schema';
 import { requireAccessibleExercise } from '@/lib/services/exercises';
-import { compareDecimal } from '@/lib/format/decimal';
 import {
   decodeExerciseHistoryCursor,
   encodeExerciseHistoryCursor,
 } from '@/lib/db/keyset-cursor';
 import { AppError } from '@/types/errors';
 
-export interface PersonalRecord {
-  exerciseId: number;
-  exerciseName: string;
-  maxWeightKg: string;
-  recordDate: Date;
-  workoutId: number;
-}
-
+/**
+ * Raw exercise history and stats compatibility surface (Atlas Fitness v0.12).
+ *
+ * This module intentionally exposes **no** PR, improvement, strength or
+ * normalized-resistance claim. The legacy `getPersonalRecords`/`isPR` pair was
+ * retired because a bare `weight_kg` cannot be interpreted without declared
+ * semantics; the truthful PR lives in `lib/services/exercise-progression.ts`.
+ * `getExerciseHistory` stays as a bounded, raw compatibility read.
+ */
 export interface ExerciseHistoryEntry {
   workoutId: number;
   workoutDate: Date;
@@ -48,81 +48,6 @@ export interface ExerciseHistoryOptions {
 
 export const DEFAULT_RAW_HISTORY_LIMIT = 50;
 export const MAX_RAW_HISTORY_LIMIT = 100;
-
-/**
- * Gets personal records (PRs) for all exercises for a user
- * PR = max weight_kg per exercise; tie → most recent
- * Note: Must calculate max in application code because MAX(text) in SQLite is lexicographic
- */
-export async function getPersonalRecords(userId: number): Promise<PersonalRecord[]> {
-  // Get all sets for the user with exercise info and workout date
-  const allSets = await db
-    .select({
-      exerciseId: workoutSets.exerciseId,
-      exerciseName: exercises.name,
-      weightKg: workoutSets.weightKg,
-      workoutDate: workouts.startedAt,
-      workoutId: workouts.id,
-    })
-    .from(workoutSets)
-    .innerJoin(workouts, eq(workoutSets.workoutId, workouts.id))
-    .innerJoin(exercises, eq(workoutSets.exerciseId, exercises.id))
-    .where(
-      and(
-        eq(workouts.userId, userId),
-        isNull(workouts.deletedAt),
-        isNull(workoutSets.deletedAt),
-        isNull(exercises.deletedAt)
-      )
-    );
-
-  // Group by exercise and calculate PR in application code
-  const prMap = new Map<number, PersonalRecord>();
-
-  for (const set of allSets) {
-    const existing = prMap.get(set.exerciseId);
-
-    if (!existing) {
-      prMap.set(set.exerciseId, {
-        exerciseId: set.exerciseId,
-        exerciseName: set.exerciseName,
-        maxWeightKg: set.weightKg,
-        recordDate: set.workoutDate,
-        workoutId: set.workoutId,
-      });
-    } else {
-      const comparison = compareDecimal(set.weightKg, existing.maxWeightKg);
-
-      if (comparison > 0) {
-        // New max weight
-        prMap.set(set.exerciseId, {
-          exerciseId: set.exerciseId,
-          exerciseName: set.exerciseName,
-          maxWeightKg: set.weightKg,
-          recordDate: set.workoutDate,
-          workoutId: set.workoutId,
-        });
-      } else if (comparison === 0) {
-        // Tie on weight - use most recent workout (or higher workout ID if dates equal)
-        if (
-          set.workoutDate > existing.recordDate ||
-          (set.workoutDate.getTime() === existing.recordDate.getTime() &&
-            set.workoutId > existing.workoutId)
-        ) {
-          prMap.set(set.exerciseId, {
-            exerciseId: set.exerciseId,
-            exerciseName: set.exerciseName,
-            maxWeightKg: set.weightKg,
-            recordDate: set.workoutDate,
-            workoutId: set.workoutId,
-          });
-        }
-      }
-    }
-  }
-
-  return Array.from(prMap.values());
-}
 
 /**
  * Bounded raw exercise history (v0.12 raw compatibility surface).
@@ -220,24 +145,4 @@ export async function getExerciseHistory(
     nextCursor,
     bounded: true,
   };
-}
-
-/**
- * Checks if a weight is a PR for an exercise
- */
-export async function isPR(
-  userId: number,
-  exerciseId: number,
-  weightKg: string
-): Promise<boolean> {
-  const prs = await getPersonalRecords(userId);
-  const exercisePR = prs.find((pr) => pr.exerciseId === exerciseId);
-
-  if (!exercisePR) {
-    // No previous record, so this is a PR
-    return true;
-  }
-
-  const comparison = compareDecimal(weightKg, exercisePR.maxWeightKg);
-  return comparison >= 0;
 }

@@ -59,6 +59,23 @@ describe('runSmoke lifecycle', () => {
     expect(evidence.knownQaIdentityResidualState.longestStreak).toBeGreaterThanOrEqual(1);
   });
 
+  it('writes only complete v1 semantics for synthetic new sets', async () => {
+    const { app, config } = createHarness();
+    const evidence = await runSmoke(config, { fetch: app.fetch });
+    expect(evidence.overallResult).toBe('PASS');
+
+    const sets = await db.select().from(workoutSets);
+    expect(sets.length).toBeGreaterThan(0);
+    for (const set of sets) {
+      expect(set.semanticCaptureVersion).toBe(1);
+      expect(set.loadMode).toBe('external');
+      expect(set.amountBasis).toBe('total');
+      expect(set.side).toBe('bilateral');
+      expect(set.setPurpose).toBe('working');
+      expect(set.repCountBasis).toBeNull();
+    }
+  });
+
   it('preserves exact raw decimal-string weights across the API', async () => {
     const { app, config } = createHarness();
     const evidence = await runSmoke(config, { fetch: app.fetch });

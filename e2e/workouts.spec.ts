@@ -115,7 +115,8 @@ test.describe('Workout Flow', () => {
     // Verify edit
     await expect(page.locator('[data-testid="workout-set"]')).toContainText('105');
 
-    // Add another set to test PR badge
+    // Add another set. v0.12 retired the bare-weight PR badge: an open workout
+    // set is never classified as a record, so no badge may appear here.
     await page.click('[data-testid="add-set-button"]');
     await page.selectOption('[data-testid="exercise-select"]', { index: 1 });
     await page.fill('[data-testid="reps-input"]', '8');
@@ -126,8 +127,7 @@ test.describe('Workout Flow', () => {
       page.getByTestId('save-set-button').click(),
     ]);
 
-    // Verify PR badge appears (should be PR since it's the first workout)
-    await expect(page.locator('[data-testid="pr-badge"]').first()).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('[data-testid="pr-badge"]')).toHaveCount(0);
 
     // Delete the first set
     // Set up dialog handler BEFORE clicking
@@ -169,7 +169,7 @@ test.describe('Workout Flow', () => {
     ).toBe(true);
   });
 
-  test('should show PR badge when matching or exceeding previous record', async ({ page }) => {
+  test('should never show a bare-weight PR badge on an open workout', async ({ page }) => {
     // Create first workout
     await startManualWorkout(page);
     
@@ -212,7 +212,9 @@ test.describe('Workout Flow', () => {
     // Should NOT have PR badge
     await expect(page.locator('[data-testid="pr-badge"]')).toHaveCount(0);
 
-    // Add set with higher weight - should show PR badge
+    // Add set with higher weight. Even a heavier open set is not a PR: v0.12
+    // derives records only from the versioned progression read model over
+    // closed workouts, so no badge may appear.
     await page.click('[data-testid="add-set-button"]');
     await page.selectOption('[data-testid="exercise-select"]', { index: 1 });
     await page.fill('[data-testid="reps-input"]', '8');
@@ -223,8 +225,7 @@ test.describe('Workout Flow', () => {
       page.getByTestId('save-set-button').click(),
     ]);
 
-    // Should have PR badge on the second set
-    await expect(page.locator('[data-testid="pr-badge"]')).toHaveCount(1);
+    await expect(page.locator('[data-testid="pr-badge"]')).toHaveCount(0);
   });
 
   test('should display workout progress recent sessions', async ({ page }) => {

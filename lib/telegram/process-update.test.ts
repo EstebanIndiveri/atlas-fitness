@@ -197,6 +197,43 @@ describe('processTelegramUpdate', () => {
     expect(sent[0].text).toContain('100');
   });
 
+  it('summarizes mixed load modes honestly and never claims generic kg lifted', async () => {
+    const { code } = await generateLinkCode(atlasUserId);
+    await processTelegramUpdate(messageUpdate(nextId(), 9013, code));
+
+    await processTelegramUpdate(
+      messageUpdate(nextId(), 9013, '/log press banca 0 10 mode=bodyweight side=bilateral purpose=working'),
+    );
+    await processTelegramUpdate(
+      messageUpdate(
+        nextId(),
+        9013,
+        '/log press banca 20 8 mode=assisted basis=total side=bilateral purpose=working',
+      ),
+    );
+
+    // A raw legacy row (all-null semantics) belongs to the same open workout.
+    const active = await workoutsService.getActiveWorkout(atlasUserId);
+    const existingSets = await workoutSetsService.listWorkoutSets(active!.id, atlasUserId);
+    await db.insert(workoutSets).values({
+      workoutId: active!.id,
+      exerciseId: existingSets[0].exerciseId,
+      setIndex: existingSets.length + 1,
+      reps: 5,
+      weightKg: '55',
+      completed: true,
+    });
+
+    sent.length = 0;
+    await processTelegramUpdate(messageUpdate(nextId(), 9013, '/resumen'));
+
+    const text = sent[0].text;
+    expect(text).toContain('peso corporal');
+    expect(text).toContain('asistencia 20 kg');
+    expect(text).toContain('carga registrada (sin contexto)');
+    expect(text).not.toMatch(/kg levantados/);
+  });
+
   it('explains the streak-nudge reminder rule', async () => {
     const { code } = await generateLinkCode(atlasUserId);
     await processTelegramUpdate(messageUpdate(nextId(), 9004, code));

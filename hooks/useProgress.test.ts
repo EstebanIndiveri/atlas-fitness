@@ -38,7 +38,6 @@ const summaryBody = {
       startedAt: '2026-09-24T12:00:00.000Z',
       durationMinutes: 61,
       routineName: 'Torso fuerte',
-      totalVolumeKg: '12.5',
     },
   ],
 };
@@ -93,12 +92,13 @@ describe('useProgress', () => {
     expect(result.current.error).toBe(UI_COPY.progressError);
   });
 
-  it('rejects a session volume that is not a decimal string or null', async () => {
+  it('tolerates a legacy payload carrying stale strength/volume fields', async () => {
     global.fetch = jest.fn<typeof fetch>(async (input) => {
       if (String(input).startsWith('/api/progress/summary')) {
         return jsonResponse({
           ...summaryBody,
-          sessions: [{ ...summaryBody.sessions[0], totalVolumeKg: 12.5 }],
+          strength: { hasLoggedSets: true, latestVolumeKg: '999', trendLabel: 'Subiendo', points: [] },
+          sessions: [{ ...summaryBody.sessions[0], totalVolumeKg: '12.5' }],
         });
       }
       return jsonResponse(weekBody);
@@ -110,8 +110,9 @@ describe('useProgress', () => {
       expect(result.current.loading).toBe(false);
     });
 
-    expect(result.current.summary).toBeNull();
-    expect(result.current.error).toBe(UI_COPY.progressError);
+    expect(result.current.error).toBeNull();
+    expect(result.current.summary?.sessions).toHaveLength(1);
+    expect(result.current.summary?.sessions[0].durationMinutes).toBe(61);
   });
 
   it('rejects invalid payloads', async () => {
