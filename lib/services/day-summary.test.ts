@@ -74,6 +74,12 @@ describe('getDaySummary', () => {
       setIndex: 1,
       reps: 8,
       weightKg: '80.5',
+      semanticCaptureVersion: 1,
+      loadMode: 'external',
+      amountBasis: 'total',
+      side: 'bilateral',
+      setPurpose: 'working',
+      repCountBasis: null,
     });
     expect(typeof set.weightKg).toBe('string');
     expect(set.weightKg).toBe('80.5');
@@ -85,6 +91,12 @@ describe('getDaySummary', () => {
       exerciseName: 'Press Banca',
       reps: 8,
       weightKg: '80.5',
+      semanticCaptureVersion: 1,
+      loadMode: 'external',
+      amountBasis: 'total',
+      side: 'bilateral',
+      setPurpose: 'working',
+      repCountBasis: null,
     });
   });
 

@@ -5,23 +5,25 @@ import { isUniqueConstraintError } from '@/lib/db/unique-error';
 import { requireAccessibleExercise } from '@/lib/services/exercises';
 import { AppError } from '@/types/errors';
 import { isValidWeightKg, parseWeightKg } from '@/lib/format/weight';
+import { normalizeExactDecimal } from '@/lib/progression/decimal';
+import { validateSemanticCapture } from '@/lib/progression/semantics';
+import type { SemanticCaptureInput, SemanticCaptureValidation } from '@/types/progression';
 import type { Workout, WorkoutSet } from '@/lib/db/schema';
 
-function assertWorkoutAllowsSetMutation(workout: Workout, action: 'create' | 'update' | 'delete'): void {
-  if (!workout.endedAt) {
-    return;
-  }
-
-  if (action === 'create') {
-    throw new AppError('VALIDATION', 'No puedes agregar series a un entrenamiento finalizado');
-  }
-  if (action === 'update') {
-    throw new AppError('VALIDATION', 'No puedes modificar series de un entrenamiento finalizado');
-  }
-  throw new AppError('VALIDATION', 'No puedes eliminar series de un entrenamiento finalizado');
+/**
+ * The six persisted semantic columns. All six are `null` on a legacy row, which
+ * must stay permanently raw/unknown; a v1 row carries the complete tuple.
+ */
+export interface WorkoutSetSemanticFields {
+  semanticCaptureVersion: number | null;
+  loadMode: string | null;
+  amountBasis: string | null;
+  side: string | null;
+  setPurpose: string | null;
+  repCountBasis: string | null;
 }
 
-export interface CreateWorkoutSetInput {
+export interface CreateWorkoutSetInput extends WorkoutSetSemanticFields {
   workoutId: number;
   userId: number;
   exerciseId: number;
@@ -37,22 +39,109 @@ export interface UpdateWorkoutSetInput {
   setIndex?: number;
   reps?: number;
   weightKg?: string;
+  semanticCaptureVersion?: number | null;
+  loadMode?: string | null;
+  amountBasis?: string | null;
+  side?: string | null;
+  setPurpose?: string | null;
+  repCountBasis?: string | null;
+}
+
+/** Reason codes from the domain capture validator. */
+type CaptureFailureReason = Extract<SemanticCaptureValidation, { ok: false }>['reason'];
+
+/** Spanish UI copy for a rejected capture; the domain owns the decision. */
+function captureFailureMessage(reason: CaptureFailureReason): string {
+  switch (reason) {
+    case 'unsupported_capture_version':
+      return 'Versión de captura no soportada. Actualizá la app para registrar la serie.';
+    case 'unknown_semantics':
+      return 'Faltan el modo de carga, el lado o el propósito. Actualizá la app para registrar la serie.';
+    case 'invalid_semantic_combination':
+      return 'La combinación de carga, lado y base elegida no es válida.';
+    case 'invalid_amount':
+      return 'El monto registrado o las repeticiones no son válidos para esta serie.';
+  }
+}
+
+function isLegacySemanticRow(set: WorkoutSet): boolean {
+  return (
+    set.semanticCaptureVersion === null &&
+    set.loadMode === null &&
+    set.amountBasis === null &&
+    set.side === null &&
+    set.setPurpose === null &&
+    set.repCountBasis === null
+  );
+}
+
+/** Returns the six columns as stored, for building a "final tuple" on PATCH. */
+function persistedSemantics(set: WorkoutSet): WorkoutSetSemanticFields {
+  return {
+    semanticCaptureVersion: set.semanticCaptureVersion,
+    loadMode: set.loadMode,
+    amountBasis: set.amountBasis,
+    side: set.side,
+    setPurpose: set.setPurpose,
+    repCountBasis: set.repCountBasis,
+  };
+}
+
+function hasSemanticInput(input: UpdateWorkoutSetInput): boolean {
+  return (
+    input.semanticCaptureVersion !== undefined ||
+    input.loadMode !== undefined ||
+    input.amountBasis !== undefined ||
+    input.side !== undefined ||
+    input.setPurpose !== undefined ||
+    input.repCountBasis !== undefined
+  );
+}
+
+function validateCapture(
+  fields: WorkoutSetSemanticFields,
+  weightKg: string,
+  reps: number,
+): SemanticCaptureValidation {
+  const input: SemanticCaptureInput = { ...fields, weightKg, reps };
+  return validateSemanticCapture(input);
+}
+
+function assertWorkoutAllowsSetMutation(workout: Workout, action: 'create' | 'update' | 'delete'): void {
+  if (!workout.endedAt) {
+    return;
+  }
+
+  if (action === 'create') {
+    throw new AppError('VALIDATION', 'No puedes agregar series a un entrenamiento finalizado');
+  }
+  if (action === 'update') {
+    throw new AppError('VALIDATION', 'No puedes modificar series de un entrenamiento finalizado');
+  }
+  throw new AppError('VALIDATION', 'No puedes eliminar series de un entrenamiento finalizado');
 }
 
 /**
- * Creates a new workout set (atomic operation with transaction)
+ * Creates a new workout set with a complete v1 semantic tuple.
+ *
+ * Every new set must carry declared semantics: an outdated client that omits the
+ * tuple receives a typed `VALIDATION` error and never silently creates an
+ * all-null (legacy/unknown) row. Domain validity is delegated to
+ * `validateSemanticCapture`; this service only performs lifecycle/ownership
+ * checks and persistence.
  */
 export async function createWorkoutSet(input: CreateWorkoutSetInput): Promise<WorkoutSet> {
-  // Validate input
+  // Shape check kept at the boundary; domain validity is decided below.
   if (input.reps <= 0) {
     throw new AppError('VALIDATION', 'Las repeticiones deben ser mayor a 0');
   }
 
-  if (!isValidWeightKg(input.weightKg)) {
-    throw new AppError('VALIDATION', 'Peso inválido');
+  const validation = validateCapture(input, input.weightKg, input.reps);
+  if (!validation.ok) {
+    throw new AppError('VALIDATION', captureFailureMessage(validation.reason));
   }
 
-  const normalizedWeight = parseWeightKg(input.weightKg);
+  const normalizedWeight = normalizeExactDecimal(input.weightKg);
 
   try {
     // Use transaction to atomically verify and insert
@@ -73,7 +162,7 @@ export async function createWorkoutSet(input: CreateWorkoutSetInput): Promise<Wo
       assertWorkoutAllowsSetMutation(workout, 'create');
       await requireAccessibleExercise(input.exerciseId, input.userId);
 
-      // Atomic insert - unique constraint will prevent duplicates
+      // Persist the canonicalized tuple; legacy all-null rows are unreachable here.
       return tx
         .insert(workoutSets)
         .values({
@@ -83,6 +172,12 @@ export async function createWorkoutSet(input: CreateWorkoutSetInput): Promise<Wo
           reps: input.reps,
           weightKg: normalizedWeight,
           completed: true,
+          semanticCaptureVersion: input.semanticCaptureVersion,
+          loadMode: validation.canonical.loadMode,
+          amountBasis: validation.canonical.amountBasis,
+          side: validation.canonical.side,
+          setPurpose: validation.canonical.setPurpose,
+          repCountBasis: validation.canonical.repCountBasis,
         })
         .returning();
     });
@@ -100,15 +195,15 @@ export async function createWorkoutSet(input: CreateWorkoutSetInput): Promise<Wo
 }
 
 /**
- * Updates a workout set
+ * Updates a workout set.
+ *
+ * For a v1 row the complete resulting tuple is validated atomically, so changing
+ * mode/side/basis/amount/purpose in isolation cannot leave an invalid row. A
+ * legacy row keeps all six semantic columns `null`: nonsemantic edits are
+ * permitted, but any attempt to add v1 semantics is rejected (a desired
+ * declared performance is recorded as a new set).
  */
 export async function updateWorkoutSet(input: UpdateWorkoutSetInput): Promise<WorkoutSet> {
-  // Validate weight if provided
-  if (input.weightKg !== undefined && !isValidWeightKg(input.weightKg)) {
-    throw new AppError('VALIDATION', 'Peso inválido');
-  }
-
-  // Validate reps if provided
   if (input.reps !== undefined && input.reps <= 0) {
     throw new AppError('VALIDATION', 'Las repeticiones deben ser mayor a 0');
   }
@@ -143,7 +238,50 @@ export async function updateWorkoutSet(input: UpdateWorkoutSetInput): Promise<Wo
   }
   if (input.setIndex !== undefined) updateData.setIndex = input.setIndex;
   if (input.reps !== undefined) updateData.reps = input.reps;
-  if (input.weightKg !== undefined) updateData.weightKg = parseWeightKg(input.weightKg);
+
+  if (isLegacySemanticRow(set)) {
+    if (hasSemanticInput(input)) {
+      throw new AppError(
+        'VALIDATION',
+        'No se puede agregar semántica v1 a una serie antigua. Registrá una serie nueva.',
+      );
+    }
+    if (input.weightKg !== undefined) {
+      if (!isValidWeightKg(input.weightKg)) {
+        throw new AppError('VALIDATION', 'Peso inválido');
+      }
+      updateData.weightKg = parseWeightKg(input.weightKg);
+    }
+  } else {
+    const stored = persistedSemantics(set);
+    const finalFields: WorkoutSetSemanticFields = {
+      semanticCaptureVersion:
+        input.semanticCaptureVersion !== undefined
+          ? input.semanticCaptureVersion
+          : stored.semanticCaptureVersion,
+      loadMode: input.loadMode !== undefined ? input.loadMode : stored.loadMode,
+      amountBasis: input.amountBasis !== undefined ? input.amountBasis : stored.amountBasis,
+      side: input.side !== undefined ? input.side : stored.side,
+      setPurpose: input.setPurpose !== undefined ? input.setPurpose : stored.setPurpose,
+      repCountBasis:
+        input.repCountBasis !== undefined ? input.repCountBasis : stored.repCountBasis,
+    };
+    const finalReps = input.reps !== undefined ? input.reps : set.reps;
+    const finalWeight = input.weightKg !== undefined ? input.weightKg : set.weightKg;
+
+    const validation = validateCapture(finalFields, finalWeight, finalReps);
+    if (!validation.ok) {
+      throw new AppError('VALIDATION', captureFailureMessage(validation.reason));
+    }
+
+    updateData.weightKg = normalizeExactDecimal(finalWeight);
+    updateData.semanticCaptureVersion = finalFields.semanticCaptureVersion;
+    updateData.loadMode = validation.canonical.loadMode;
+    updateData.amountBasis = validation.canonical.amountBasis;
+    updateData.side = validation.canonical.side;
+    updateData.setPurpose = validation.canonical.setPurpose;
+    updateData.repCountBasis = validation.canonical.repCountBasis;
+  }
 
   const [updated] = await db
     .update(workoutSets)

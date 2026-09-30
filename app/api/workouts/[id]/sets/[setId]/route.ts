@@ -4,11 +4,22 @@ import * as workoutSetsService from '@/lib/services/workout-sets';
 import { z } from 'zod';
 import { AppError } from '@/types/errors';
 
+/**
+ * PATCH accepts partial semantic fields; the service merges them into the stored
+ * tuple and validates the complete resulting state atomically. Transport only
+ * checks shape/types.
+ */
 const updateSetSchema = z.object({
   exerciseId: z.number().int().positive().optional(),
   setIndex: z.number().int().positive().optional(),
   reps: z.number().int().positive().optional(),
   weightKg: z.string().optional(),
+  semanticCaptureVersion: z.number().int().positive().nullable().optional(),
+  loadMode: z.string().nullable().optional(),
+  amountBasis: z.string().nullable().optional(),
+  side: z.string().nullable().optional(),
+  setPurpose: z.string().nullable().optional(),
+  repCountBasis: z.string().nullable().optional(),
 });
 
 /**

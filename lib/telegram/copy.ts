@@ -1,5 +1,6 @@
 import { STREAK_NUDGE_RULE } from '@/types/streak';
-import { formatWeightKg } from '@/lib/format/weight';
+import { describeRecordedAmount } from '@/lib/format/amount';
+import type { CanonicalSemantics } from '@/types/progression';
 
 export const TELEGRAM_COPY = {
   startUnlinked:
@@ -8,8 +9,10 @@ export const TELEGRAM_COPY = {
     `Hola, ${name}. Ya estás vinculado. Usá /log, /entreno, /resumen o /recordatorio.`,
   help: [
     'Comandos Atlas Fitness:',
-    '/log <ejercicio> <peso_kg> <reps> — registrar una serie',
-    '/entreno <ejercicio> <peso_kg> <reps> — entreno corto (serie + cerrar)',
+    '/log <ejercicio> <peso|0> <reps> mode=<external|bodyweight|bodyweight_added|assisted> side=<bilateral|left|right|alternating> purpose=<working|warmup> [basis=total|per_side] [repbasis=total|per_side] — registrar una serie',
+    'Ejemplo: /log press banca 80 10 mode=external basis=total side=bilateral purpose=working',
+    'Peso corporal: /log dominadas 0 8 mode=bodyweight side=bilateral purpose=working',
+    '/entreno — igual que /log pero además cierra el entrenamiento',
     '/fin — cerrar el entrenamiento activo',
     '/resumen — resumen de hoy (hora Córdoba)',
     '/recordatorio — racha, tip y regla de aviso',
@@ -22,9 +25,14 @@ export const TELEGRAM_COPY = {
   linkExpired: 'Ese código venció. Pedí uno nuevo en Ajustes (válido 10 minutos).',
   linkConflict: 'Este Telegram ya está vinculado a otra cuenta.',
   logUsage:
-    'Usá: /log <ejercicio> <peso_kg> <reps>\nEjemplo: /log press banca 80 10',
-  logOk: (exercise: string, reps: number, weightKg: string) =>
-    `Registré ${exercise}: ${reps} reps × ${formatWeightKg(weightKg)}.`,
+    'Usá: /log <ejercicio> <peso|0> <reps> mode=<external|bodyweight|bodyweight_added|assisted> side=<bilateral|left|right|alternating> purpose=<working|warmup> [basis=total|per_side] [repbasis=total|per_side]\nEjemplo: /log press banca 80 10 mode=external basis=total side=bilateral purpose=working',
+  logOk: (input: {
+    exercise: string;
+    reps: number;
+    weightKg: string;
+    canonical: CanonicalSemantics;
+  }) =>
+    `Registré ${input.exercise}: ${input.reps} reps · ${describeRecordedAmount(input.canonical, input.weightKg)}.`,
   logExerciseNone: (query: string) =>
     `No encontré el ejercicio "${query}". Probá con Press Banca, Sentadilla o Peso Muerto.`,
   logExerciseAmbiguous: (names: string[]) =>
@@ -35,8 +43,8 @@ export const TELEGRAM_COPY = {
     `Hoy (${date}, hora Córdoba) todavía no registraste entrenos.`,
   summaryHeader: (date: string, setCount: number) =>
     `Resumen de hoy (${date}, Córdoba) — ${setCount} serie(s):`,
-  summarySetLine: (exercise: string, reps: number, weightKg: string) =>
-    `• ${exercise}: ${reps} × ${formatWeightKg(weightKg)}`,
+  summarySetLine: (exercise: string, reps: number, amountLabel: string) =>
+    `• ${exercise}: ${reps} reps · ${amountLabel}`,
   summaryOpenWorkout: 'Tenés un entrenamiento abierto. Cerralo con /fin.',
   reminderRule: `Regla de recordatorio (${STREAK_NUDGE_RULE}): si ayer tuviste un día activo (entreno cerrado o ánimo) y hoy todavía no, te avisamos para no perder la racha. Zona horaria: America/Argentina/Cordoba. El cron /api/cron/streak-nudge registra el aviso una vez por día y lo envía por Telegram si tu cuenta está vinculada.`,
   reminderStreak: (current: number, longest: number) =>
