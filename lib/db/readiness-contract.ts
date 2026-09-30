@@ -105,6 +105,12 @@ export const REQUIRED_SCHEMA: readonly RequiredTable[] = [
       'weight_kg',
       'completed',
       'deleted_at',
+      'semantic_capture_version',
+      'load_mode',
+      'amount_basis',
+      'side',
+      'set_purpose',
+      'rep_count_basis',
     ],
     primaryKey: ['id'],
     indexes: [

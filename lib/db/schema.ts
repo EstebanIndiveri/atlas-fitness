@@ -13,6 +13,13 @@ import type {
   UserGoalPreference,
   UserPacePreference,
 } from '@/types/user-preferences';
+import type {
+  AmountBasis,
+  LoadMode,
+  RepCountBasis,
+  SetPurpose,
+  Side,
+} from '@/types/progression';
 
 /**
  * Users table — authentication and profile
@@ -336,6 +343,14 @@ export const workoutSets = sqliteTable(
     weightKg: text('weight_kg').notNull(),
     completed: integer('completed', { mode: 'boolean' }).notNull().default(true),
     deletedAt: integer('deleted_at', { mode: 'timestamp' }),
+    // Nullable semantic capture (v0.12). Legacy rows keep all six NULL and remain
+    // raw/uninterpreted; there is deliberately no second amount column.
+    semanticCaptureVersion: integer('semantic_capture_version'),
+    loadMode: text('load_mode').$type<LoadMode>(),
+    amountBasis: text('amount_basis').$type<AmountBasis>(),
+    side: text('side').$type<Side>(),
+    setPurpose: text('set_purpose').$type<SetPurpose>(),
+    repCountBasis: text('rep_count_basis').$type<RepCountBasis>(),
   },
   (table) => ({
     uniqueWorkoutSet: uniqueIndex('workout_sets_workout_id_set_index_unique')
@@ -347,6 +362,61 @@ export const workoutSets = sqliteTable(
     exerciseLookupIdx: index('workout_sets_exercise_lookup_idx')
       .on(table.exerciseId, table.workoutId, table.setIndex, table.id)
       .where(sql`${table.deletedAt} IS NULL AND ${table.completed} = 1`),
+    // Additive partial expression index (v0.12) for the exact all-time external-load
+    // cohort lookup. It orders by decimal-exact `weight_kg` (integer-part length,
+    // integer part, fractional part) for a fixed exercise/mode/basis/side/reps key.
+    externalPrCohortIdx: index('workout_sets_external_pr_cohort_idx')
+      .on(
+        table.exerciseId,
+        table.loadMode,
+        table.amountBasis,
+        table.side,
+        table.reps,
+        sql`(length(CASE WHEN instr(${table.weightKg}, '.') = 0 THEN ${table.weightKg} ELSE substr(${table.weightKg}, 1, instr(${table.weightKg}, '.') - 1) END)) DESC`,
+        sql`(CASE WHEN instr(${table.weightKg}, '.') = 0 THEN ${table.weightKg} ELSE substr(${table.weightKg}, 1, instr(${table.weightKg}, '.') - 1) END) DESC`,
+        sql`(CASE WHEN instr(${table.weightKg}, '.') = 0 THEN '' ELSE substr(${table.weightKg}, instr(${table.weightKg}, '.') + 1) END) DESC`,
+      )
+      .where(sql`${table.deletedAt} IS NULL AND ${table.completed} = 1`),
+    semanticCaptureVersionValue: check(
+      'workout_sets_semantic_capture_version_check',
+      sql`${table.semanticCaptureVersion} IS NULL OR ${table.semanticCaptureVersion} > 0`,
+    ),
+    loadModeValue: check(
+      'workout_sets_load_mode_check',
+      sql`${table.loadMode} IS NULL OR ${table.loadMode} IN ('external', 'bodyweight', 'bodyweight_added', 'assisted')`,
+    ),
+    amountBasisValue: check(
+      'workout_sets_amount_basis_check',
+      sql`${table.amountBasis} IS NULL OR ${table.amountBasis} IN ('total', 'per_side')`,
+    ),
+    sideValue: check(
+      'workout_sets_side_check',
+      sql`${table.side} IS NULL OR ${table.side} IN ('bilateral', 'left', 'right', 'alternating')`,
+    ),
+    setPurposeValue: check(
+      'workout_sets_set_purpose_check',
+      sql`${table.setPurpose} IS NULL OR ${table.setPurpose} IN ('working', 'warmup')`,
+    ),
+    repCountBasisValue: check(
+      'workout_sets_rep_count_basis_check',
+      sql`${table.repCountBasis} IS NULL OR ${table.repCountBasis} IN ('total', 'per_side')`,
+    ),
+    // All six semantics NULL (legacy/unknown) or the four required v1 fields present.
+    semanticTupleComplete: check(
+      'workout_sets_semantic_tuple_check',
+      sql`(${table.semanticCaptureVersion} IS NULL AND ${table.loadMode} IS NULL AND ${table.amountBasis} IS NULL AND ${table.side} IS NULL AND ${table.setPurpose} IS NULL AND ${table.repCountBasis} IS NULL) OR (${table.semanticCaptureVersion} IS NOT NULL AND ${table.loadMode} IS NOT NULL AND ${table.side} IS NOT NULL AND ${table.setPurpose} IS NOT NULL)`,
+    ),
+    // Plain bodyweight carries no basis and the canonical zero sentinel; every other
+    // load mode carries an explicit amount basis.
+    bodyweightAmount: check(
+      'workout_sets_bodyweight_amount_check',
+      sql`${table.loadMode} IS NULL OR (${table.loadMode} = 'bodyweight' AND ${table.amountBasis} IS NULL AND ${table.weightKg} = '0') OR (${table.loadMode} <> 'bodyweight' AND ${table.amountBasis} IS NOT NULL)`,
+    ),
+    // Alternating requires an explicit rep-count basis; every other side forbids it.
+    alternatingRepBasis: check(
+      'workout_sets_alternating_rep_basis_check',
+      sql`${table.side} IS NULL OR (${table.side} = 'alternating' AND ${table.repCountBasis} IS NOT NULL) OR (${table.side} <> 'alternating' AND ${table.repCountBasis} IS NULL)`,
+    ),
   })
 );
 

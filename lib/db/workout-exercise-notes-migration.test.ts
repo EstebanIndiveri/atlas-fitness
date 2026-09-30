@@ -25,25 +25,33 @@ interface Journal {
 }
 
 /**
- * Copies the real migrations folder and strips the v0.11 migration, yielding the
- * schema an existing v0.10 database would already have.
+ * Copies the real migrations folder and strips the v0.11 migration plus every later
+ * migration, yielding the schema an existing v0.10 database would already have.
+ * Stripping only the tagged entry is not enough: a later additive migration left in
+ * the pre-folder would be applied first and make the migrator skip this one by timestamp.
  */
 function copyPreMigrationFolder(destination: string): void {
   cpSync(MIGRATIONS_FOLDER, destination, { recursive: true });
 
   const journalPath = join(destination, 'meta/_journal.json');
   const journal = JSON.parse(readFileSync(journalPath, 'utf8')) as Journal;
-  const withoutNewMigration = journal.entries.filter((entry) => entry.tag !== NEW_MIGRATION_TAG);
+  const targetIndex = journal.entries.find((entry) => entry.tag === NEW_MIGRATION_TAG)?.idx;
 
-  if (withoutNewMigration.length === journal.entries.length) {
+  if (targetIndex === undefined) {
     throw new Error(`Fixture setup failed: ${NEW_MIGRATION_TAG} not found in the journal`);
   }
 
+  const preMigrationEntries = journal.entries.filter((entry) => entry.idx < targetIndex);
+  const strippedEntries = journal.entries.filter((entry) => entry.idx >= targetIndex);
+
   writeFileSync(
     journalPath,
-    JSON.stringify({ ...journal, entries: withoutNewMigration }, null, 2),
+    JSON.stringify({ ...journal, entries: preMigrationEntries }, null, 2),
   );
-  rmSync(join(destination, `${NEW_MIGRATION_TAG}.sql`), { force: true });
+
+  for (const entry of strippedEntries) {
+    rmSync(join(destination, `${entry.tag}.sql`), { force: true });
+  }
 }
 
 function makeFixture(): {
