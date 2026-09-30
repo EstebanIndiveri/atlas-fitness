@@ -5,14 +5,18 @@ import { useState } from 'react';
 import { ExerciseMedia } from '@/components/exercises/ExerciseMedia';
 import { Card } from '@/components/ui/Card';
 import { MetricValue } from '@/components/ui/MetricValue';
+import { ExerciseNotePanel } from '@/components/session/ExerciseNotePanel';
+import { LastCompletedPanel } from '@/components/session/LastCompletedPanel';
 import { SetCheckList } from '@/components/session/SetCheckList';
 import { SessionCompleteSetBar } from '@/components/session/SessionCompleteSetBar';
+import { useExerciseSessionMemory } from '@/hooks/useExerciseSessionMemory';
 import { SESSION_COPY } from '@/lib/copy/session';
 import { cn } from '@/lib/ui/cn';
 import { metric } from '@/types/metric';
 import type { RoutineExerciseItem } from '@/types/routine';
 
 type GuidedExerciseCardProps = {
+  workoutId: number;
   exercise: RoutineExerciseItem;
   completedCount: number;
   completedSets?: readonly CompletedSet[];
@@ -26,6 +30,7 @@ type GuidedExerciseCardProps = {
   onHold?: () => void;
   busy: boolean;
   resting?: boolean;
+  readOnly?: boolean;
   nextExerciseName?: string | null;
 };
 
@@ -35,7 +40,7 @@ type CompletedSet = {
   reps: number;
 };
 
-type SecondaryPanel = 'technique' | 'replace' | 'notes';
+type SecondaryPanel = 'technique' | 'replace' | 'notes' | 'last';
 
 function ActionChip({
   children,
@@ -68,11 +73,12 @@ function ActionChip({
  * Active exercise card for the guided-session player.
  *
  * @param props Exercise metadata plus current-session set data and completion controls.
- * @returns A Figma-aligned exercise card without inventing unavailable prior-session data.
+ * @returns A Figma-aligned exercise card with persisted note and previous-encounter panels.
  * @example
- * <GuidedExerciseCard exercise={exercise} completedCount={1} weight="75" onWeightChange={() => {}} onCompleteSet={() => {}} busy={false} />
+ * <GuidedExerciseCard workoutId={8} exercise={exercise} completedCount={1} weight="75" onWeightChange={() => {}} onCompleteSet={() => {}} busy={false} />
  */
 export function GuidedExerciseCard({
+  workoutId,
   exercise,
   completedCount,
   completedSets = [],
@@ -86,14 +92,14 @@ export function GuidedExerciseCard({
   onHold,
   busy,
   resting = false,
+  readOnly = false,
   nextExerciseName,
 }: GuidedExerciseCardProps) {
   const [panel, setPanel] = useState<SecondaryPanel | null>(null);
-  const [noteText, setNoteText] = useState('');
+  const memory = useExerciseSessionMemory({ workoutId, exerciseId: exercise.exerciseId });
   const safeCompletedCount = Math.min(completedCount, exercise.targetSets);
   const activeSet = Math.min(safeCompletedCount + 1, exercise.targetSets);
   const canCompleteSet = safeCompletedCount < exercise.targetSets;
-  const noteInputId = `guided-exercise-note-${exercise.id}`;
   const togglePanel = (nextPanel: SecondaryPanel): void => {
     setPanel((currentPanel) => (currentPanel === nextPanel ? null : nextPanel));
   };
@@ -139,6 +145,13 @@ export function GuidedExerciseCard({
             >
               ≣ Notas
             </ActionChip>
+            <ActionChip
+              ariaLabel={SESSION_COPY.showLastTime}
+              active={panel === 'last'}
+              onClick={() => togglePanel('last')}
+            >
+              {`↺ ${SESSION_COPY.lastTimeChip}`}
+            </ActionChip>
           </div>
         </div>
         {panel === 'technique' ? (
@@ -158,27 +171,26 @@ export function GuidedExerciseCard({
           </div>
         ) : null}
         {panel === 'notes' ? (
-          <div className="mx-4 mt-4 rounded-2xl bg-canvas p-3">
-            <label
-              htmlFor={noteInputId}
-              className="text-xs font-semibold uppercase tracking-[0.06em] text-ink-muted"
-            >
-              Nota de la sesión para {exercise.exerciseName}
-            </label>
-            <textarea
-              id={noteInputId}
-              className="mt-2 min-h-24 w-full resize-none rounded-xl bg-surface px-3 py-3 text-base leading-6 text-ink outline-none ring-1 ring-line placeholder:text-ink-muted focus:ring-2 focus:ring-brand"
-              value={noteText}
-              onChange={(event) => setNoteText(event.target.value)}
-              maxLength={280}
-              placeholder={SESSION_COPY.notesEmpty}
-              aria-describedby={`${noteInputId}-helper`}
-            />
-            <div id={`${noteInputId}-helper`} className="mt-2 flex items-center justify-between gap-3 text-xs text-ink-muted">
-              <span>Nota local de esta sesión.</span>
-              <span className="tabular-nums">{noteText.length}/280</span>
-            </div>
-          </div>
+          <ExerciseNotePanel
+            exerciseId={exercise.exerciseId}
+            exerciseName={exercise.exerciseName}
+            readOnly={readOnly}
+            context={memory.context}
+            loading={memory.loading}
+            saving={memory.saving}
+            error={memory.error}
+            onSave={memory.saveNote}
+            onDelete={memory.deleteNote}
+            onRetry={memory.reload}
+          />
+        ) : null}
+        {panel === 'last' ? (
+          <LastCompletedPanel
+            context={memory.context}
+            loading={memory.loading}
+            error={memory.error}
+            onRetry={memory.reload}
+          />
         ) : null}
         {panel === 'replace' ? (
           <div className="mx-4 mt-4 rounded-2xl bg-canvas p-3">

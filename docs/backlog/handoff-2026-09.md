@@ -6,6 +6,8 @@
 
 > **Actualización posterior (snapshot 2026-09-29).** Se publicó **v0.10.0 "Días objetivo de hábitos"**: el release PR #186 (`chore(release): v0.10.0`, `release/0.10.0` → `main`, head `8bad403645d3cc41afbca9267d0030e139a801ac`) se fusionó en `main` mediante merge normal (no squash), dejando el merge commit `531bf0706355763885c9798fc012a5eb6bbc0298`; el tag anotado `v0.10.0` (objeto `a03d0591f172f87a8b3410a2e003d614dba38a31`) apunta a ese commit y `package.json`/`package-lock.json` quedaron en **0.10.0**. La publicación anterior es **v0.9.0** (release PR #168, tag anotado sobre `0cd7a1a250cbdbf81f4897af129274524222a206`). La evidencia de release (migración de producción, deployment Vercel y smoke) está en §6; el bloque histórico de abajo conserva sus fechas y cifras originales.
 
+> **Actualización posterior (snapshot 2026-09-29).** El trabajo de **v0.11.0 "Memoria de ejercicio"** (workstreams A–F) está **integrado y revisado en `develop`, pero NO publicado**. No es un release: no hay PR de release, no existe tag `v0.11.0`, `package.json`/`package-lock.json` siguen en **0.10.0** y la última versión publicada es **v0.10.0**. La verdad documentada y su matriz claim→evidencia están en la sección **"Wave v0.11.0 — implementada en `develop`, NO publicada"** de §6. El plan de release (§30 del brief v0.11) no se ejecutó.
+
 ## 1. Recap producto / visión
 
 Atlas Fitness es un coach de entrenamiento mobile-first: no busca ser un CRUD de rutinas sino un loop de hábito donde el usuario registra cómo está, ve qué toca hoy, puede adaptar la sesión con Coach Atlas, entrena guiado, deja feedback y vuelve a Progreso con datos reales. La visión de [`handoff-atlas-adaptive-core.md`](./handoff-atlas-adaptive-core.md) sigue vigente como norte: **contexto → interpretación → recomendación → acción → aprendizaje**, con una regla central: Coach Atlas propone y explica, nunca inventa ni modifica silenciosamente.
@@ -126,6 +128,39 @@ Ver [`../../CHANGELOG.md`](../../CHANGELOG.md) para detalle agrupado Added/Chang
 - [x] Tag anotado `v0.10.0` (objeto `a03d0591f172f87a8b3410a2e003d614dba38a31`) creado sobre `531bf0706355763885c9798fc012a5eb6bbc0298`.
 - [x] Migración de producción `0023_habit_target_schedules` (aditiva, sin backfill): gate pre-merge sobre `release/0.10.0` (run 36580211527, `SUCCESS`) y confirmación de idempotencia post-merge sobre `main` @ `531bf07` (run 36580447444, `SUCCESS`).
 - [x] Deployment de producción Vercel id 6736930690 de `531bf07` en `SUCCESS` ([https://atlas-fitness-hg3pm124j-eindi-acme.vercel.app](https://atlas-fitness-hg3pm124j-eindi-acme.vercel.app)); smoke sin sesión: `/`, `/login` y `/onboarding` = 200, `/dashboard/today` = 307 → `/login`, y `GET /api/stats/habits?period=week`, `GET /api/habit-targets` y `GET /api/stats/habit-adherence?period=week` = 401.
+
+### Wave v0.11.0 — implementada en `develop`, NO publicada (snapshot 2026-09-29)
+
+**No es un release.** Los workstreams A–F de "Memoria de ejercicio" están integrados y revisados en `develop` a partir de `11a8c935a6babeb63263fcd94bffc0f8ec3e1fe3` (merge de E), pero **no** se cortó `release/0.11.0`, **no** hay tag `v0.11.0`, **no** se tocó `package.json`/`package-lock.json` (siguen en **0.10.0**) y la última versión publicada sigue siendo **v0.10.0**. El plan de release (§30 del brief) no se ejecutó.
+
+**Tesis entregada (verificada en código y tests):** Atlas permite guardar una nota **explícita** de un ejercicio durante un workout, la persiste con ownership y versión, y al reaparecer el ejercicio devuelve esa nota junto con las **series previas como registros históricos raw**, sin inferir progresión, readiness, significado de dolor ni próxima carga.
+
+**Anclas de merge verificadas** (`git log`): A PR #191 `713a63b575b6f2dbfe72bf5025e29520873ce164`; B PR #192 `de41752041ef6a9622804bf1ff98d080f4b5e8bb`; C PR #193 `3fedd90245af739462459999a2b17f1123a88f74`; D PR #194 `8a42318c47fb861eb032100b71588ed56bbd797c`; E PR #195 `11a8c935a6babeb63263fcd94bffc0f8ec3e1fe3`.
+
+**Matriz claim → evidencia (toda afirmación citada tiene prueba; sin claim sin evidencia):**
+
+| Claim (v0.11, solo lo probado) | Evidencia (path / test / PR) |
+|---|---|
+| Nota es **input explícito del usuario**, 1–280 puntos de código Unicode, recortada; cota por helper compartido, no por `.length`/`maxLength` | `types/exercise-session-memory.ts`, `lib/session/exercise-session-memory.ts` (`countExerciseNoteCodePoints`, `MAX_EXERCISE_NOTE_CODE_POINTS=280`), `lib/session/exercise-session-memory.test.ts`; PR #191 |
+| `WorkoutExerciseNote` con ownership `user/workout/exercise`, `version` monotónica y CAS `{noteId,version}` | `types/exercise-session-memory.ts`, `lib/services/exercise-session-memory.ts` (`putWorkoutExerciseNote`/`deleteWorkoutExerciseNote`), `lib/services/exercise-session-memory.test.ts` (transiciones §17, carreras create/create, update/update, delete/recreate); PR #192 |
+| Migración **aditiva, tabla vacía, cero backfill**; índices parciales aditivos en `workouts`/`workout_sets` | `lib/db/migrations/0024_workout_exercise_notes.sql`, `lib/db/schema.ts`, `lib/db/workout-exercise-notes-migration.test.ts`; PR #192 |
+| Historial de "última vez" usa índices, sin scan/sort de toda la historia | `lib/db/workout-exercise-notes-query-plan.test.ts` (afirma `workouts_user_id_ended_at_idx` + `workout_sets_exercise_lookup_idx`/tabla de notas y ausencia de `TEMP B-TREE`); PR #192 |
+| Nota **inmutable tras cierre**; mutación solo en workout activo | `lib/services/exercise-session-memory.ts` (+ test); E2E caso "a closed workout freezes its note"; PR #192/#195 |
+| Series previas = **registros históricos raw** del **mismo y exacto `exerciseId`**, del último workout cerrado/completado/no borrado; excluye workout actual/abierto y borrados | `lib/services/exercise-session-memory.ts` (`loadLastCompletedExerciseSets`), `types/exercise-session-memory.ts`; E2E caso "last completed sets ... exclude the current workout"; PR #192/#195 |
+| Nota previa y series previas pueden venir de **workouts distintos con fechas Córdoba independientes** | `types/exercise-session-memory.ts` (`LastCompletedExerciseSets` vs `LastCompletedExerciseNote`), `lib/services/exercise-session-memory.test.ts`; PR #191/#192 |
+| API delgada `GET context` y `PUT`/`DELETE note`, `userId` solo de sesión, errores `{code,message}` | `app/api/workouts/[id]/exercises/[exerciseId]/context/route.ts`, `.../note/route.ts`, `.../params.ts` (+ `route.test.ts`); `lib/api/exercise-session-memory.ts` (parser total); PR #193 |
+| UI: Notas persistidas con save/delete/conflicto, panel "Última vez" con estados locales; el contexto nunca bloquea el registro de series | `components/session/ExerciseNotePanel.tsx`, `components/session/LastCompletedPanel.tsx`, `hooks/useExerciseSessionMemory.ts`, `components/session/GuidedExerciseCard.tsx` (+ tests); PR #194 |
+| Copy de feedback corregido: guarda como parte de la sesión, **no** cambia el plan ni recomienda cargas | `lib/copy/session.ts` (`feedbackHelper`), `lib/copy/session.test.ts`; E2E caso "honest persistence-only feedback copy"; PR #194/#195 |
+| E2E no vacío: versión exacta en update/reload/re-auth, CAS obsoleto `409`, cierre inmutable, cross-user, skip/hold con nota retenida, mobile 390px, Unicode 280/281 | `e2e/exercise-session-memory.spec.ts` (8 casos); PR #195 |
+
+**Límites declarados (no describir como shipped):**
+
+- **Sin** afirmación de progresión, PR, e1RM, readiness/recuperación, recomendación de próxima carga, aprendizaje del Coach ni automatización por feedback. Las series/notas son registros, no recomendaciones.
+- El feedback post-workout sigue **write-only** salvo su propio GET. Notas y series **no** se envían a Gemini, Telegram, analytics ni otro usuario. El único cambio adyacente a Coach es el copy corregido.
+- **DEFER/EXCLUDE** permanecen (ver §7 y §24/§25 del brief): historial dedicado por ejercicio, PR/e1RM, load-mode taxonomy, warm-up/drop/superset, RPE/RIR por set, sustitución, read-back/uso del feedback, consumo de historial/hábitos/notas por Coach, gamificación, motion y misiones/quests.
+- **Storage/retention sin cambios:** las notas persisten con el historial; soft-delete de un workout excluye sus notas y sets del contexto futuro.
+
+**Validación de esta sincronización (AUTHOR, docs-only, Node 20.15.0):** Jest focal 11 suites / 140 tests verde (6 suites backend/domain/query-plan + 5 suites UI/hook/copy), `tsc --noEmit` limpio. No se ejecutó la suite full ni Playwright en este workstream documental; la evidencia E2E citada pertenece a la wave E. `git diff --stat` toca únicamente `CHANGELOG.md`, `docs/backlog/handoff-2026-09.md` y `docs/backlog/README.md`.
 
 ### Checkpoint de desarrollo (2026-09-28) — snapshot histórico posterior a v0.9.0
 

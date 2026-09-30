@@ -12,6 +12,13 @@ describe('SESSION_COPY', () => {
     expect(SESSION_COPY.streakDays(1)).toBe('1 día seguido');
     expect(SESSION_COPY.streakDays(3)).toBe('3 días seguidos');
   });
+
+  it('states feedback persistence without promising recovery or next-load changes', () => {
+    expect(SESSION_COPY.feedbackHelper).toBe(
+      'Guardamos este feedback como parte de esta sesión. No cambia tu plan ni recomienda cargas automáticamente.',
+    );
+    expect(SESSION_COPY.feedbackHelper).not.toMatch(/recuperaci|próximas cargas|calibrar/i);
+  });
 });
 
 describe('motivatorForSet', () => {
