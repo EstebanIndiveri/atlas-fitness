@@ -169,7 +169,16 @@ async function createSet(
   set: { setIndex: number; reps: number; weightKg: string },
 ): Promise<WorkoutSetRecord> {
   const response = await client.post(paths.sets(workoutId), {
-    body: { exerciseId, ...set },
+    body: {
+      exerciseId,
+      ...set,
+      semanticCaptureVersion: 1,
+      loadMode: 'external',
+      amountBasis: 'total',
+      side: 'bilateral',
+      setPurpose: 'working',
+      repCountBasis: null,
+    },
   });
   requireHttpStatus(response, [201], 'history', 'create_set');
   return parseWorkoutSet(requireJson(response, 'create_set'), 'create_set');

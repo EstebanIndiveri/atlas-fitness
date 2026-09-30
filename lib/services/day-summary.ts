@@ -8,6 +8,12 @@ export interface DaySummarySet {
   exerciseName: string;
   reps: number;
   weightKg: string;
+  semanticCaptureVersion: number | null;
+  loadMode: string | null;
+  amountBasis: string | null;
+  side: string | null;
+  setPurpose: string | null;
+  repCountBasis: string | null;
 }
 
 export interface DaySummaryWorkout {
@@ -54,6 +60,12 @@ export async function getDaySummary(
         exerciseName: exercises.name,
         reps: workoutSets.reps,
         weightKg: workoutSets.weightKg,
+        semanticCaptureVersion: workoutSets.semanticCaptureVersion,
+        loadMode: workoutSets.loadMode,
+        amountBasis: workoutSets.amountBasis,
+        side: workoutSets.side,
+        setPurpose: workoutSets.setPurpose,
+        repCountBasis: workoutSets.repCountBasis,
       })
       .from(workoutSets)
       .innerJoin(exercises, eq(exercises.id, workoutSets.exerciseId))
@@ -68,6 +80,12 @@ export async function getDaySummary(
         exerciseName: set.exerciseName,
         reps: set.reps,
         weightKg: set.weightKg,
+        semanticCaptureVersion: set.semanticCaptureVersion,
+        loadMode: set.loadMode,
+        amountBasis: set.amountBasis,
+        side: set.side,
+        setPurpose: set.setPurpose,
+        repCountBasis: set.repCountBasis,
       })),
     });
   }

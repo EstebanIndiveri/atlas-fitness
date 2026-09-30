@@ -16,6 +16,7 @@ import { useRestTimer } from '@/hooks/useRestTimer';
 import { recordPostWorkoutFeedback } from '@/lib/api/post-workout-feedback';
 import { SESSION_COPY } from '@/lib/copy/session';
 import { isValidFeedback } from './feedback-validation';
+import { evaluateCapture } from '@/lib/session/semantics-draft';
 import type {
   DiscomfortEntry,
   WorkoutSensation,
@@ -184,8 +185,27 @@ export default function GuidedSessionPlayerPage() {
   const completedSetsForCurrent = session.current
     ? session.workout.sets
         .filter((set) => set.exerciseId === session.current?.exerciseId)
-        .map((set) => ({ setIndex: set.setIndex, weightKg: set.weightKg, reps: set.reps }))
+        .map((set) => ({
+          setIndex: set.setIndex,
+          weightKg: set.weightKg,
+          reps: set.reps,
+          semanticCaptureVersion: set.semanticCaptureVersion,
+          loadMode: set.loadMode,
+          amountBasis: set.amountBasis,
+          side: set.side,
+          setPurpose: set.setPurpose,
+          repCountBasis: set.repCountBasis,
+        }))
     : [];
+  const repsValue = Number.parseInt(session.reps, 10);
+  const capture = session.current
+    ? evaluateCapture(
+        session.semanticDraft,
+        session.weight,
+        Number.isFinite(repsValue) && repsValue > 0 ? repsValue : session.current.targetReps,
+      )
+    : null;
+  const canSubmitSet = capture?.ok === true;
   const nextExerciseName = session.queueItems.find((item) => !item.current)?.name ?? null;
 
   return (
@@ -248,6 +268,8 @@ export default function GuidedSessionPlayerPage() {
                   busy={session.busy || rest.active}
                   resting={rest.active}
                   nextExerciseName={nextExerciseName}
+                  semantics={session.semantics}
+                  canSubmitSet={canSubmitSet}
                 />
                 {rest.active ? (
                   <div
