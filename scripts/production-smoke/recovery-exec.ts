@@ -1,4 +1,5 @@
-import { deleteWorkoutWithReadback } from './cleanup';
+import { deleteNoteWithReadback, deleteWorkoutWithReadback } from './cleanup';
+import { requireHttpStatus } from './http-status';
 import type { SmokeHttpClient } from './http-client';
 import {
   asArray,
@@ -21,24 +22,21 @@ export class AmbiguousOrphansError extends Error {
 /** Lists the visible (non-deleted, owned) workout ids. */
 export async function listVisibleWorkoutIds(client: SmokeHttpClient): Promise<number[]> {
   const response = await client.get('/api/workouts');
-  if (response.status !== 200) {
-    throw new Error(`GET /api/workouts returned ${response.status}`);
-  }
+  requireHttpStatus(response, [200], 'cleanup', 'list_workouts');
   return asArray(requireJson(response, 'workouts'), 'workouts').map((row) =>
     parseWorkout(row, 'workout').id,
   );
 }
 
-async function readWorkoutDetail(
+/** Reads a workout detail (or `null` for 404). */
+export async function readWorkoutDetail(
   client: SmokeHttpClient,
   workoutId: number,
 ): Promise<Record<string, unknown> | null> {
   const response = await client.get(`/api/workouts/${workoutId}`);
+  requireHttpStatus(response, [200, 404], 'cleanup', `workout_${workoutId}`);
   if (response.status === 404) {
     return null;
-  }
-  if (response.status !== 200) {
-    throw new Error(`GET /api/workouts/${workoutId} returned ${response.status}`);
   }
   return asRecord(requireJson(response, `workout-${workoutId}`), `workout-${workoutId}`);
 }
@@ -66,9 +64,7 @@ async function collectRoutineExerciseIds(
     return [];
   }
   const response = await client.get('/api/routines');
-  if (response.status !== 200) {
-    return [];
-  }
+  requireHttpStatus(response, [200], 'cleanup', 'routines');
   const routines = asArray(requireJson(response, 'routines'), 'routines');
   for (const item of routines) {
     const routine = asRecord(item, 'routine');
@@ -87,43 +83,48 @@ function unique(ids: readonly number[]): number[] {
   return Array.from(new Set(ids));
 }
 
-/** Deletes any current note on an active orphan so the marker is removed first. */
+/** Deletes any current note on an active orphan with a `currentNote:null` readback. */
 async function deleteActiveNotes(
   client: SmokeHttpClient,
   workoutId: number,
   exerciseIds: readonly number[],
 ): Promise<void> {
   for (const exerciseId of exerciseIds) {
-    const response = await client.get(`/api/workouts/${workoutId}/exercises/${exerciseId}/context`);
-    if (response.status === 404) {
+    const readResponse = await client.get(
+      `/api/workouts/${workoutId}/exercises/${exerciseId}/context`,
+    );
+    if (readResponse.status === 404) {
       continue;
     }
-    if (response.status !== 200) {
-      throw new Error(`Context read returned ${response.status} for workout ${workoutId}`);
-    }
+    requireHttpStatus(readResponse, [200], 'cleanup', `context_${workoutId}_${exerciseId}`);
     const context = parseExerciseContext(
-      requireJson(response, 'context'),
+      requireJson(readResponse, 'context'),
       `context-${workoutId}-${exerciseId}`,
     );
     if (!context.currentNote) {
       continue;
     }
-    const remove = await client.del(`/api/workouts/${workoutId}/exercises/${exerciseId}/note`, {
-      body: {
-        expectedNoteId: context.currentNote.id,
-        expectedVersion: context.currentNote.version,
-      },
+    const noteId = context.currentNote.id;
+    const version = context.currentNote.version;
+    await deleteNoteWithReadback({
+      deleteNote: () =>
+        client.del(`/api/workouts/${workoutId}/exercises/${exerciseId}/note`, {
+          body: { expectedNoteId: noteId, expectedVersion: version },
+        }),
+      readContext: () =>
+        client.get(`/api/workouts/${workoutId}/exercises/${exerciseId}/context`),
     });
-    if (remove.status !== 200) {
-      throw new Error(`Note delete returned ${remove.status} for workout ${workoutId}`);
-    }
   }
 }
 
 export interface RecoveryParams {
   expectedUserId: number;
+  /** System routine expected for a create-before-mark orphan (`null` = cannot verify). */
+  expectedRoutineId: number | null;
   now: Date;
   crashWindowMs: number;
+  /** Ids recorded in a secret-free manifest, trusted for stale reconciliation. */
+  trustedWorkoutIds?: readonly number[];
 }
 
 /**
@@ -139,17 +140,13 @@ export async function recoverOrphans(
   params: RecoveryParams,
 ): Promise<number> {
   const listResponse = await client.get('/api/workouts');
-  if (listResponse.status !== 200) {
-    throw new Error(`GET /api/workouts returned ${listResponse.status}`);
-  }
+  requireHttpStatus(listResponse, [200], 'cleanup', 'list_workouts');
   const rows = asArray(requireJson(listResponse, 'workouts'), 'workouts').map((row) =>
     parseWorkout(row, 'workout'),
   );
 
   const activeResponse = await client.get('/api/workouts/active');
-  if (activeResponse.status !== 200) {
-    throw new Error(`GET /api/workouts/active returned ${activeResponse.status}`);
-  }
+  requireHttpStatus(activeResponse, [200], 'cleanup', 'active_workout');
   const activeBody = requireJson(activeResponse, 'active');
   const activeWorkout =
     activeBody === null || activeBody === undefined ? null : parseWorkout(activeBody, 'active');
@@ -181,6 +178,8 @@ export async function recoverOrphans(
     probes,
     activeWorkoutId: activeWorkout?.id ?? null,
     expectedUserId: params.expectedUserId,
+    expectedRoutineId: params.expectedRoutineId,
+    trustedWorkoutIds: params.trustedWorkoutIds ?? [],
     now: params.now,
     crashWindowMs: params.crashWindowMs,
   });
@@ -203,8 +202,7 @@ export async function recoverOrphans(
 
     await deleteWorkoutWithReadback({
       workoutId: cleanup.workoutId,
-      deleteWorkout: async () =>
-        (await client.del(`/api/workouts/${cleanup.workoutId}`)).status,
+      deleteWorkout: () => client.del(`/api/workouts/${cleanup.workoutId}`),
       listWorkoutIds: () => listVisibleWorkoutIds(client),
     });
     recovered += 1;

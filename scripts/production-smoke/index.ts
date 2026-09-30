@@ -3,7 +3,8 @@ import { writeFileSync } from 'node:fs';
 
 import { SMOKE_ENV_KEYS } from './constants';
 import { loadSmokeConfig } from './config';
-import { buildEvidence, serializeEvidence, step } from './evidence';
+import { assertEvidenceSanitized, buildEvidence, serializeEvidence, step } from './evidence';
+import { createFileManifestStore } from './manifest';
 import { generateQaRunId } from './run-id';
 import { runSmoke } from './runner';
 import type { OverallResult, SmokeEvidence } from './types';
@@ -20,7 +21,18 @@ function exitCodeFor(overall: OverallResult): number {
   return overall === 'FAIL' ? 1 : 2;
 }
 
-function writeEvidence(evidence: SmokeEvidence, path: string | null): void {
+/**
+ * Serializes evidence only after the sanitizer confirms no secret leaked.
+ *
+ * A detected leak throws before anything is written, so a leak can never be
+ * persisted (architecture §7).
+ */
+export function writeEvidence(
+  evidence: SmokeEvidence,
+  path: string | null,
+  secrets: readonly string[],
+): void {
+  assertEvidenceSanitized(evidence, secrets);
   const serialized = serializeEvidence(evidence);
   if (path) {
     writeFileSync(path, serialized, { encoding: 'utf8' });
@@ -67,12 +79,19 @@ export async function runFromEnv(
   if (!loaded.ok) {
     const evidence = incompleteEvidence();
     const configuredPath = env[SMOKE_ENV_KEYS.evidencePath]?.trim() || null;
-    writeEvidence(evidence, configuredPath);
+    writeEvidence(evidence, configuredPath, []);
     return { evidence, exitCode: 2 };
   }
 
-  const evidence = await runSmoke(loaded.config, { fetch: globalThis.fetch });
-  writeEvidence(evidence, loaded.config.evidencePath);
+  const manifestStore =
+    loaded.config.manifestPath !== null
+      ? createFileManifestStore(loaded.config.manifestPath)
+      : undefined;
+  const evidence = await runSmoke(loaded.config, {
+    fetch: globalThis.fetch,
+    ...(manifestStore ? { manifestStore } : {}),
+  });
+  writeEvidence(evidence, loaded.config.evidencePath, [loaded.config.password]);
   return { evidence, exitCode: exitCodeFor(evidence.overallResult) };
 }
 

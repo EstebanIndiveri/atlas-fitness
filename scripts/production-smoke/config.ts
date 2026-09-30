@@ -100,6 +100,14 @@ export function loadSmokeConfig(
   }
 
   const expectedHost = new URL(baseUrl).host;
+  const evidencePath = read(env, SMOKE_ENV_KEYS.evidencePath) || null;
+  const manifestPathRaw = read(env, SMOKE_ENV_KEYS.manifestPath);
+  const manifestPath =
+    manifestPathRaw !== ''
+      ? manifestPathRaw
+      : evidencePath !== null
+        ? `${evidencePath}.manifest.json`
+        : null;
   const config: SmokeRunConfig = {
     baseUrl,
     expectedHost,
@@ -112,7 +120,8 @@ export function loadSmokeConfig(
     deploymentUrl,
     workflowRunId: read(env, SMOKE_ENV_KEYS.workflowRunId) || null,
     qaRunId: qaRunIdOverride !== '' ? qaRunIdOverride : generateQaRunId(options.randomBytes),
-    evidencePath: read(env, SMOKE_ENV_KEYS.evidencePath) || null,
+    evidencePath,
+    manifestPath,
     recoveryOnly: parseBoolean(read(env, SMOKE_ENV_KEYS.recoveryOnly)),
     crashWindowMs: parsePositiveInt(
       read(env, SMOKE_ENV_KEYS.crashWindowMs),

@@ -37,6 +37,7 @@ export const SMOKE_ENV_KEYS = {
   workflowRunId: 'ATLAS_SMOKE_WORKFLOW_RUN_ID',
   qaRunId: 'ATLAS_SMOKE_QA_RUN_ID',
   evidencePath: 'ATLAS_SMOKE_EVIDENCE_PATH',
+  manifestPath: 'ATLAS_SMOKE_MANIFEST_PATH',
   recoveryOnly: 'ATLAS_SMOKE_RECOVERY_ONLY',
   crashWindowMs: 'ATLAS_SMOKE_CRASH_WINDOW_MS',
 } as const;

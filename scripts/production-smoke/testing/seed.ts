@@ -110,6 +110,21 @@ export async function seedSystemRoutineWithExercise(): Promise<SeededRoutine> {
   return { routineId: routine!.id, exerciseId: exercise!.id };
 }
 
+/** Seeds a non-system (user-owned) routine for mismatch tests. */
+export async function seedUserRoutine(userId: number): Promise<number> {
+  const suffix = randomSuffix();
+  const [routine] = await db
+    .insert(routines)
+    .values({
+      slug: `smoke-user-routine-${suffix}`,
+      name: 'Smoke User Routine',
+      isSystem: false,
+      userId,
+    })
+    .returning({ id: routines.id });
+  return routine!.id;
+}
+
 export interface SeedWorkoutInput {
   userId: number;
   routineId?: number | null;

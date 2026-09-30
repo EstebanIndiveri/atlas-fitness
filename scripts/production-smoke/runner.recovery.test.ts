@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it } from '@jest/globals';
 import { runSmoke } from './runner';
 import { buildMarker } from './marker';
 import { createHarness, TEST_EMAIL, TEST_PASSWORD } from './testing/harness';
+import type { InProcessAppOptions } from './testing/in-process-app';
 import {
   listVisibleWorkoutIds,
   readNoteRow,
@@ -15,6 +16,7 @@ import {
   seedQaUser,
   seedSet,
   seedSystemRoutineWithExercise,
+  seedUserRoutine,
   seedWorkout,
 } from './testing/seed';
 
@@ -93,6 +95,25 @@ describe('runSmoke orphan recovery', () => {
     expect(await listVisibleWorkoutIds(userId)).toEqual([orphanId]);
   });
 
+  it('stops when a create-before-mark orphan uses an unexpected routine', async () => {
+    const otherRoutineId = await seedUserRoutine(userId);
+    const orphanId = await seedWorkout({
+      userId,
+      routineId: otherRoutineId,
+      startedAt: new Date(),
+    });
+
+    const { app, config } = createHarness();
+    const evidence = await runSmoke(config, { fetch: app.fetch });
+
+    expect(evidence.overallResult).toBe('FAIL');
+    expect(evidence.cleanupResult).toMatchObject({
+      status: 'FAIL',
+      detail: 'ambiguous_orphans',
+    });
+    expect(await listVisibleWorkoutIds(userId)).toEqual([orphanId]);
+  });
+
   it('recovery-only mode cleans up and never creates a fixture', async () => {
     const orphanId = await seedWorkout({
       userId,
@@ -112,5 +133,23 @@ describe('runSmoke orphan recovery', () => {
     expect((await readWorkoutRow(orphanId))?.deletedAt).not.toBeNull();
     const visible = await listVisibleWorkoutIds(userId);
     expect(visible).toEqual([]);
+  });
+
+  it('fails recovery-only when logout is not confirmed', async () => {
+    const intercept: InProcessAppOptions['intercept'] = (_request, url) => {
+      if (url.pathname === '/api/auth/logout') {
+        return new Response(null, { status: 500 });
+      }
+      return null;
+    };
+
+    const { app, config } = createHarness({
+      config: { recoveryOnly: true },
+      app: { intercept },
+    });
+    const evidence = await runSmoke(config, { fetch: app.fetch });
+
+    expect(evidence.overallResult).toBe('FAIL');
+    expect(evidence.cleanupResult.status).toBe('FAIL');
   });
 });

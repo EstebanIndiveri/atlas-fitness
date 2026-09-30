@@ -25,6 +25,7 @@ clean up its own synthetic fixtures **through the public APIs only**.
 | `ATLAS_SMOKE_WORKFLOW_RUN_ID` | no | CI run id. |
 | `ATLAS_SMOKE_QA_RUN_ID` | no | Test-only override of the generated `qaRunId`. |
 | `ATLAS_SMOKE_EVIDENCE_PATH` | no | Evidence output path. When unset, evidence goes to stdout. |
+| `ATLAS_SMOKE_MANIFEST_PATH` | no | Secret-free manifest path. Defaults to `<evidencePath>.manifest.json`; unset with no evidence path. |
 | `ATLAS_SMOKE_RECOVERY_ONLY` | no | `1`/`true`: perform cleanup only, never create a fixture. |
 | `ATLAS_SMOKE_CRASH_WINDOW_MS` | no | Create-before-mark crash window (default 5 min). |
 
@@ -36,14 +37,21 @@ HTTP `429` => `INCOMPLETE` with `retryAfterSeconds` guidance. Exit codes:
 
 - The password, `Set-Cookie`/`Cookie` headers, session tokens, and raw HTTP
   responses are never logged, persisted, or uploaded.
-- The cookie jar is in-memory only; the runner has no filesystem side effects.
+- The cookie jar is in-memory only. The runner's only filesystem writes are the
+  sanitized evidence file and the secret-free manifest (non-secret ids/markers/
+  timestamps/run id); both are validated/redaction-checked before writing.
 - Every request is bound to exactly one expected host; redirects to any other
   host are rejected (`redirect: 'manual'` + `Location` host inspection).
+- Every HTTP status decision routes through one helper: `429` is always
+  `INCOMPLETE` with `retryAfterSeconds`; unexpected statuses are `FAIL`.
 - The exact QA identity is verified via `/api/auth/me`; any unexpected
   `userId` on a mutated resource stops the run.
-- Ambiguous artifacts (unknown markers, unmarked/foreign workouts, multiple
-  unexpected workouts) stop cleanup instead of guessing. A `404` delete is
-  accepted only after a readback confirms absence from the visible list.
+- Ambiguous artifacts (unknown markers, unmarked/foreign workouts, routine
+  mismatch, multiple unexpected workouts) stop cleanup instead of guessing. A
+  `404` delete is accepted only after a readback confirms absence; a note delete
+  is accepted only after a readback confirms `currentNote:null`.
+- A pre-existing manifest is reconciled before a run and removed after clean
+  cleanup; a manifest owned by another QA user stops the run.
 - `qaRunId` is 128 bits of CSPRNG and collision-safe across concurrent runs.
 
 ## Lifecycle (architecture §4)

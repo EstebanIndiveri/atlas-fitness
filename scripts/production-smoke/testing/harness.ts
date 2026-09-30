@@ -34,6 +34,7 @@ export function makeConfig(overrides: Partial<SmokeRunConfig> = {}): SmokeRunCon
     workflowRunId: 'workflow-run-1',
     qaRunId: TEST_QA_RUN_ID,
     evidencePath: null,
+    manifestPath: null,
     recoveryOnly: false,
     crashWindowMs: 300_000,
     ...overrides,

@@ -45,6 +45,27 @@ describe('loadSmokeConfig', () => {
     expect(result.config.recoveryOnly).toBe(true);
   });
 
+  it('defaults the manifest path alongside the evidence file', () => {
+    const env = validEnv();
+    env[SMOKE_ENV_KEYS.evidencePath] = '/tmp/evidence.json';
+    const result = loadSmokeConfig(env, { randomBytes: deterministic });
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    expect(result.config.manifestPath).toBe('/tmp/evidence.json.manifest.json');
+  });
+
+  it('honours an explicit manifest path and leaves it null without evidence', () => {
+    const env = validEnv();
+    env[SMOKE_ENV_KEYS.manifestPath] = '/tmp/manifest.json';
+    const withPath = loadSmokeConfig(env, { randomBytes: deterministic });
+    expect(withPath.ok && withPath.config.manifestPath).toBe('/tmp/manifest.json');
+
+    const noEvidence = loadSmokeConfig(validEnv(), { randomBytes: deterministic });
+    expect(noEvidence.ok && noEvidence.config.manifestPath).toBeNull();
+  });
+
   it.each([
     ['baseUrl', SMOKE_ENV_KEYS.baseUrl],
     ['email', SMOKE_ENV_KEYS.email],

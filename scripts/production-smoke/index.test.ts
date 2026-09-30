@@ -2,12 +2,14 @@
  * @jest-environment node
  */
 import { afterEach, describe, expect, it } from '@jest/globals';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { SMOKE_ENV_KEYS } from './constants';
-import { runFromEnv } from './index';
+import { buildEvidence, step } from './evidence';
+import { runFromEnv, writeEvidence } from './index';
+import type { SmokeEvidence } from './types';
 
 describe('runFromEnv', () => {
   const dirs: string[] = [];
@@ -44,5 +46,38 @@ describe('runFromEnv', () => {
     const written = JSON.parse(readFileSync(evidencePath, 'utf8')) as Record<string, unknown>;
     expect(written.overallResult).toBe('INCOMPLETE');
     expect(JSON.stringify(written)).not.toContain('password');
+  });
+
+  it('refuses to persist evidence that contains a secret', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'atlas-smoke-'));
+    dirs.push(dir);
+    const evidencePath = join(dir, 'evidence.json');
+    const evidence: SmokeEvidence = buildEvidence({
+      qaRunId: 'LEAKEDSECRETVALUE',
+      expectedReleaseSha: 'a',
+      actualReleaseSha: 'a',
+      deploymentId: null,
+      deploymentEnvironment: null,
+      deploymentUrl: null,
+      workflowRunId: null,
+      startedAt: 't',
+      completedAt: 't',
+      targetResult: step('PASS'),
+      authResult: step('PASS'),
+      reauthResult: step('PASS'),
+      historyResult: step('PASS'),
+      noteResult: step('PASS'),
+      casResult: step('PASS'),
+      cleanupResult: step('PASS'),
+      retryAfterSeconds: null,
+      recoveredOrphans: 0,
+      knownQaIdentityResidualState: { longestStreak: null },
+      overallResult: 'PASS',
+    });
+
+    expect(() => writeEvidence(evidence, evidencePath, ['LEAKEDSECRETVALUE'])).toThrow(
+      /sensitive/i,
+    );
+    expect(existsSync(evidencePath)).toBe(false);
   });
 });

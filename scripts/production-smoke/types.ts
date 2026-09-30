@@ -57,7 +57,9 @@ export interface SmokeEvidence {
   overallResult: OverallResult;
 }
 
-/** Fully validated runner configuration (password is kept only in memory). */
+/**
+ * Fully validated runner configuration (password is kept only in memory).
+ */
 export interface SmokeRunConfig {
   baseUrl: string;
   expectedHost: string;
@@ -71,8 +73,32 @@ export interface SmokeRunConfig {
   workflowRunId: string | null;
   qaRunId: string;
   evidencePath: string | null;
+  /** Secret-free manifest path; defaults alongside the evidence file. */
+  manifestPath: string | null;
   recoveryOnly: boolean;
   crashWindowMs: number;
+}
+
+/**
+ * Secret-free per-run manifest (architecture §6): only non-secret ids, markers,
+ * timestamps and the workflow run id. Never a password, cookie or note text.
+ */
+export interface SmokeManifest {
+  qaRunId: string;
+  expectedUserId: number;
+  routineId: number | null;
+  exerciseId: number | null;
+  aId: number | null;
+  bId: number | null;
+  createdAt: string;
+  workflowRunId: string | null;
+}
+
+/** Injectable persistence for the secret-free manifest (FS or in-memory). */
+export interface ManifestStore {
+  read: () => Promise<SmokeManifest | null>;
+  write: (manifest: SmokeManifest) => Promise<void>;
+  remove: () => Promise<void>;
 }
 
 /** Result of loading and validating configuration from the environment. */
@@ -113,4 +139,6 @@ export interface SmokeDeps {
   now?: () => Date;
   randomBytes?: RandomBytes;
   logger?: Logger;
+  /** Secret-free manifest persistence; absent = no manifest side effect. */
+  manifestStore?: ManifestStore;
 }
