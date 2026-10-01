@@ -24,4 +24,18 @@ describe('Atlas token contrast (WCAG AA)', () => {
     expect(meetsContrastAa(ATLAS_COLOR.danger, ATLAS_COLOR.dangerMuted)).toBe(true);
     expect(meetsContrastAa(ATLAS_COLOR.ink, ATLAS_COLOR.brandMuted)).toBe(true);
   });
+
+  it('verified progress accent stays legible on its surface and label color', () => {
+    expect(meetsContrastAa(ATLAS_COLOR.verifiedForeground, ATLAS_COLOR.verified)).toBe(true);
+    expect(meetsContrastAa(ATLAS_COLOR.verified, ATLAS_COLOR.verifiedMuted)).toBe(true);
+    expect(meetsContrastAa(ATLAS_COLOR.verified, ATLAS_COLOR.surface)).toBe(true);
+  });
+
+  it('unknown/insufficient evidence stays readable on its low surface', () => {
+    expect(meetsContrastAa(ATLAS_COLOR.unknown, ATLAS_COLOR.unknownMuted)).toBe(true);
+  });
+
+  it('overlay surface keeps AAA ink', () => {
+    expect(contrastRatio(ATLAS_COLOR.ink, ATLAS_COLOR.overlay)).toBeGreaterThanOrEqual(7);
+  });
 });

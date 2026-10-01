@@ -1,5 +1,6 @@
 import type { ButtonHTMLAttributes } from 'react';
 import { cn } from '@/lib/ui/cn';
+import { FOCUS_RING_CLASS } from '@/lib/ui/roles';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'success' | 'warning';
 export type ButtonSize = 'sm' | 'md' | 'lg';
@@ -21,8 +22,11 @@ const SIZE_CLASS: Record<ButtonSize, string> = {
   lg: 'w-full px-4 py-3 text-sm',
 };
 
-export const BUTTON_BASE_CLASS =
-  'inline-flex items-center justify-center rounded-md font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50';
+export const BUTTON_BASE_CLASS = cn(
+  'inline-flex items-center justify-center rounded-control font-medium',
+  'active:opacity-90 disabled:cursor-not-allowed disabled:opacity-50',
+  FOCUS_RING_CLASS,
+);
 
 export function buttonClassName(options: {
   variant?: ButtonVariant;
@@ -37,14 +41,30 @@ export function buttonClassName(options: {
 export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: ButtonVariant;
   size?: ButtonSize;
+  /**
+   * Busy state: disables the control and exposes `aria-busy` while preserving
+   * its accessible name. Visual spinner motion is deferred to workstream C.
+   */
+  loading?: boolean;
 };
 
 export function Button({
   variant = 'primary',
   size = 'md',
   type = 'button',
+  loading = false,
+  disabled,
   className,
   ...props
 }: ButtonProps) {
-  return <button type={type} className={buttonClassName({ variant, size, className })} {...props} />;
+  return (
+    <button
+      type={type}
+      disabled={disabled || loading}
+      aria-busy={loading || undefined}
+      data-loading={loading || undefined}
+      className={buttonClassName({ variant, size, className })}
+      {...props}
+    />
+  );
 }

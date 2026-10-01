@@ -11,8 +11,14 @@ describe('buttonClassName', () => {
     expect(buttonClassName({ variant: 'warning' })).toContain('bg-warning');
   });
 
-  it('always uses token radius', () => {
-    expect(buttonClassName()).toContain('rounded-md');
+  it('always uses the control radius role', () => {
+    expect(buttonClassName()).toContain('rounded-control');
+  });
+
+  it('exposes pressed and focus-visible states without relying on color alone', () => {
+    const className = buttonClassName();
+    expect(className).toContain('active:opacity-90');
+    expect(className).toContain('focus-visible:outline-2');
   });
 });
 
@@ -31,6 +37,13 @@ describe('Button', () => {
       </Button>,
     );
     const button = screen.getByRole('button', { name: 'Cargando...' });
+    expect(button.hasAttribute('disabled')).toBe(true);
+  });
+
+  it('exposes a loading state while preserving the accessible name', () => {
+    render(<Button loading>Guardar</Button>);
+    const button = screen.getByRole('button', { name: 'Guardar' });
+    expect(button.getAttribute('aria-busy')).toBe('true');
     expect(button.hasAttribute('disabled')).toBe(true);
   });
 });

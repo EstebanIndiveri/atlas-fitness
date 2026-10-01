@@ -37,7 +37,7 @@ export function MetricValue({
 }: MetricValueProps) {
   return (
     <span className={cn('inline-flex items-baseline gap-2', className)}>
-      <span className="font-medium text-ink">
+      <span className="numeric font-medium text-ink">
         {label ? <span className="sr-only">{label}: </span> : null}
         {metricValue.value}
       </span>
