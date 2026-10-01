@@ -59,26 +59,22 @@ export interface NextExerciseSuggestion {
   message: string;
 }
 
-export type ImprovementDirection = 'up' | 'down' | 'same' | 'none';
-
-export interface ExerciseImprovement {
-  exerciseId: number;
-  exerciseName: string;
-  currentMaxKg: string;
-  previousMaxKg: string | null;
-  deltaKg: string | null;
-  direction: ImprovementDirection;
-}
-
+/**
+ * Safe post-close facts only (v0.12).
+ *
+ * A bare `weight_kg` cannot prove an improvement (it may be external load,
+ * added load, assistance or a bodyweight sentinel, and the previous session may
+ * be open/incompatible), so v0.12 exposes no max-weight delta and no
+ * `Σ(weight_kg × reps)` "volume". Any future PR shown after close must come
+ * from the versioned progression read model, never from this summary.
+ */
 export interface GuidedCloseStats {
   durationMinutes: number | null;
   completedSets: number;
-  totalVolumeKg: string;
 }
 
 export interface GuidedCloseSummary {
   streak: StreakStats;
-  improvements: ExerciseImprovement[];
   stats: GuidedCloseStats;
 }
 

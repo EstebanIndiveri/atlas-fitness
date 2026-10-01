@@ -4,11 +4,28 @@ import * as workoutSetsService from '@/lib/services/workout-sets';
 import { z } from 'zod';
 import { AppError } from '@/types/errors';
 
+/**
+ * Semantic shape only. Domain validity (mode/basis/side/amount combination) is
+ * decided by the progression domain (`validateSemanticCapture`), never here.
+ * The keys stay optional at the transport boundary so an outdated client that
+ * omits the tuple reaches the service and receives a typed validation failure
+ * instead of silently creating an all-null row.
+ */
+const semanticShape = {
+  semanticCaptureVersion: z.number().int().positive().nullable().optional(),
+  loadMode: z.string().nullable().optional(),
+  amountBasis: z.string().nullable().optional(),
+  side: z.string().nullable().optional(),
+  setPurpose: z.string().nullable().optional(),
+  repCountBasis: z.string().nullable().optional(),
+};
+
 const createSetSchema = z.object({
   exerciseId: z.number().int().positive(),
   setIndex: z.number().int().positive(),
   reps: z.number().int().positive(),
   weightKg: z.string(),
+  ...semanticShape,
 });
 
 /**
@@ -37,6 +54,12 @@ export async function POST(
       setIndex: validated.setIndex,
       reps: validated.reps,
       weightKg: validated.weightKg,
+      semanticCaptureVersion: validated.semanticCaptureVersion ?? null,
+      loadMode: validated.loadMode ?? null,
+      amountBasis: validated.amountBasis ?? null,
+      side: validated.side ?? null,
+      setPurpose: validated.setPurpose ?? null,
+      repCountBasis: validated.repCountBasis ?? null,
     });
 
     return NextResponse.json(workoutSet, { status: 201 });

@@ -27,6 +27,8 @@ interface SentMessage {
   text: string;
 }
 
+const EXTERNAL_TAIL = 'mode=external basis=total side=bilateral purpose=working';
+
 function messageUpdate(
   updateId: number,
   telegramUserId: number,
@@ -113,11 +115,11 @@ describe('processTelegramUpdate', () => {
     expect(rows).toHaveLength(1);
   });
 
-  it('does not create a second set when /log is replayed with the same update_id', async () => {
+  it('writes a v1 set and is idempotent when /log is replayed with the same update_id', async () => {
     const { code } = await generateLinkCode(atlasUserId);
     await processTelegramUpdate(messageUpdate(nextId(), 9002, code));
 
-    const logUpdate = messageUpdate(nextId(), 9002, '/log press banca 80.5 10');
+    const logUpdate = messageUpdate(nextId(), 9002, `/log press banca 80.5 10 ${EXTERNAL_TAIL}`);
     const first = await processTelegramUpdate(logUpdate);
     const second = await processTelegramUpdate(logUpdate);
 
@@ -130,13 +132,62 @@ describe('processTelegramUpdate', () => {
     expect(sets).toHaveLength(1);
     expect(sets[0].weightKg).toBe('80.5');
     expect(sets[0].reps).toBe(10);
+    expect(sets[0].semanticCaptureVersion).toBe(1);
+    expect(sets[0].loadMode).toBe('external');
+    expect(sets[0].side).toBe('bilateral');
+    expect(sets[0].setPurpose).toBe('working');
     expect(sent.some((item) => item.text.includes('Press Banca'))).toBe(true);
+  });
+
+  it('does not write a set for the legacy three-argument syntax and replies with usage', async () => {
+    const { code } = await generateLinkCode(atlasUserId);
+    await processTelegramUpdate(messageUpdate(nextId(), 9010, code));
+
+    sent.length = 0;
+    await processTelegramUpdate(messageUpdate(nextId(), 9010, '/log press banca 80 10'));
+
+    expect(sent[0].text).toBe(TELEGRAM_COPY.logUsage);
+    const active = await workoutsService.getActiveWorkout(atlasUserId);
+    expect(active).toBeNull();
+  });
+
+  it('records a bodyweight set with the zero sentinel and mode-aware wording', async () => {
+    const { code } = await generateLinkCode(atlasUserId);
+    await processTelegramUpdate(messageUpdate(nextId(), 9011, code));
+
+    await processTelegramUpdate(
+      messageUpdate(nextId(), 9011, '/log press banca 0 12 mode=bodyweight side=bilateral purpose=working'),
+    );
+
+    const active = await workoutsService.getActiveWorkout(atlasUserId);
+    const sets = await workoutSetsService.listWorkoutSets(active!.id, atlasUserId);
+    expect(sets[0].weightKg).toBe('0');
+    expect(sets[0].loadMode).toBe('bodyweight');
+    expect(sets[0].amountBasis).toBeNull();
+    expect(sent.some((item) => item.text.includes('peso corporal'))).toBe(true);
+  });
+
+  it('records an assisted set with assistance wording, never "kg lifted"', async () => {
+    const { code } = await generateLinkCode(atlasUserId);
+    await processTelegramUpdate(messageUpdate(nextId(), 9012, code));
+
+    await processTelegramUpdate(
+      messageUpdate(
+        nextId(),
+        9012,
+        '/log press banca 20 8 mode=assisted basis=total side=bilateral purpose=working',
+      ),
+    );
+
+    expect(sent.some((item) => item.text.includes('asistencia 20 kg'))).toBe(true);
   });
 
   it('returns the day summary for today Córdoba after a short workout', async () => {
     const { code } = await generateLinkCode(atlasUserId);
     await processTelegramUpdate(messageUpdate(nextId(), 9003, code));
-    await processTelegramUpdate(messageUpdate(nextId(), 9003, '/entreno press banca 100 5'));
+    await processTelegramUpdate(
+      messageUpdate(nextId(), 9003, `/entreno press banca 100 5 ${EXTERNAL_TAIL}`),
+    );
 
     sent.length = 0;
     await processTelegramUpdate(messageUpdate(nextId(), 9003, '/resumen'));
@@ -144,6 +195,43 @@ describe('processTelegramUpdate', () => {
     expect(sent[0].text).toContain('Resumen de hoy');
     expect(sent[0].text).toContain('Press Banca');
     expect(sent[0].text).toContain('100');
+  });
+
+  it('summarizes mixed load modes honestly and never claims generic kg lifted', async () => {
+    const { code } = await generateLinkCode(atlasUserId);
+    await processTelegramUpdate(messageUpdate(nextId(), 9013, code));
+
+    await processTelegramUpdate(
+      messageUpdate(nextId(), 9013, '/log press banca 0 10 mode=bodyweight side=bilateral purpose=working'),
+    );
+    await processTelegramUpdate(
+      messageUpdate(
+        nextId(),
+        9013,
+        '/log press banca 20 8 mode=assisted basis=total side=bilateral purpose=working',
+      ),
+    );
+
+    // A raw legacy row (all-null semantics) belongs to the same open workout.
+    const active = await workoutsService.getActiveWorkout(atlasUserId);
+    const existingSets = await workoutSetsService.listWorkoutSets(active!.id, atlasUserId);
+    await db.insert(workoutSets).values({
+      workoutId: active!.id,
+      exerciseId: existingSets[0].exerciseId,
+      setIndex: existingSets.length + 1,
+      reps: 5,
+      weightKg: '55',
+      completed: true,
+    });
+
+    sent.length = 0;
+    await processTelegramUpdate(messageUpdate(nextId(), 9013, '/resumen'));
+
+    const text = sent[0].text;
+    expect(text).toContain('peso corporal');
+    expect(text).toContain('asistencia 20 kg');
+    expect(text).toContain('carga registrada (sin contexto)');
+    expect(text).not.toMatch(/kg levantados/);
   });
 
   it('explains the streak-nudge reminder rule', async () => {
@@ -165,7 +253,7 @@ describe('processTelegramUpdate', () => {
   it('ends an open workout from the inline callback without a second side effect', async () => {
     const { code } = await generateLinkCode(atlasUserId);
     await processTelegramUpdate(messageUpdate(nextId(), 9006, code));
-    await processTelegramUpdate(messageUpdate(nextId(), 9006, '/log press banca 80 10'));
+    await processTelegramUpdate(messageUpdate(nextId(), 9006, `/log press banca 80 10 ${EXTERNAL_TAIL}`));
 
     const callbackId = nextId();
     const callback: TelegramUpdate = {

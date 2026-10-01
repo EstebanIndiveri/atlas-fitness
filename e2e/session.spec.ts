@@ -97,6 +97,10 @@ test.describe('Guided session (Epic-E Must)', () => {
     await expect(page.getByTestId('session-skip')).toBeVisible();
     await expect(page.getByTestId('session-hold')).toBeVisible();
 
+    await page.getByTestId('semantics-loadMode-external').click();
+    await page.getByTestId('semantics-amountBasis-total').click();
+    await page.getByTestId('semantics-side-bilateral').click();
+    await page.getByTestId('semantics-purpose-working').click();
     await page.fill('[data-testid="guided-weight-input"]', '40');
     await Promise.all([
       page.waitForResponse((resp) => resp.url().includes('/sets') && resp.status() === 201),
@@ -110,6 +114,10 @@ test.describe('Guided session (Epic-E Must)', () => {
     await expect(page.getByTestId('next-exercise-banner')).toBeVisible();
     await expect(page.getByTestId('guided-exercise-name')).toHaveText('Sentadilla');
 
+    await page.getByTestId('semantics-loadMode-external').click();
+    await page.getByTestId('semantics-amountBasis-total').click();
+    await page.getByTestId('semantics-side-bilateral').click();
+    await page.getByTestId('semantics-purpose-working').click();
     await page.fill('[data-testid="guided-weight-input"]', '50');
     await Promise.all([
       page.waitForResponse(
@@ -120,7 +128,8 @@ test.describe('Guided session (Epic-E Must)', () => {
 
     await expect(page.getByTestId('session-close')).toBeVisible({ timeout: 5000 });
     await expect(page.getByTestId('session-close')).toContainText('¡Sesión completada!');
-    await expect(page.getByTestId('close-improvement').first()).toBeVisible();
+    // v0.12 retired the bare-weight improvement claim from the close summary.
+    await expect(page.getByTestId('close-improvement')).toHaveCount(0);
 
     await page.click('[data-testid="close-effort-exigente"]');
     await page.click('[data-testid="close-mood-good"]');

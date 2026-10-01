@@ -3,7 +3,7 @@
 import { AtlasInterpretationCard } from '@/components/progress/AtlasInterpretationCard';
 import { HabitActivityCard } from '@/components/progress/HabitActivityCard';
 import { HabitTargetAdherenceCard } from '@/components/progress/HabitTargetAdherenceCard';
-import { StrengthEvolutionCard, WellbeingCard } from '@/components/progress/ProgressInsightCards';
+import { WellbeingCard } from '@/components/progress/ProgressInsightCards';
 import { ProgressHeader } from '@/components/progress/ProgressHeader';
 import { ProgressSummaryCard } from '@/components/progress/ProgressSummaryCard';
 import { RecentSessionsCard } from '@/components/progress/RecentSessionsCard';
@@ -18,20 +18,12 @@ import { cn } from '@/lib/ui/cn';
 import { useProgress } from '@/hooks/useProgress';
 import { PROGRESS_COPY } from '@/lib/copy/progress';
 import type { ProgressPeriod } from '@/lib/services/progress-summary';
-import type { StrengthProgressSummary } from '@/lib/services/strength-progress';
 
 const PERIOD_OPTIONS: ReadonlyArray<{ value: ProgressPeriod; label: string }> = [
   { value: 'week', label: PROGRESS_COPY.periods.week },
   { value: 'month', label: PROGRESS_COPY.periods.month },
   { value: 'quarter', label: PROGRESS_COPY.periods.quarter },
 ];
-
-const EMPTY_STRENGTH: StrengthProgressSummary = {
-  hasLoggedSets: false,
-  latestVolumeKg: null,
-  trendLabel: 'Sin datos de fuerza',
-  points: [],
-};
 
 function isProgressPeriod(value: string): value is ProgressPeriod {
   return value === 'week' || value === 'month' || value === 'quarter';
@@ -116,7 +108,6 @@ export default function ProgressPage() {
             consistencyPercent={consistencyPercent}
           />
           <WeeklyConsistencyCard week={week} />
-          <StrengthEvolutionCard strength={summary.strength ?? EMPTY_STRENGTH} />
           <WellbeingCard
             checkin={checkin.checkin}
             loading={checkin.loading}

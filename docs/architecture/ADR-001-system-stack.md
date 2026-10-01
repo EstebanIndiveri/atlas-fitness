@@ -63,3 +63,18 @@ Expo RN (mismos `/api/*`); HealthKit/Watch solo con import; offline con `client_
 - BE/FE/QA implementan contra contratos compartidos sin BFF.
 - App Store / offline / HealthKit no bloquean MVP.
 - Gobernanza de código: ver `AGENTS.md`.
+
+---
+
+## Nota de decisión posterior — 2026-09-30 (v0.12 Progression Foundation)
+
+La semántica histórica de PR de esta ADR (sección **Stack**, fila **PR**: «Calculado: max `weight_kg`; empate → más reciente») queda **superada para toda afirmación nueva dirigida al usuario** por el contrato v0.12 Progression Foundation. El texto anterior se conserva como historia y no se reescribe.
+
+- El PR histórico por peso máximo desnudo se **retira**: `GET /api/stats/prs` responde `410 Gone` (`PR_CONTRACT_RETIRED`) y `getPersonalRecords`/`isPR` dejan de existir. No hay dos algoritmos de PR.
+- La verdad de progresión proviene del contrato versionado (`semanticCaptureVersion=1`) y del read model `progressionRuleVersion=1`: `lib/progression/**`, `lib/services/exercise-progression.ts`, `GET /api/exercises/[id]/progression`.
+- El **primer** entrenamiento elegible de una cohorte es un **baseline** («Punto de referencia»), nunca un PR.
+- Un **PR** exige mejora **estricta** en una cohorte exacta y comparable: mismo ejercicio exacto, mismas repeticiones, misma base de cantidad y lado declarados, carga externa, serie de trabajo y entrenamiento **cerrado**. Un empate no es un PR nuevo.
+- El PR no se persiste: se recalcula desde los datos actuales y puede retirarse si se borra el registro fuente.
+- v0.12 no expone PR de peso corporal, peso añadido, asistencia, alternado, e1RM ni volumen. El volumen y el «gráfico de fuerza» mixtos se retiraron de Progreso y del cierre de sesión; sus métricas futuras deben consumir este read model por cohorte compatible.
+
+Referencia: `docs/superpowers/specs/2026-09-30-v0.12.0-progression-foundation-brief.md`.

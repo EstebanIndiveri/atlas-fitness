@@ -298,6 +298,12 @@ async function loadLastCompletedExerciseSets(
       setIndex: set.setIndex,
       reps: set.reps,
       weightKg: set.weightKg,
+      semanticCaptureVersion: set.semanticCaptureVersion,
+      loadMode: set.loadMode,
+      amountBasis: set.amountBasis,
+      side: set.side,
+      setPurpose: set.setPurpose,
+      repCountBasis: set.repCountBasis,
     })),
   };
 }

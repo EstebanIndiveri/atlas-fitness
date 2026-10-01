@@ -7,10 +7,20 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Input, TextArea, fieldClassName } from '@/components/ui/Input';
 import { EmptyState, LoadingState } from '@/components/ui/states';
+import { SetSemanticsControls } from '@/components/session/SetSemanticsControls';
 import { UI_COPY } from '@/lib/copy/ui';
-import { compareDecimal } from '@/lib/format/decimal';
-import { formatWeightKg } from '@/lib/format/weight';
+import { describeRecordedAmount, LEGACY_AMOUNT_LABEL } from '@/lib/format/amount';
+import { canonicalSemantics } from '@/lib/progression/semantics';
+import {
+  EMPTY_SEMANTIC_DRAFT,
+  applyLoadMode,
+  applySide,
+  defaultWeightForLoadMode,
+  evaluateCapture,
+} from '@/lib/session/semantics-draft';
 import { cn } from '@/lib/ui/cn';
+import type { SemanticDraft, SessionSemanticsControls } from '@/lib/session/semantics-draft';
+import type { AmountBasis, LoadMode, RepCountBasis, SetPurpose, Side } from '@/types/progression';
 import type { WorkoutSet, Exercise } from '@/lib/db/schema';
 
 interface WorkoutWithSets {
@@ -24,14 +34,6 @@ interface WorkoutWithSets {
   sets: WorkoutSet[];
 }
 
-interface PersonalRecord {
-  exerciseId: number;
-  exerciseName: string;
-  maxWeightKg: string;
-  recordDate: Date;
-  workoutId: number;
-}
-
 export default function WorkoutSessionPage() {
   const params = useParams();
   const router = useRouter();
@@ -39,7 +41,6 @@ export default function WorkoutSessionPage() {
 
   const [workout, setWorkout] = useState<WorkoutWithSets | null>(null);
   const [exercises, setExercises] = useState<Exercise[]>([]);
-  const [prs, setPrs] = useState<PersonalRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddSet, setShowAddSet] = useState(false);
   const [showEndWorkout, setShowEndWorkout] = useState(false);
@@ -50,16 +51,43 @@ export default function WorkoutSessionPage() {
   const [reps, setReps] = useState('10');
   const [weight, setWeight] = useState('');
   const [editingSetId, setEditingSetId] = useState<number | null>(null);
+  const [semanticDraft, setSemanticDraft] = useState<SemanticDraft>(EMPTY_SEMANTIC_DRAFT);
 
   const [note, setNote] = useState('');
   const [mood, setMood] = useState<number | null>(null);
 
+  const selectLoadMode = useCallback((mode: LoadMode) => {
+    setSemanticDraft((draft) => applyLoadMode(draft, mode));
+    setWeight(defaultWeightForLoadMode(mode));
+  }, []);
+  const selectAmountBasis = useCallback((basis: AmountBasis) => {
+    setSemanticDraft((draft) => ({ ...draft, amountBasis: basis }));
+  }, []);
+  const selectSide = useCallback((side: Side) => {
+    setSemanticDraft((draft) => applySide(draft, side));
+  }, []);
+  const selectSetPurpose = useCallback((purpose: SetPurpose) => {
+    setSemanticDraft((draft) => ({ ...draft, setPurpose: purpose }));
+  }, []);
+  const selectRepCountBasis = useCallback((basis: RepCountBasis) => {
+    setSemanticDraft((draft) => ({ ...draft, repCountBasis: basis }));
+  }, []);
+
+  const semantics: SessionSemanticsControls = {
+    draft: semanticDraft,
+    reused: false,
+    onLoadMode: selectLoadMode,
+    onAmountBasis: selectAmountBasis,
+    onSide: selectSide,
+    onSetPurpose: selectSetPurpose,
+    onRepCountBasis: selectRepCountBasis,
+  };
+
   const fetchData = useCallback(async () => {
     try {
-      const [workoutRes, exercisesRes, prsRes] = await Promise.all([
+      const [workoutRes, exercisesRes] = await Promise.all([
         fetch(`/api/workouts/${workoutId}`),
         fetch('/api/exercises'),
-        fetch('/api/stats/prs'),
       ]);
 
       if (workoutRes.ok) {
@@ -72,11 +100,6 @@ export default function WorkoutSessionPage() {
       if (exercisesRes.ok) {
         const exercisesData = await exercisesRes.json();
         setExercises(exercisesData);
-      }
-
-      if (prsRes.ok) {
-        const prsData = await prsRes.json();
-        setPrs(prsData);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -129,14 +152,25 @@ export default function WorkoutSessionPage() {
           startRestTimer(90);
         }
       } else {
+        const repsValue = parseInt(reps, 10);
+        const capture = evaluateCapture(semanticDraft, weight, Number.isFinite(repsValue) ? repsValue : 0);
+        if (!capture || !capture.ok) {
+          return;
+        }
         const response = await fetch(`/api/workouts/${workoutId}/sets`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             exerciseId: selectedExerciseId,
             setIndex,
-            reps: parseInt(reps),
+            reps: repsValue,
             weightKg: weight,
+            semanticCaptureVersion: 1,
+            loadMode: capture.canonical.loadMode,
+            amountBasis: capture.canonical.amountBasis,
+            side: capture.canonical.side,
+            setPurpose: capture.canonical.setPurpose,
+            repCountBasis: capture.canonical.repCountBasis,
           }),
         });
 
@@ -201,17 +235,12 @@ export default function WorkoutSessionPage() {
     setSelectedExerciseId(null);
     setReps('10');
     setWeight('');
+    setSemanticDraft(EMPTY_SEMANTIC_DRAFT);
   };
 
   const startRestTimer = (seconds: number) => {
     setRestTimer(seconds);
     setTimerActive(true);
-  };
-
-  const isPR = (exerciseId: number, weightKg: string): boolean => {
-    const pr = prs.find((p) => p.exerciseId === exerciseId);
-    if (!pr) return true;
-    return compareDecimal(weightKg, pr.maxWeightKg) >= 0;
   };
 
   if (loading) {
@@ -227,6 +256,13 @@ export default function WorkoutSessionPage() {
   }
 
   const isEnded = !!workout.endedAt;
+  const repsValueForForm = parseInt(reps, 10);
+  const createCapture = evaluateCapture(
+    semanticDraft,
+    weight,
+    Number.isFinite(repsValueForForm) ? repsValueForForm : 0,
+  );
+  const canCreateCapture = createCapture?.ok === true;
 
   return (
     <div className="mx-auto w-full max-w-4xl px-4 py-4">
@@ -319,8 +355,14 @@ export default function WorkoutSessionPage() {
                 data-testid="weight-input"
               />
             </div>
+            {!editingSetId ? <SetSemanticsControls {...semantics} /> : null}
             <div className="flex gap-2">
-              <Button className="flex-1" onClick={handleAddOrUpdateSet} data-testid="save-set-button">
+              <Button
+                className="flex-1"
+                onClick={handleAddOrUpdateSet}
+                disabled={!editingSetId && !canCreateCapture}
+                data-testid="save-set-button"
+              >
                 {editingSetId ? 'Actualizar' : 'Guardar'}
               </Button>
               <Button variant="secondary" className="flex-1" onClick={resetForm}>
@@ -339,7 +381,23 @@ export default function WorkoutSessionPage() {
           <div className="space-y-2">
             {workout.sets.map((set) => {
               const exercise = exercises.find((ex) => ex.id === set.exerciseId);
-              const isNewPR = isPR(set.exerciseId, set.weightKg);
+              const canonical = set.semanticCaptureVersion !== null
+                ? canonicalSemantics(set.semanticCaptureVersion, {
+                    loadMode: set.loadMode,
+                    amountBasis: set.amountBasis,
+                    side: set.side,
+                    setPurpose: set.setPurpose,
+                    repCountBasis: set.repCountBasis,
+                  })
+                : null;
+              const amountLabel =
+                canonical?.status === 'canonical'
+                  ? describeRecordedAmount(canonical.tuple, set.weightKg)
+                  : `${set.weightKg} kg · ${LEGACY_AMOUNT_LABEL}`;
+
+              // An open workout set is never classified as a record: v0.12 only
+              // derives a PR from the versioned progression read model over
+              // closed workouts, so this page shows raw recorded sets only.
 
               return (
                 <div
@@ -352,15 +410,7 @@ export default function WorkoutSessionPage() {
                       {exercise?.name || 'Ejercicio desconocido'}
                     </p>
                     <p className="text-xs text-ink-muted">
-                      {set.reps} reps × {formatWeightKg(set.weightKg)}
-                      {isNewPR && (
-                        <span
-                          className="ml-2 rounded-md bg-warning-muted px-2 py-0.5 text-xs font-medium text-warning"
-                          data-testid="pr-badge"
-                        >
-                          🏆 PR
-                        </span>
-                      )}
+                      {set.reps} reps · {amountLabel}
                     </p>
                   </div>
                   {!isEnded && (

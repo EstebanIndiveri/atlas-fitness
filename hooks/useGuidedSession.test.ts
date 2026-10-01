@@ -4,6 +4,7 @@
 import { afterEach, describe, expect, it, jest } from '@jest/globals';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { useGuidedSession } from './useGuidedSession';
+import { EMPTY_SEMANTIC_DRAFT } from '@/lib/session/semantics-draft';
 import type { RoutineExerciseItem, RoutineSummary } from '@/types/routine';
 import type { WorkoutSet } from '@/lib/db/schema';
 
@@ -60,6 +61,12 @@ const finishedSets: WorkoutSet[] = [
     weightKg: '40.5',
     completed: true,
     deletedAt: null,
+    semanticCaptureVersion: null,
+    loadMode: null,
+    amountBasis: null,
+    side: null,
+    setPurpose: null,
+    repCountBasis: null,
   },
   {
     id: 2,
@@ -70,6 +77,12 @@ const finishedSets: WorkoutSet[] = [
     weightKg: '42.5',
     completed: true,
     deletedAt: null,
+    semanticCaptureVersion: null,
+    loadMode: null,
+    amountBasis: null,
+    side: null,
+    setPurpose: null,
+    repCountBasis: null,
   },
 ];
 
@@ -296,6 +309,10 @@ describe('useGuidedSession skip/hold', () => {
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     act(() => {
+      result.current.semantics.onLoadMode('external');
+      result.current.semantics.onAmountBasis('total');
+      result.current.semantics.onSide('bilateral');
+      result.current.semantics.onSetPurpose('working');
       result.current.setWeight('40');
       result.current.setReps('12');
     });
@@ -311,10 +328,17 @@ describe('useGuidedSession skip/hold', () => {
         setIndex: 1,
         reps: 12,
         weightKg: '40',
+        semanticCaptureVersion: 1,
+        loadMode: 'external',
+        amountBasis: 'total',
+        side: 'bilateral',
+        setPurpose: 'working',
+        repCountBasis: null,
       },
     ]);
     expect(result.current.completedCount).toBe(1);
     expect(result.current.reps).toBe('8');
+    expect(result.current.semantics.reused).toBe(true);
   });
 
   it('adds one local set to the current exercise without changing another exercise', async () => {
@@ -376,5 +400,78 @@ describe('useGuidedSession skip/hold', () => {
     expect(result.current.queue.pendingExerciseIds).toEqual([10, 30]);
     expect(result.current.queue.skippedExerciseIds).toEqual([20]);
     expect(result.current.routine?.exercises.find((item) => item.exerciseId === 20)?.targetSets).toBe(4);
+  });
+
+  it('prefills the semantics draft from the last explicitly confirmed set of the same exercise', async () => {
+    const confirmed = {
+      ...finishedSets[0],
+      id: 5,
+      setIndex: 2,
+      weightKg: '50',
+      semanticCaptureVersion: 1,
+      loadMode: 'assisted',
+      amountBasis: 'total',
+      side: 'bilateral',
+      setPurpose: 'working',
+      repCountBasis: null,
+    };
+    const semanticWorkout = { ...workout, sets: [finishedSets[0], confirmed] };
+    global.fetch = jest.fn(async (input: string) => {
+      const url = String(input);
+      if (url === '/api/workouts/8') return jsonResponse(semanticWorkout);
+      if (url === '/api/routines/1') return jsonResponse(routine);
+      return jsonResponse({ code: 'NOT_FOUND', message: url }, 404);
+    }) as unknown as typeof fetch;
+
+    const { result } = renderHook(() => useGuidedSession('8'));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    await waitFor(() => expect(result.current.semanticDraft.loadMode).toBe('assisted'));
+
+    expect(result.current.semanticDraft.amountBasis).toBe('total');
+    expect(result.current.semanticDraft.side).toBe('bilateral');
+    expect(result.current.semantics.reused).toBe(true);
+    expect(result.current.weight).toBe('50');
+  });
+
+  it('never infers semantics from legacy sets', async () => {
+    global.fetch = jest.fn(async (input: string) => {
+      const url = String(input);
+      if (url === '/api/workouts/8') return jsonResponse(workout);
+      if (url === '/api/routines/1') return jsonResponse(routine);
+      return jsonResponse({ code: 'NOT_FOUND', message: url }, 404);
+    }) as unknown as typeof fetch;
+
+    const { result } = renderHook(() => useGuidedSession('8'));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.semanticDraft).toEqual(EMPTY_SEMANTIC_DRAFT);
+    expect(result.current.semantics.reused).toBe(false);
+    expect(result.current.weight).toBe('');
+  });
+
+  it('clears incompatible semantics when the load mode changes to bodyweight', async () => {
+    global.fetch = jest.fn(async (input: string) => {
+      const url = String(input);
+      if (url === '/api/workouts/8') return jsonResponse(workout);
+      if (url === '/api/routines/1') return jsonResponse(routine);
+      return jsonResponse({ code: 'NOT_FOUND', message: url }, 404);
+    }) as unknown as typeof fetch;
+
+    const { result } = renderHook(() => useGuidedSession('8'));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    act(() => {
+      result.current.semantics.onLoadMode('external');
+      result.current.semantics.onAmountBasis('per_side');
+    });
+    expect(result.current.semanticDraft.amountBasis).toBe('per_side');
+
+    act(() => {
+      result.current.semantics.onLoadMode('bodyweight');
+    });
+    expect(result.current.semanticDraft.loadMode).toBe('bodyweight');
+    expect(result.current.semanticDraft.amountBasis).toBe('');
+    expect(result.current.weight).toBe('0');
+    expect(result.current.semantics.reused).toBe(false);
   });
 });

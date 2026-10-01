@@ -180,6 +180,12 @@ describe('startAdaptedWorkout', () => {
         setIndex,
         reps: 10,
         weightKg: '40',
+        semanticCaptureVersion: 1,
+        loadMode: 'external',
+        amountBasis: 'total',
+        side: 'bilateral',
+        setPurpose: 'working',
+        repCountBasis: null,
       });
     }
     const resumed = await getWorkoutById(workout.id, userId);

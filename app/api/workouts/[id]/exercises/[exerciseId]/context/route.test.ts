@@ -23,6 +23,13 @@ import {
   workouts,
   workoutSets,
 } from '@/lib/db/schema';
+import type {
+  AmountBasis,
+  LoadMode,
+  RepCountBasis,
+  SetPurpose,
+  Side,
+} from '@/types/progression';
 
 const AFTERNOON = new Date('2026-09-17T18:00:00.000Z');
 // 2026-09-17T02:00:00Z is 2026-09-16 23:00 in Córdoba (UTC−3).
@@ -101,6 +108,12 @@ async function createSet(overrides: {
   reps?: number;
   weightKg?: string;
   completed?: boolean;
+  semanticCaptureVersion?: number | null;
+  loadMode?: LoadMode | null;
+  amountBasis?: AmountBasis | null;
+  side?: Side | null;
+  setPurpose?: SetPurpose | null;
+  repCountBasis?: RepCountBasis | null;
 }): Promise<number> {
   const [row] = await db
     .insert(workoutSets)
@@ -111,6 +124,12 @@ async function createSet(overrides: {
       reps: overrides.reps ?? 8,
       weightKg: overrides.weightKg ?? '60',
       completed: overrides.completed ?? true,
+      semanticCaptureVersion: overrides.semanticCaptureVersion ?? null,
+      loadMode: overrides.loadMode ?? null,
+      amountBasis: overrides.amountBasis ?? null,
+      side: overrides.side ?? null,
+      setPurpose: overrides.setPurpose ?? null,
+      repCountBasis: overrides.repCountBasis ?? null,
     })
     .returning({ id: workoutSets.id });
   return row!.id;
@@ -239,8 +258,32 @@ describe('GET /api/workouts/[id]/exercises/[exerciseId]/context', () => {
         localDate: '2026-09-16',
         endedAt: '2026-09-17T02:00:00.000Z',
         sets: [
-          { id: firstSetId, exerciseId, setIndex: 1, reps: 8, weightKg: '62.75' },
-          { id: secondSetId, exerciseId, setIndex: 2, reps: 6, weightKg: '70' },
+          {
+            id: firstSetId,
+            exerciseId,
+            setIndex: 1,
+            reps: 8,
+            weightKg: '62.75',
+            semanticCaptureVersion: null,
+            loadMode: null,
+            amountBasis: null,
+            side: null,
+            setPurpose: null,
+            repCountBasis: null,
+          },
+          {
+            id: secondSetId,
+            exerciseId,
+            setIndex: 2,
+            reps: 6,
+            weightKg: '70',
+            semanticCaptureVersion: null,
+            loadMode: null,
+            amountBasis: null,
+            side: null,
+            setPurpose: null,
+            repCountBasis: null,
+          },
         ],
       },
       lastCompletedNote: {
@@ -251,6 +294,46 @@ describe('GET /api/workouts/[id]/exercises/[exerciseId]/context', () => {
         noteId: historyNoteId,
         note: 'bajar volumen',
         version: 1,
+      },
+    });
+  });
+
+  it('carries the declared semantic tuple of a remembered set through the API', async () => {
+    const routineId = await createRoutine(userId, [exerciseId]);
+    const currentWorkoutId = await createWorkout({ userId, routineId });
+    const setsWorkoutId = await createWorkout({
+      userId,
+      startedAt: SETS_ENDED,
+      endedAt: SETS_ENDED,
+    });
+    await createSet({
+      workoutId: setsWorkoutId,
+      exerciseId,
+      setIndex: 1,
+      reps: 8,
+      weightKg: '0',
+      semanticCaptureVersion: 1,
+      loadMode: 'bodyweight',
+      amountBasis: null,
+      side: 'bilateral',
+      setPurpose: 'working',
+    });
+
+    const response = await getContext(userId, currentWorkoutId, exerciseId);
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      lastCompletedSets: {
+        sets: [
+          {
+            weightKg: '0',
+            semanticCaptureVersion: 1,
+            loadMode: 'bodyweight',
+            amountBasis: null,
+            side: 'bilateral',
+            setPurpose: 'working',
+          },
+        ],
       },
     });
   });

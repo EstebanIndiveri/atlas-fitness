@@ -3,9 +3,13 @@ import { fireEvent, render, screen } from '@testing-library/react';
 
 import { LastCompletedPanel } from './LastCompletedPanel';
 import { SESSION_COPY } from '@/lib/copy/session';
+import { LEGACY_AMOUNT_LABEL } from '@/lib/format/amount';
 import { cordobaDisplayDate } from '@/lib/time/cordoba';
 import type { ExerciseSessionMemoryError } from '@/hooks/useExerciseSessionMemory';
-import type { ExerciseSessionContext } from '@/types/exercise-session-memory';
+import type {
+  ExerciseSessionContext,
+  ExerciseSessionSetSnapshot,
+} from '@/types/exercise-session-memory';
 
 function context(overrides: Partial<ExerciseSessionContext> = {}): ExerciseSessionContext {
   return {
@@ -18,15 +22,29 @@ function context(overrides: Partial<ExerciseSessionContext> = {}): ExerciseSessi
   };
 }
 
+function legacySet(overrides: Partial<ExerciseSessionSetSnapshot> = {}): ExerciseSessionSetSnapshot {
+  return {
+    id: 1,
+    exerciseId: 10,
+    setIndex: 1,
+    reps: 12,
+    weightKg: '40.5',
+    semanticCaptureVersion: null,
+    loadMode: null,
+    amountBasis: null,
+    side: null,
+    setPurpose: null,
+    repCountBasis: null,
+    ...overrides,
+  };
+}
+
 const lastSets = {
   workoutId: 90,
   exerciseId: 10,
   localDate: '2026-09-28',
   endedAt: '2026-09-28T12:00:00.000Z',
-  sets: [
-    { id: 1, exerciseId: 10, setIndex: 1, reps: 12, weightKg: '40.5' },
-    { id: 3, exerciseId: 10, setIndex: 3, reps: 8, weightKg: '20.25' },
-  ],
+  sets: [legacySet(), legacySet({ id: 3, setIndex: 3, reps: 8, weightKg: '20.25' })],
 };
 
 const lastNote = {
@@ -82,7 +100,7 @@ describe('LastCompletedPanel', () => {
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
 
-  it('shows raw previous sets and note with their independent source dates', () => {
+  it('shows raw previous sets as legacy records and the note with independent source dates', () => {
     render(
       <LastCompletedPanel
         {...panelProps({ context: context({ lastCompletedSets: lastSets, lastCompletedNote: lastNote }) })}
@@ -101,9 +119,88 @@ describe('LastCompletedPanel', () => {
     expect(setsDate).not.toBe(noteDate);
 
     expect(screen.getByText('12 reps')).toBeTruthy();
-    expect(screen.getByText('40.5 kg')).toBeTruthy();
-    expect(screen.getByText('20.25 kg')).toBeTruthy();
+    expect(screen.getByText(`40.5 kg · ${LEGACY_AMOUNT_LABEL}`)).toBeTruthy();
+    expect(screen.getByText(`20.25 kg · ${LEGACY_AMOUNT_LABEL}`)).toBeTruthy();
     expect(screen.getByText(lastNote.note)).toBeTruthy();
+  });
+
+  it('renders a declared bodyweight zero as peso corporal, never 0 kg', () => {
+    render(
+      <LastCompletedPanel
+        {...panelProps({
+          context: context({
+            lastCompletedSets: {
+              ...lastSets,
+              sets: [
+                legacySet({
+                  weightKg: '0',
+                  semanticCaptureVersion: 1,
+                  loadMode: 'bodyweight',
+                  amountBasis: null,
+                  side: 'bilateral',
+                  setPurpose: 'working',
+                }),
+              ],
+            },
+          }),
+        })}
+      />,
+    );
+
+    expect(screen.getByText('peso corporal (sin carga externa)')).toBeTruthy();
+    expect(screen.queryByText(/^0 kg$/)).toBeNull();
+  });
+
+  it('renders a declared assisted amount as assistance', () => {
+    render(
+      <LastCompletedPanel
+        {...panelProps({
+          context: context({
+            lastCompletedSets: {
+              ...lastSets,
+              sets: [
+                legacySet({
+                  weightKg: '30',
+                  semanticCaptureVersion: 1,
+                  loadMode: 'assisted',
+                  amountBasis: 'total',
+                  side: 'bilateral',
+                  setPurpose: 'working',
+                }),
+              ],
+            },
+          }),
+        })}
+      />,
+    );
+
+    expect(screen.getByText('asistencia 30 kg')).toBeTruthy();
+  });
+
+  it('renders a declared per-side amount per side without multiplying it', () => {
+    render(
+      <LastCompletedPanel
+        {...panelProps({
+          context: context({
+            lastCompletedSets: {
+              ...lastSets,
+              sets: [
+                legacySet({
+                  weightKg: '20',
+                  semanticCaptureVersion: 1,
+                  loadMode: 'external',
+                  amountBasis: 'per_side',
+                  side: 'bilateral',
+                  setPurpose: 'working',
+                }),
+              ],
+            },
+          }),
+        })}
+      />,
+    );
+
+    expect(screen.getByText('20 kg por lado')).toBeTruthy();
   });
 
   it('shows only the note date when there is no previous set encounter', () => {

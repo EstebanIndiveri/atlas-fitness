@@ -133,6 +133,12 @@ describe('suggestNextExerciseForWorkout', () => {
       setIndex: 1,
       reps: 5,
       weightKg: '60',
+      semanticCaptureVersion: 1,
+      loadMode: 'external',
+      amountBasis: 'total',
+      side: 'bilateral',
+      setPurpose: 'working',
+      repCountBasis: null,
     });
 
     const suggestion = await suggestNextExerciseForWorkout(workout.id, userId, {
@@ -153,6 +159,12 @@ describe('suggestNextExerciseForWorkout', () => {
       setIndex: 1,
       reps: 5,
       weightKg: '60',
+      semanticCaptureVersion: 1,
+      loadMode: 'external',
+      amountBasis: 'total',
+      side: 'bilateral',
+      setPurpose: 'working',
+      repCountBasis: null,
     });
 
     const suggestion = await suggestNextExerciseForWorkout(workout.id, userId, {
@@ -177,6 +189,12 @@ describe('suggestNextExerciseForWorkout', () => {
       setIndex: 1,
       reps: 5,
       weightKg: '60',
+      semanticCaptureVersion: 1,
+      loadMode: 'external',
+      amountBasis: 'total',
+      side: 'bilateral',
+      setPurpose: 'working',
+      repCountBasis: null,
     });
 
     const suggestion = await suggestNextExerciseForWorkout(workout.id, userId, {
@@ -259,7 +277,6 @@ describe('getGuidedCloseSummary', () => {
     expect(summary.stats).toEqual({
       durationMinutes: 48,
       completedSets: 2,
-      totalVolumeKg: '0.7',
     });
   });
 
@@ -282,10 +299,9 @@ describe('getGuidedCloseSummary', () => {
 
     expect(summary.stats.durationMinutes).toBeNull();
     expect(summary.stats.completedSets).toBe(0);
-    expect(summary.stats.totalVolumeKg).toBe('0');
   });
 
-  it('compares max weight vs the last ended session of the same exercise', async () => {
+  it('exposes no bare-weight improvement or volume claim after close', async () => {
     await wipe();
     const [user] = await db
       .insert(users)
@@ -310,6 +326,12 @@ describe('getGuidedCloseSummary', () => {
       setIndex: 1,
       reps: 5,
       weightKg: '80',
+      semanticCaptureVersion: 1,
+      loadMode: 'external',
+      amountBasis: 'total',
+      side: 'bilateral',
+      setPurpose: 'working',
+      repCountBasis: null,
     });
     const { updateWorkout } = await import('@/lib/services/workouts');
     await updateWorkout(previous.id, user.id, { endedAt: new Date() });
@@ -322,15 +344,18 @@ describe('getGuidedCloseSummary', () => {
       setIndex: 1,
       reps: 5,
       weightKg: '85',
+      semanticCaptureVersion: 1,
+      loadMode: 'external',
+      amountBasis: 'total',
+      side: 'bilateral',
+      setPurpose: 'working',
+      repCountBasis: null,
     });
 
     const summary = await getGuidedCloseSummary(current.id, user.id);
-    expect(summary.improvements).toHaveLength(1);
-    expect(summary.improvements[0].exerciseName).toBe('Press Banca');
-    expect(summary.improvements[0].direction).toBe('up');
-    expect(summary.improvements[0].currentMaxKg).toBe('85');
-    expect(summary.improvements[0].previousMaxKg).toBe('80');
-    expect(summary.improvements[0].deltaKg).toBe('5');
+    const raw = summary as unknown as Record<string, unknown>;
+    expect(raw.improvements).toBeUndefined();
+    expect('totalVolumeKg' in summary.stats).toBe(false);
     expect(summary.streak.currentStreak).toBeGreaterThanOrEqual(1);
   });
 });

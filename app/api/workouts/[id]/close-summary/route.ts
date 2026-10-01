@@ -5,7 +5,11 @@ import { AppError } from '@/types/errors';
 
 /**
  * GET /api/workouts/[id]/close-summary
- * Streak + max-weight delta vs last session of the same exercise.
+ * Safe post-close facts only: streak, duration and completed-set count.
+ *
+ * v0.12 intentionally exposes no max-weight delta and no mixed-mode volume
+ * claim here; a truthful PR, when one exists, comes from the versioned
+ * progression read model (`GET /api/exercises/[id]/progression`).
  */
 export async function GET(
   request: NextRequest,

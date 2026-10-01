@@ -2,6 +2,7 @@ import { describe, expect, it, jest } from '@jest/globals';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { useState } from 'react';
 import { SetCheckList } from './SetCheckList';
+import type { SessionSemanticsControls } from '@/lib/session/semantics-draft';
 
 describe('SetCheckList', () => {
   it('renders completed, active, and pending rows in the Figma table structure', () => {
@@ -22,12 +23,12 @@ describe('SetCheckList', () => {
     );
 
     expect(screen.getByText('SERIE')).toBeTruthy();
-    expect(screen.getByText('CARGA (KG)')).toBeTruthy();
+    expect(screen.getByText('CARGA')).toBeTruthy();
     expect(screen.getByText('REPS')).toBeTruthy();
     expect(screen.getByText('ESTADO')).toBeTruthy();
     expect(screen.getByText('SERIE 2 EN CURSO')).toBeTruthy();
     expect(screen.getByText('Objetivo: 8 reps')).toBeTruthy();
-    expect(screen.getByText('70.0')).toBeTruthy();
+    expect(screen.getByText(/70\.0/)).toBeTruthy();
     expect(screen.getByText('10')).toBeTruthy();
     expect(screen.getByText('+ Añadir serie')).toBeTruthy();
     expect(screen.getByText('Calentamiento')).toBeTruthy();
@@ -77,7 +78,7 @@ describe('SetCheckList', () => {
       />,
     );
 
-    expect(screen.getByText('82.5')).toBeTruthy();
+    expect(screen.getByText(/82\.5/)).toBeTruthy();
     expect(screen.getByText('6')).toBeTruthy();
     expect(screen.getByText('SERIE 2 EN CURSO')).toBeTruthy();
   });
@@ -252,4 +253,71 @@ describe('SetCheckList', () => {
     expect(screen.getByText('SERIE 1 EN CURSO')).toBeTruthy();
   });
 
+  it('shows the bodyweight no-load label instead of a 0 kg amount', () => {
+    const semantics: SessionSemanticsControls = {
+      draft: {
+        loadMode: 'bodyweight',
+        amountBasis: '',
+        side: 'bilateral',
+        setPurpose: 'working',
+        repCountBasis: '',
+      },
+      reused: false,
+      onLoadMode: jest.fn(),
+      onAmountBasis: jest.fn(),
+      onSide: jest.fn(),
+      onSetPurpose: jest.fn(),
+      onRepCountBasis: jest.fn(),
+    };
+    render(
+      <SetCheckList
+        targetSets={3}
+        targetReps={8}
+        completedCount={0}
+        completedSets={[]}
+        weight="0"
+        onWeightChange={jest.fn()}
+        reps="8"
+        onRepsChange={jest.fn()}
+        onCompleteSet={jest.fn()}
+        busy={false}
+        semantics={semantics}
+      />,
+    );
+
+    expect(screen.getByTestId('set-semantics-controls')).toBeTruthy();
+    expect(screen.getByTestId('bodyweight-amount')).toBeTruthy();
+    expect(screen.queryByTestId('guided-weight-input')).toBeNull();
+  });
+
+  it('renders a mode-aware compact amount for a declared completed set', () => {
+    render(
+      <SetCheckList
+        targetSets={3}
+        targetReps={8}
+        completedCount={1}
+        completedSets={[
+          {
+            setIndex: 1,
+            weightKg: '20',
+            reps: 10,
+            semanticCaptureVersion: 1,
+            loadMode: 'assisted',
+            amountBasis: 'total',
+            side: 'bilateral',
+            setPurpose: 'working',
+            repCountBasis: null,
+          },
+        ]}
+        weight="20"
+        onWeightChange={jest.fn()}
+        reps="8"
+        onRepsChange={jest.fn()}
+        onCompleteSet={jest.fn()}
+        busy={false}
+      />,
+    );
+
+    expect(screen.getByText('asist. 20')).toBeTruthy();
+  });
 });

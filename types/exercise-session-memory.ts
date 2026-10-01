@@ -57,6 +57,12 @@ export interface WorkoutExerciseNote {
  *
  * `weightKg` stays the exact persisted decimal string; it is never parsed to a
  * float or normalized here. Values are historical records, not recommendations.
+ *
+ * The declared semantic tuple travels with the raw amount so a bodyweight `"0"`
+ * sentinel, an assistance magnitude or a per-side amount is never silently
+ * reinterpreted as one generic "kg" number. When `semanticCaptureVersion` is
+ * `null` the entire tuple is `null`: the row is legacy/unknown and must be
+ * displayed as a recorded amount without inferred meaning.
  */
 export interface ExerciseSessionSetSnapshot {
   id: number;
@@ -64,6 +70,12 @@ export interface ExerciseSessionSetSnapshot {
   setIndex: number;
   reps: number;
   weightKg: WeightKg;
+  semanticCaptureVersion: number | null;
+  loadMode: string | null;
+  amountBasis: string | null;
+  side: string | null;
+  setPurpose: string | null;
+  repCountBasis: string | null;
 }
 
 /**

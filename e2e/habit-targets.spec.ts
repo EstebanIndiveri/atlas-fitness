@@ -786,9 +786,7 @@ test.describe('Habit targets — integration', () => {
   });
 
   test.describe('Progress honesty', () => {
-    test('shows a real decimal volume for an eligible session and unavailable only otherwise', async ({
-      page,
-    }) => {
+    test('never exposes a mixed-mode session volume or strength claim', async ({ page }) => {
       await registerAndCompleteTestAccount(page, 'Volumen Real');
 
       const exercisesResponse = await page.request.get('/api/exercises');
@@ -797,12 +795,24 @@ test.describe('Habit targets — integration', () => {
       expect(exercises.length, 'the catalog must expose at least one exercise').toBeGreaterThan(0);
       const exerciseId = exercises[0].id;
 
-      // Session with an eligible set: 50.55 kg × 3 = 151.65 kg.
+      // A closed session with a declared external set. Its raw amount (50.55 kg)
+      // must never be summed into a mixed-mode "volume" claim.
       const withSetsResponse = await page.request.post('/api/workouts', { data: {} });
       expect(withSetsResponse.status()).toBe(201);
       const withSets = (await withSetsResponse.json()) as { id: number };
       const setResponse = await page.request.post(`/api/workouts/${withSets.id}/sets`, {
-        data: { exerciseId, setIndex: 1, reps: 3, weightKg: '50.55' },
+        data: {
+          exerciseId,
+          setIndex: 1,
+          reps: 3,
+          weightKg: '50.55',
+          semanticCaptureVersion: 1,
+          loadMode: 'external',
+          amountBasis: 'total',
+          side: 'bilateral',
+          setPurpose: 'working',
+          repCountBasis: null,
+        },
       });
       expect(setResponse.status()).toBe(201);
       const closeWithSets = await page.request.patch(`/api/workouts/${withSets.id}`, {
@@ -810,28 +820,20 @@ test.describe('Habit targets — integration', () => {
       });
       expect(closeWithSets.status()).toBe(200);
 
-      // Session with no eligible sets: volume must stay genuinely unavailable.
-      const withoutSetsResponse = await page.request.post('/api/workouts', { data: {} });
-      expect(withoutSetsResponse.status()).toBe(201);
-      const withoutSets = (await withoutSetsResponse.json()) as { id: number };
-      const closeWithoutSets = await page.request.patch(`/api/workouts/${withoutSets.id}`, {
-        data: { endedAt: new Date().toISOString() },
-      });
-      expect(closeWithoutSets.status()).toBe(200);
-
       const summaryResponse = await page.request.get('/api/progress/summary?period=month');
       expect(summaryResponse.status()).toBe(200);
       const summary = (await summaryResponse.json()) as {
-        sessions: Array<{ workoutId: number; totalVolumeKg: string | null }>;
+        sessions: Array<{ workoutId: number; totalVolumeKg?: unknown }>;
+        strength?: unknown;
       };
-      const withSetsSummary = summary.sessions.find((s) => s.workoutId === withSets.id);
-      const withoutSetsSummary = summary.sessions.find((s) => s.workoutId === withoutSets.id);
-      expect(withSetsSummary?.totalVolumeKg).toBe('151.65');
-      expect(withoutSetsSummary?.totalVolumeKg).toBeNull();
+      const session = summary.sessions.find((s) => s.workoutId === withSets.id);
+      expect(session).toBeTruthy();
+      expect(session && 'totalVolumeKg' in session).toBe(false);
+      expect('strength' in summary).toBe(false);
 
       await page.goto('/dashboard/progress');
-      await expect(page.getByText('151.65 kg', { exact: true })).toBeVisible();
-      await expect(page.getByText('Volumen no disponible', { exact: true })).toBeVisible();
+      await expect(page.getByText('151.65 kg', { exact: true })).toHaveCount(0);
+      await expect(page.getByText('Volumen no disponible', { exact: true })).toHaveCount(0);
     });
 
     test('removes the inert Notificaciones and Compartir controls from the Progress header', async ({

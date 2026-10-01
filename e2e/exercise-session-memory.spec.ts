@@ -140,7 +140,18 @@ async function logSet(
   weightKg: string,
 ): Promise<void> {
   const response = await page.request.post(`/api/workouts/${workoutId}/sets`, {
-    data: { exerciseId, setIndex, reps, weightKg },
+    data: {
+      exerciseId,
+      setIndex,
+      reps,
+      weightKg,
+      semanticCaptureVersion: 1,
+      loadMode: 'external',
+      amountBasis: 'total',
+      side: 'bilateral',
+      setPurpose: 'working',
+      repCountBasis: null,
+    },
   });
   expect(response.status()).toBe(201);
 }

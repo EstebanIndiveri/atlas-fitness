@@ -116,6 +116,49 @@ function parseSuggestion(value: unknown): NextExerciseSuggestion | null {
   };
 }
 
+/** Declared semantics of a transported set; missing fields become explicit null. */
+interface TransportedSemantics {
+  semanticCaptureVersion: number | null;
+  loadMode: string | null;
+  amountBasis: string | null;
+  side: string | null;
+  setPurpose: string | null;
+  repCountBasis: string | null;
+}
+
+/**
+ * Parses the semantic tuple of a transported set. An omitted tuple is an
+ * explicit unknown (all null), never inferred; a present but malformed value is
+ * rejected so no consumer silently invents semantics.
+ */
+function parseTransportedSemantics(
+  record: Record<string, unknown>,
+): TransportedSemantics | undefined {
+  const version = record.semanticCaptureVersion ?? null;
+  if (version !== null && (typeof version !== 'number' || !Number.isInteger(version))) {
+    return undefined;
+  }
+
+  const keys = ['loadMode', 'amountBasis', 'side', 'setPurpose', 'repCountBasis'] as const;
+  const parsed = {} as Record<typeof keys[number], string | null>;
+  for (const key of keys) {
+    const value = record[key] ?? null;
+    if (value !== null && typeof value !== 'string') {
+      return undefined;
+    }
+    parsed[key] = value;
+  }
+
+  return {
+    semanticCaptureVersion: version,
+    loadMode: parsed.loadMode,
+    amountBasis: parsed.amountBasis,
+    side: parsed.side,
+    setPurpose: parsed.setPurpose,
+    repCountBasis: parsed.repCountBasis,
+  };
+}
+
 function parseSetSnapshots(value: unknown): WorkoutQueueSetSnapshot[] | null {
   if (!Array.isArray(value)) {
     return null;
@@ -135,12 +178,17 @@ function parseSetSnapshots(value: unknown): WorkoutQueueSetSnapshot[] | null {
     ) {
       return null;
     }
+    const semantics = parseTransportedSemantics(record);
+    if (!semantics) {
+      return null;
+    }
     sets.push({
       id: record.id,
       exerciseId: record.exerciseId,
       setIndex: record.setIndex,
       reps: record.reps,
       weightKg: record.weightKg,
+      ...semantics,
     });
   }
   return sets;

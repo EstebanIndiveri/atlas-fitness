@@ -1,6 +1,10 @@
 'use client';
 
 import { SESSION_COPY } from '@/lib/copy/session';
+import { formatCompactAmount } from '@/lib/format/amount';
+import { SetSemanticsControls } from '@/components/session/SetSemanticsControls';
+import { canonicalSemantics } from '@/lib/progression/semantics';
+import type { SessionSemanticsControls } from '@/lib/session/semantics-draft';
 
 type SetCheckListProps = {
   targetSets: number;
@@ -16,13 +20,41 @@ type SetCheckListProps = {
   busy: boolean;
   resting?: boolean;
   nextExerciseName?: string | null;
+  semantics?: SessionSemanticsControls;
 };
 
 type CompletedSet = {
   setIndex: number;
   weightKg: string;
   reps: number;
+  semanticCaptureVersion?: number | null;
+  loadMode?: string | null;
+  amountBasis?: string | null;
+  side?: string | null;
+  setPurpose?: string | null;
+  repCountBasis?: string | null;
 };
+
+/** Mode-aware label for a completed row; legacy rows keep their raw amount. */
+function completedAmountLabel(set: CompletedSet | undefined): string {
+  if (!set) {
+    return '—';
+  }
+  if (set.semanticCaptureVersion === undefined || set.semanticCaptureVersion === null) {
+    return `${set.weightKg} · ${SESSION_COPY.legacyAmountShort}`;
+  }
+  const canonical = canonicalSemantics(set.semanticCaptureVersion, {
+    loadMode: set.loadMode ?? null,
+    amountBasis: set.amountBasis ?? null,
+    side: set.side ?? null,
+    setPurpose: set.setPurpose ?? null,
+    repCountBasis: set.repCountBasis ?? null,
+  });
+  if (canonical.status !== 'canonical') {
+    return `${set.weightKg} · ${SESSION_COPY.legacyAmountShort}`;
+  }
+  return formatCompactAmount(canonical.tuple, set.weightKg);
+}
 
 const SET_TABLE_GRID_CLASS =
   'grid-cols-[2.5rem_minmax(0,1fr)_minmax(2.75rem,0.65fr)_2.75rem]';
@@ -83,10 +115,12 @@ export function SetCheckList({
   onAddSet,
   busy,
   resting = false,
+  semantics,
 }: SetCheckListProps) {
   const safeCompleted = Math.min(Math.max(completedSets.length || completedCount, 0), targetSets);
   const slots = Array.from({ length: targetSets }, (_, index) => index + 1);
   const activeSet = safeCompleted < targetSets ? safeCompleted + 1 : null;
+  const isBodyweight = semantics?.draft.loadMode === 'bodyweight';
 
   return (
     <div data-testid="set-checklist">
@@ -96,7 +130,7 @@ export function SetCheckList({
       >
         <span role="columnheader">SERIE</span>
         <span className="min-w-0 text-center" role="columnheader">
-          CARGA (KG)
+          CARGA
         </span>
         <span className="text-center" role="columnheader">
           REPS
@@ -122,15 +156,26 @@ export function SetCheckList({
                     {SESSION_COPY.targetReps(targetReps)}
                   </span>
                 </div>
+                {semantics ? <SetSemanticsControls {...semantics} /> : null}
                 <div className="grid grid-cols-1 gap-3 min-[430px]:grid-cols-2">
                   <div className="rounded-xl bg-surface p-3 ring-1 ring-line">
                     <div className="mb-2 flex items-baseline justify-between gap-1">
                       <label htmlFor="guided-weight" className="text-[10px] font-medium uppercase text-ink-muted">
                         Peso (kg)
                       </label>
-                      <span className="shrink-0 text-[10px] text-ink-muted">Paso ±2.5 kg</span>
+                      <span className="shrink-0 text-[10px] text-ink-muted">
+                        {isBodyweight ? SESSION_COPY.bodyweightNoLoad : 'Paso ±2.5 kg'}
+                      </span>
                     </div>
-                    <div className="flex items-center gap-2">
+                    {isBodyweight ? (
+                      <p
+                        className="rounded-md bg-canvas px-2 py-2 text-center text-sm font-semibold text-ink-muted"
+                        data-testid="bodyweight-amount"
+                      >
+                        {SESSION_COPY.bodyweightNoLoad}
+                      </p>
+                    ) : (
+                      <div className="flex items-center gap-2">
                       <button
                         type="button"
                         className="size-9 shrink-0 rounded-md bg-canvas text-xl font-semibold leading-none text-ink"
@@ -160,7 +205,8 @@ export function SetCheckList({
                       >
                         +
                       </button>
-                    </div>
+                      </div>
+                    )}
                   </div>
                   <div className="rounded-xl bg-surface p-3 ring-1 ring-line">
                     <div className="mb-2 flex items-baseline justify-between gap-1">
@@ -219,7 +265,7 @@ export function SetCheckList({
                     : 'min-w-0 text-center text-lg tabular-nums text-ink-muted'
                 }
               >
-                {completed?.weightKg ?? '—'}
+                {completedAmountLabel(completed)}
               </span>
               <span
                 className={
