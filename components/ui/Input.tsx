@@ -1,8 +1,12 @@
 import type { InputHTMLAttributes, TextareaHTMLAttributes } from 'react';
 import { cn } from '@/lib/ui/cn';
+import { FOCUS_RING_CLASS } from '@/lib/ui/roles';
 
-export const FIELD_CLASS_NAME =
-  'w-full rounded-md border border-line bg-surface px-4 py-2 text-ink placeholder:text-ink-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand';
+export const FIELD_CLASS_NAME = cn(
+  'w-full rounded-control border border-line bg-surface px-4 py-2 text-ink placeholder:text-ink-muted',
+  FOCUS_RING_CLASS,
+  'focus-visible:outline-brand',
+);
 
 export function fieldClassName(error?: boolean, className?: string): string {
   return cn(FIELD_CLASS_NAME, error && 'border-danger', className);
