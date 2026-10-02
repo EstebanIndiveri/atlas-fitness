@@ -63,9 +63,11 @@ export function HabitsScreen(): JSX.Element {
   return (
     <>
       <Card level="panel" className="space-y-3 p-5">
-        <div className="flex min-w-0 items-start justify-between gap-4">
-          <h2 className="min-w-0 font-serif text-xl font-semibold text-ink">Hábitos Diarios</h2>
-          <p className="shrink-0 text-right text-sm font-semibold text-ink-muted">
+        <div className="flex min-w-0 flex-wrap items-start justify-between gap-x-4 gap-y-1">
+          <h2 className="min-w-0 break-words font-serif text-xl font-semibold text-ink">
+            Hábitos Diarios
+          </h2>
+          <p className="text-right text-sm font-semibold text-ink-muted">
             {COPY.completed(completedCount, HABIT_PREVIEWS.length)}
           </p>
         </div>
