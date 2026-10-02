@@ -384,8 +384,8 @@ export function useGuidedSession(workoutId: string) {
   const skipCurrent = useCallback(async () => runQueueAction('skip'), [runQueueAction]);
   const holdCurrent = useCallback(async () => runQueueAction('hold'), [runQueueAction]);
 
-  const saveAndClose = useCallback(async () => {
-    if (!workout || mood === null) return;
+  const saveAndClose = useCallback(async (): Promise<WorkoutPayload | null> => {
+    if (!workout || mood === null) return null;
     setBusy(true);
     try {
       const patch = await fetch(`/api/workouts/${workout.id}`, {
@@ -400,7 +400,9 @@ export function useGuidedSession(workoutId: string) {
       if (summaryRes.ok) {
         setSummary((await summaryRes.json()) as GuidedCloseSummary);
       }
-      await load();
+      // Returns the reloaded workout (with persisted `endedAt` and its recorded
+      // sets) so the caller can derive post-close progression candidates.
+      return await load();
     } finally {
       setBusy(false);
     }
