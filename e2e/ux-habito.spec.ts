@@ -86,7 +86,7 @@ test.describe('UX hábito — mobile 390px', () => {
           const style = getComputedStyle(el);
           const text = (el.textContent || '').trim();
           const isSrOnly = style.position === 'absolute' && rect.width <= 2 && style.clip !== 'auto';
-          if (el.children.length === 0 && rect.height > 8 && rect.width > 0 && rect.width <= 2 && text && !isSrOnly) {
+          if (el.children.length === 0 && rect.height > 8 && rect.width < 2 && text && !isSrOnly) {
             count += 1;
           }
         });
