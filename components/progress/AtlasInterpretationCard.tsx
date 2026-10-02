@@ -33,7 +33,7 @@ function buildNarrative(summary: ProgressSummary, week: WeekConsistency | null):
  */
 export function AtlasInterpretationCard({ summary, week }: AtlasInterpretationCardProps) {
   return (
-    <Card tone="brand" className="space-y-3 rounded-[28px] p-5">
+    <Card tone="brand" className="space-y-3 rounded-panel p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-base font-semibold text-ink">{PROGRESS_COPY.interpretation.title}</h2>
         <span className="rounded-full bg-surface px-2.5 py-1 text-[11px] font-semibold text-brand">

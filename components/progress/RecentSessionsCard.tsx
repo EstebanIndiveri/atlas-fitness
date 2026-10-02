@@ -23,7 +23,7 @@ interface RecentSessionsCardProps {
  */
 export function RecentSessionsCard({ sessions }: RecentSessionsCardProps) {
   return (
-    <Card className="space-y-4 rounded-[28px] p-5">
+    <Card level="panel" className="space-y-4 p-5">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-base font-semibold text-ink">{PROGRESS_COPY.sessions.title}</h2>
       </div>

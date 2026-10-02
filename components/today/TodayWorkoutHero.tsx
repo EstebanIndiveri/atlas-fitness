@@ -128,7 +128,7 @@ export function TodayWorkoutHero({
       const metrics = routine ? buildMetrics(routine) : null;
       const workoutCompleted = today.completion.total > 0 && today.completion.completed >= today.completion.total;
       return (
-        <Card tone="brand" className="relative min-w-0 space-y-6 overflow-hidden rounded-[2rem] p-5 sm:p-7">
+        <Card tone="brand" className="relative min-w-0 space-y-6 overflow-hidden rounded-hero p-5 sm:p-7">
           <TopographicTexture className="text-brand opacity-[0.06]" />
           <div className="relative flex flex-wrap items-center justify-between gap-3">
             <div className="flex shrink-0 items-center gap-2 text-[0.68rem] font-semibold tracking-[0.18em] text-brand">
@@ -192,7 +192,11 @@ export function TodayWorkoutHero({
         <EmptyState
           title={COPY.noPlanTitle}
           description={COPY.noPlanDescription}
-          action={<Button onClick={onCreatePlan ?? onAdapt}>{COPY.createPlan}</Button>}
+          action={
+            <Button className="min-h-11" onClick={onCreatePlan ?? onAdapt}>
+              {COPY.createPlan}
+            </Button>
+          }
         />
       );
     case 'routine_missing':

@@ -47,11 +47,11 @@ export function ProfileHeaderCard({ user, statusLabel, stats }: ProfileHeaderCar
           {initials}
         </div>
         <div className="min-w-0">
-          <h2 className="truncate text-xl font-semibold tracking-[-0.02em] text-ink">{user.name}</h2>
-          <p className="truncate text-sm text-ink-muted">{user.email}</p>
-          <p className="mt-2 inline-flex max-w-full items-center rounded-full bg-brand-muted px-3 py-1 text-xs font-medium text-ink">
-            <span aria-hidden="true" className="mr-1 text-success">●</span>
-            <span className="truncate">{statusLabel}</span>
+          <h2 className="break-words text-xl font-semibold tracking-[-0.02em] text-ink">{user.name}</h2>
+          <p className="break-words text-sm text-ink-muted">{user.email}</p>
+          <p className="mt-2 inline-flex max-w-full flex-wrap items-center gap-x-1 rounded-full bg-brand-muted px-3 py-1 text-xs font-medium text-ink">
+            <span aria-hidden="true" className="text-success">●</span>
+            <span className="break-words">{statusLabel}</span>
           </p>
         </div>
       </div>

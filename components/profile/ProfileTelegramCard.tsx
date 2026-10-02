@@ -60,8 +60,8 @@ export function ProfileTelegramCard({
           </p>
         )}
 
-        <div className="flex items-center justify-between gap-3 border-t border-line pt-4">
-          <p className="text-sm text-ink-muted">Estado de sincronización</p>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
+          <p className="min-w-0 break-words text-sm text-ink-muted">Estado de sincronización</p>
           <Button
             type="button"
             variant="secondary"

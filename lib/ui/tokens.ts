@@ -22,6 +22,13 @@ export const ATLAS_COLOR = {
   danger: '#B42318',
   dangerMuted: '#FCEBEA',
   dangerForeground: '#FFFFFF',
+  /**
+   * `success` intentionally aliases the brand green and is reserved for generic
+   * completion confirmations (e.g. "saved", "done label"). It is NOT the
+   * verified-progression role: verified progress uses the distinct reserved
+   * `verified` teal so `action != verified != generic success`. Do not introduce
+   * a second green; use `verified` for comparable results (brief §9–12).
+   */
   success: '#1F6B4A',
   successForeground: '#FFFFFF',
   warning: '#9A3412',

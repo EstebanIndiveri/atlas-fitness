@@ -26,7 +26,7 @@ export function SettingsSection({ title, children, eyebrow, testId }: SettingsSe
           </p>
         ) : null}
       </div>
-      <Card className="divide-y divide-line overflow-hidden p-0">{children}</Card>
+      <Card level="panel" className="divide-y divide-line overflow-hidden p-0">{children}</Card>
     </section>
   );
 }

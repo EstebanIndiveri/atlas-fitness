@@ -40,11 +40,11 @@ export function TodayWeekCard() {
     : '🔥 Racha: sin registrar';
 
   return (
-    <Card className="space-y-4 rounded-[1.75rem] p-5">
-      <div className="flex items-start justify-between gap-3">
-        <h2 className="font-serif text-xl font-semibold text-ink">{COPY.heading}</h2>
+    <Card level="panel" className="space-y-4 p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <h2 className="min-w-0 break-words font-serif text-xl font-semibold text-ink">{COPY.heading}</h2>
         <p
-          className="text-right text-sm font-semibold text-brand"
+          className="min-w-0 break-words text-right text-sm font-semibold text-brand"
           role="status"
           data-testid={STREAK_TEST_IDS.chip}
         >

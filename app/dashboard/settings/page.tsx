@@ -236,7 +236,7 @@ export default function SettingsPage() {
 
   return (
     <div className="mx-auto w-full max-w-lg space-y-6 px-4 py-4 sm:px-6 sm:py-6">
-      <header className="flex items-center justify-between gap-4">
+      <header className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="font-serif text-3xl font-semibold tracking-[-0.03em] text-ink sm:text-4xl">
           {UI_COPY.profileTitle}
         </h1>
@@ -245,9 +245,9 @@ export default function SettingsPage() {
           disabled
           aria-label="Editar perfil (no configurado)"
           title="Editar perfil: no configurado"
-          className="text-sm font-semibold text-ink disabled:cursor-not-allowed disabled:opacity-70"
+          className="min-h-11 rounded-control px-2 text-sm font-semibold text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-70"
         >
-          ✎ Editar
+          <span aria-hidden="true">✎</span> Editar
         </button>
       </header>
 
@@ -293,12 +293,17 @@ export default function SettingsPage() {
 
       <SettingsSection title={UI_COPY.profileApplicationTitle}>
         <div className="space-y-3 p-4" data-testid="pwa-install-settings">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-brand-muted text-sm text-ink">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <span
+                aria-hidden="true"
+                className="flex size-9 shrink-0 items-center justify-center rounded-md bg-brand-muted text-sm text-ink"
+              >
                 ●
               </span>
-              <h3 className="text-sm font-medium text-ink">{PWA_COPY.settingsInstallHeading}</h3>
+              <h3 className="min-w-0 break-words text-sm font-medium text-ink">
+                {PWA_COPY.settingsInstallHeading}
+              </h3>
             </div>
             <span className="rounded-full bg-canvas px-3 py-1 text-xs font-semibold text-ink-muted">
               {pwaStatus}
@@ -321,9 +326,12 @@ export default function SettingsPage() {
       <SettingsSection title={UI_COPY.profileAccountTitle} testId="account-settings">
         <SettingsRow icon="♙" title="Datos personales" />
         <SettingsRow icon="▢" title="Privacidad y datos" />
-        <div className="flex items-center justify-between gap-4 p-4">
-          <div className="flex items-center gap-3">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-danger/10 text-sm text-danger">
+        <div className="flex flex-wrap items-center justify-between gap-4 p-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <span
+              aria-hidden="true"
+              className="flex size-9 shrink-0 items-center justify-center rounded-md bg-danger/10 text-sm text-danger"
+            >
               ↪
             </span>
             <div className="[&_button]:!text-danger">
