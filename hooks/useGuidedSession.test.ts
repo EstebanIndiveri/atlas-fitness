@@ -475,3 +475,47 @@ describe('useGuidedSession skip/hold', () => {
     expect(result.current.semantics.reused).toBe(false);
   });
 });
+
+describe('useGuidedSession saveAndClose', () => {
+  const originalFetch = global.fetch;
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  it('returns the reloaded closed workout so callers can verify close-time PRs', async () => {
+    let endedAt: string | null = null;
+    global.fetch = jest.fn(async (input: string, init?: FetchInit) => {
+      const url = String(input);
+      const method = readMethod(init);
+      if (url === '/api/workouts/8' && method === 'GET') {
+        return jsonResponse({ ...workout, endedAt });
+      }
+      if (url === '/api/workouts/8' && method === 'PATCH') {
+        endedAt = '2026-09-20T22:00:00.000Z';
+        return jsonResponse({ ok: true });
+      }
+      if (url === '/api/workouts/8/close-summary') {
+        return jsonResponse({
+          streak: { currentStreak: 1, longestStreak: 1, lastActiveDate: '2026-09-20' },
+          stats: { durationMinutes: 30, completedSets: 2 },
+        });
+      }
+      if (url === '/api/routines/1') return jsonResponse(routine);
+      return jsonResponse({ code: 'NOT_FOUND', message: url }, 404);
+    }) as unknown as typeof fetch;
+
+    const { result } = renderHook(() => useGuidedSession('8'));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    act(() => result.current.setMood(4));
+
+    let closed: unknown = null;
+    await act(async () => {
+      closed = await result.current.saveAndClose();
+    });
+
+    expect(closed).toMatchObject({ id: 8, endedAt: '2026-09-20T22:00:00.000Z' });
+    expect(result.current.workout?.endedAt).toBe('2026-09-20T22:00:00.000Z');
+  });
+});

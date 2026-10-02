@@ -99,13 +99,29 @@ describe('motion primitive contract (brief §16–17)', () => {
 });
 
 describe('motion consumers stay inside the contract', () => {
-  it('does not trigger the celebration primitive in any product component', () => {
-    const files = [...walkSourceFiles(path.join(process.cwd(), 'components')), ...walkSourceFiles(path.join(process.cwd(), 'app'))];
+  // Workstream E owns the single authorized celebration trigger. Every other
+  // product file must stay free of the celebration primitive.
+  const CELEBRATION_ALLOWLIST = new Set([
+    path.join('components', 'session', 'VerifiedPrCelebration.tsx'),
+  ]);
+
+  it('triggers the celebration primitive only in the authorized verified-PR surface', () => {
+    const files = [
+      ...walkSourceFiles(path.join(process.cwd(), 'components')),
+      ...walkSourceFiles(path.join(process.cwd(), 'app')),
+    ].filter((file) => !/\.test\.tsx?$/.test(file));
 
     for (const file of files) {
       const content = readFileSync(file, 'utf8');
-      expect(content).not.toContain('MOTION_CELEBRATION_CLASS');
-      expect(content).not.toContain('motion-celebrate');
+      const relative = path.relative(process.cwd(), file);
+      const usesCelebration =
+        content.includes('MOTION_CELEBRATION_CLASS') || content.includes('motion-celebrate');
+
+      if (CELEBRATION_ALLOWLIST.has(relative)) {
+        expect(usesCelebration).toBe(true);
+      } else {
+        expect(usesCelebration).toBe(false);
+      }
     }
   });
 

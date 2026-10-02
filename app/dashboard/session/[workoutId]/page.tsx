@@ -8,15 +8,21 @@ import { GuidedSessionHeader } from '@/components/session/GuidedSessionHeader';
 import { RestTimer } from '@/components/session/RestTimer';
 import { SessionCloseScreen } from '@/components/session/SessionCloseScreen';
 import { SessionQueueActions } from '@/components/session/SessionQueueActions';
+import { VerifiedPrCelebration } from '@/components/session/VerifiedPrCelebration';
 import { PageContainer } from '@/components/shell/PageContainer';
 import { Card } from '@/components/ui/Card';
 import { ErrorState, LoadingState } from '@/components/ui/states';
 import { useGuidedSession } from '@/hooks/useGuidedSession';
 import { useRestTimer } from '@/hooks/useRestTimer';
+import { fetchExerciseProgression } from '@/lib/api/exercise-progression';
 import { recordPostWorkoutFeedback } from '@/lib/api/post-workout-feedback';
+import { deriveEligibleCohorts, findVerifiedClosePr } from '@/lib/session/close-pr';
+import { hasPrEventBeenSeen, markPrEventSeen } from '@/lib/session/pr-event-guard';
 import { SESSION_COPY } from '@/lib/copy/session';
 import { isValidFeedback } from './feedback-validation';
 import { evaluateCapture } from '@/lib/session/semantics-draft';
+import type { VerifiedProgressionEvent } from '@/lib/session/close-pr';
+import type { WorkoutSet } from '@/lib/db/schema';
 import type {
   DiscomfortEntry,
   WorkoutSensation,
@@ -59,6 +65,40 @@ function useElapsedSeconds(startedAt: Date | null): number {
   return Math.max(0, Math.floor((now - startedAt.getTime()) / 1000));
 }
 
+interface ClosedWorkoutPayload {
+  id: number;
+  sets: WorkoutSet[];
+}
+
+/**
+ * Best-effort, bounded PR verification for a workout that just closed locally.
+ *
+ * Only the server read model can classify a PR; this helper merely derives the
+ * workout's own eligible cohorts, checks the full contract, and dedupes the
+ * presentation event. Any failure yields `null` and never affects the close.
+ */
+async function detectVerifiedClosePr(
+  workout: ClosedWorkoutPayload,
+): Promise<VerifiedProgressionEvent | null> {
+  const candidates = deriveEligibleCohorts(workout.sets);
+  if (candidates.length === 0) {
+    return null;
+  }
+  const closedSetIds = new Set(workout.sets.map((set) => set.id));
+  const event = await findVerifiedClosePr({
+    workoutId: workout.id,
+    closedSetIds,
+    candidates,
+    fetchProgression: fetchExerciseProgression,
+  });
+  if (!event || hasPrEventBeenSeen(event.key)) {
+    return null;
+  }
+  // Write the dedupe key BEFORE exposing the celebration (brief §19/E10).
+  markPrEventSeen(event.key);
+  return event;
+}
+
 export default function GuidedSessionPlayerPage() {
   const params = useParams();
   const router = useRouter();
@@ -73,6 +113,7 @@ export default function GuidedSessionPlayerPage() {
   const [discomfort, setDiscomfort] = useState<DiscomfortEntry[]>([]);
   const [feedbackSaving, setFeedbackSaving] = useState(false);
   const [feedbackError, setFeedbackError] = useState<string | null>(null);
+  const [verifiedEvent, setVerifiedEvent] = useState<VerifiedProgressionEvent | null>(null);
   const [restTotalSeconds, setRestTotalSeconds] = useState(0);
   const elapsedSeconds = useElapsedSeconds(readStartedAt(session.workout ?? {}));
 
@@ -107,9 +148,10 @@ export default function GuidedSessionPlayerPage() {
     setFeedbackSaving(true);
     setFeedbackError(null);
     try {
-      if (!session.workout.endedAt) {
-        await session.saveAndClose();
-      }
+      // Only a real local open → closed transition may become celebration-eligible.
+      const wasOpen = !session.workout.endedAt;
+      const closedWorkout = wasOpen ? await session.saveAndClose() : null;
+
       await recordPostWorkoutFeedback({
         workoutId: session.workout.id,
         effort: selectedEffort,
@@ -117,12 +159,27 @@ export default function GuidedSessionPlayerPage() {
         discomfort,
         note: null,
       });
+
+      if (wasOpen && closedWorkout) {
+        const event = await detectVerifiedClosePr(closedWorkout);
+        if (event) {
+          setVerifiedEvent(event);
+          return;
+        }
+      }
+
       router.push('/dashboard/today');
     } catch {
+      // Feedback is a separate persistence operation from the close: a failure
+      // here must not rewrite the factual closed state.
       setFeedbackError(SESSION_COPY.feedbackSaveError);
     } finally {
       setFeedbackSaving(false);
     }
+  };
+
+  const handleContinueFromCelebration = () => {
+    router.push('/dashboard/today');
   };
 
   const handleSkip = async () => {
@@ -222,11 +279,17 @@ export default function GuidedSessionPlayerPage() {
           elapsedSeconds={elapsedSeconds}
         />
 
-        {showClose ? (
+        {verifiedEvent ? (
+          <VerifiedPrCelebration
+            event={verifiedEvent}
+            onContinue={handleContinueFromCelebration}
+          />
+        ) : showClose ? (
           <SessionCloseScreen
             summary={session.summary}
             routineName={session.routine.name}
             muscleGroups={muscleGroups}
+            closed={ended}
             effort={effort}
             onEffort={setEffort}
             sensation={sensation}
