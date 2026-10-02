@@ -64,6 +64,39 @@ test.describe('UX hábito — mobile 390px', () => {
     await expect(page.getByText('0 de 4 completados', { exact: true })).toBeVisible();
     await expectNoHorizontalOverflow(page);
   });
+
+  test('habit names stay readable at 200% text instead of collapsing', async ({ page }) => {
+    await registerFreshUser(page);
+
+    for (const [route, listTestId] of [
+      ['/dashboard/today', 'habit-preview-list'],
+      ['/dashboard/habits', 'habits-list'],
+    ] as const) {
+      await page.goto(route);
+      await expect(page.getByTestId(listTestId)).toBeVisible();
+      // Approximate WCAG 1.4.4 text resize (Tailwind is rem-based).
+      await page.evaluate(() => {
+        document.documentElement.style.fontSize = '32px';
+      });
+
+      const collapsed = await page.evaluate(() => {
+        let count = 0;
+        document.querySelectorAll('main *').forEach((el) => {
+          const rect = el.getBoundingClientRect();
+          const style = getComputedStyle(el);
+          const text = (el.textContent || '').trim();
+          const isSrOnly = style.position === 'absolute' && rect.width <= 2 && style.clip !== 'auto';
+          if (el.children.length === 0 && rect.height > 8 && rect.width > 0 && rect.width <= 2 && text && !isSrOnly) {
+            count += 1;
+          }
+        });
+        return count;
+      });
+
+      expect(collapsed, `text collapsed to zero width on ${route}`).toBe(0);
+      await expectNoHorizontalOverflow(page);
+    }
+  });
 });
 
 test.describe('UX hábito — desktop shell', () => {
