@@ -8,7 +8,10 @@ describe('SESSION_COPY', () => {
     expect(SESSION_COPY.holdExercise).toBe('Posponer');
     expect(SESSION_COPY.errorNotActive).toMatch(/no está activa/);
     expect(SESSION_COPY.noImage).toBe('Sin imagen');
-    expect(SESSION_COPY.closeTitle).toMatch(/Sesión completada/);
+    // Pre-close copy states routine completion, never an unperformed persistence.
+    expect(SESSION_COPY.closeTitle).toMatch(/Rutina completada/);
+    expect(SESSION_COPY.closeTitle).not.toMatch(/guardad|Sesión completada/i);
+    expect(SESSION_COPY.closeSavedTitle).toMatch(/Sesión guardada/);
     expect(SESSION_COPY.streakDays(1)).toBe('1 día seguido');
     expect(SESSION_COPY.streakDays(3)).toBe('3 días seguidos');
   });

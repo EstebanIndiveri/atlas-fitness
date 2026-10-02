@@ -22,7 +22,7 @@ interface WeeklyConsistencyCardProps {
 export function WeeklyConsistencyCard({ week }: WeeklyConsistencyCardProps) {
   if (!week) {
     return (
-      <Card className="rounded-2xl p-5">
+      <Card level="panel" className="p-5">
         <EmptyState
           title={PROGRESS_COPY.week.emptyTitle}
           description={PROGRESS_COPY.week.emptyBody}
@@ -34,14 +34,11 @@ export function WeeklyConsistencyCard({ week }: WeeklyConsistencyCardProps) {
   const consistencyPercent = formatWeekConsistencyPercent(week.activeCount);
 
   return (
-    <Card className="space-y-4 overflow-hidden rounded-[28px] p-5">
+    <Card level="panel" className="space-y-4 overflow-hidden p-5">
       <div data-testid="weekly-consistency-header" className="flex min-w-0 flex-col gap-3">
         <div className="min-w-0 break-words">
           <div className="flex items-start justify-between gap-3">
             <h2 className="text-base font-semibold text-ink">{PROGRESS_COPY.week.title}</h2>
-            <span className="shrink-0 rounded-full bg-canvas px-3 py-1 text-xs font-semibold text-ink-muted">
-              Media {consistencyPercent}%
-            </span>
           </div>
           <p className="mt-1 text-sm text-ink-muted">{PROGRESS_COPY.week.body}</p>
         </div>

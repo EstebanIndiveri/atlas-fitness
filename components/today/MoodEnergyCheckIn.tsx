@@ -138,7 +138,7 @@ export function MoodEnergyCheckIn({ onStateChange }: MoodEnergyCheckInProps): JS
   };
 
   return (
-    <Card className="rounded-[1.75rem] border border-line bg-surface p-5 shadow-card sm:p-6" data-testid="mood-energy-checkin">
+    <Card level="panel" className="p-5 sm:p-6" data-testid="mood-energy-checkin">
       <div className="flex items-start justify-between gap-4">
         <h2 className="text-lg font-semibold text-ink">{CHECKIN_COPY.title}</h2>
         <p className="pt-0.5 text-right text-sm font-semibold text-brand">{labelForEnergy(selectedEnergy)}</p>
@@ -196,7 +196,7 @@ export function MoodEnergyCheckIn({ onStateChange }: MoodEnergyCheckInProps): JS
           <div className="mt-6 flex items-center justify-between gap-4">
             <p className="text-sm font-semibold text-ink">{CHECKIN_COPY.energyTitle}</p>
           </div>
-          <div className="mt-3 grid grid-cols-3 gap-2" aria-label={CHECKIN_COPY.energyTitle}>
+          <div className="mt-3 grid grid-cols-3 gap-2" role="group" aria-label={CHECKIN_COPY.energyTitle}>
             {ENERGY_OPTIONS.map(({ value, label }) => {
               const active = selectedEnergy === value;
               return (
@@ -209,7 +209,7 @@ export function MoodEnergyCheckIn({ onStateChange }: MoodEnergyCheckInProps): JS
                   disabled={saving}
                   onClick={() => handleEnergySelect(value)}
                   className={cn(
-                    'rounded-xl border py-2.5 transition focus-visible:outline-brand',
+                    'min-h-11 rounded-xl border py-2.5 transition focus-visible:outline-brand',
                     active ? 'border-brand text-white' : 'border-line bg-canvas text-ink-muted hover:bg-surface',
                   )}
                 >

@@ -59,7 +59,7 @@ export function RoutineSummaryCard({ routine, canEdit, starting, error, onStart 
 
   return (
     <Card
-      className="overflow-hidden rounded-[1.75rem] border border-line bg-surface p-4 shadow-card"
+      className="overflow-hidden rounded-panel border border-line bg-surface p-4 shadow-card"
       data-testid={ROUTINE_TEST_IDS.detailSummary}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">

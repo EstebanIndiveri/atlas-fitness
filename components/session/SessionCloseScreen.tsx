@@ -1,5 +1,6 @@
 'use client';
 
+import { AtlasIcon } from '@/components/ui/AtlasIcon';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { MetricValue } from '@/components/ui/MetricValue';
@@ -16,6 +17,8 @@ type SessionCloseScreenProps = {
   summary: GuidedCloseSummary | null;
   routineName?: string;
   muscleGroups?: string[];
+  /** True once `workout.endedAt` is persisted; false during final review. */
+  closed?: boolean;
   effort: number | null;
   onEffort: (value: number) => void;
   sensation: WorkoutSensation | null;
@@ -41,6 +44,7 @@ export function SessionCloseScreen({
   summary,
   routineName,
   muscleGroups = [],
+  closed = false,
   effort,
   onEffort,
   sensation,
@@ -58,21 +62,25 @@ export function SessionCloseScreen({
     : muscleGroups.length > 0
       ? muscleGroups.join(' · ')
       : SESSION_COPY.closeDefaultSubtitle;
+  const eyebrow = closed ? SESSION_COPY.closeSavedEyebrow : SESSION_COPY.closeEyebrow;
+  const title = closed ? SESSION_COPY.closeSavedTitle : SESSION_COPY.closeTitle;
+  const congrats = closed ? SESSION_COPY.closeSavedCongrats : SESSION_COPY.closeCongrats;
+  const saveLabel = closed ? SESSION_COPY.saveFeedback : SESSION_COPY.saveAndClose;
 
   return (
-    <Card className="overflow-hidden p-0" data-testid="session-close">
+    <Card className="overflow-hidden p-0" data-testid="session-close" data-closed={closed}>
       <div className="bg-brand-muted/70 px-5 py-6 text-center">
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-success text-2xl text-success-foreground shadow-card">
-          ✓
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-success text-success-foreground shadow-card">
+          <AtlasIcon name="complete" size="lg" data-testid="close-complete-icon" />
         </div>
         <p className="mt-4 text-xs font-semibold uppercase tracking-[0.22em] text-brand">
-          {SESSION_COPY.closeEyebrow}
+          {eyebrow}
         </p>
         <h1 className="mt-1 text-2xl font-bold tracking-[-0.03em] text-ink">
-          {SESSION_COPY.closeTitle}
+          {title}
         </h1>
         <p className="mt-2 text-sm text-ink-muted">{subtitle}</p>
-        <p className="mt-1 text-sm text-ink">{SESSION_COPY.closeCongrats}</p>
+        <p className="mt-1 text-sm text-ink">{congrats}</p>
       </div>
 
       <div className="space-y-5 p-5">
@@ -107,7 +115,7 @@ export function SessionCloseScreen({
           disabled={saving || effort === null || sensation === null}
           data-testid="close-save"
         >
-          {SESSION_COPY.saveAndClose}
+          {saveLabel}
         </Button>
       </div>
     </Card>

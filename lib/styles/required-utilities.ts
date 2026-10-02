@@ -16,6 +16,13 @@ export const REQUIRED_APP_UTILITIES = [
   'shadow-card',
   'pt-safe',
   'pb-safe',
+  // v0.13 role utilities (brief §9–12) — shape, depth and numeric data.
+  'rounded-control',
+  'rounded-panel',
+  'rounded-hero',
+  'bg-overlay',
+  'shadow-overlay',
+  'numeric',
 ] as const;
 
 export type RequiredAppUtility = (typeof REQUIRED_APP_UTILITIES)[number];

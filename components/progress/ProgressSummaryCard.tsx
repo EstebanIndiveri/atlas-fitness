@@ -1,5 +1,6 @@
 import { Card } from '@/components/ui/Card';
 import { MetricValue } from '@/components/ui/MetricValue';
+import { cn } from '@/lib/ui/cn';
 import { PROGRESS_COPY } from '@/lib/copy/progress';
 import type { ProgressPeriod } from '@/lib/services/progress-summary';
 import { metric } from '@/types/metric';
@@ -17,14 +18,15 @@ interface SummaryStatProps {
   metricLabel: string;
   value: string;
   hint?: string;
+  className?: string;
 }
 
-function SummaryStat({ label, metricLabel, value, hint }: SummaryStatProps) {
+function SummaryStat({ label, metricLabel, value, hint, className }: SummaryStatProps) {
   return (
     <div
       aria-label={metricLabel}
       data-testid="progress-summary-stat"
-      className="flex h-full min-w-0 flex-col overflow-hidden rounded-2xl bg-canvas p-3.5"
+      className={cn('flex h-full min-w-0 flex-col overflow-hidden rounded-2xl bg-canvas p-3.5', className)}
     >
       <p className="break-words text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-muted">{label}</p>
       <MetricValue
@@ -52,14 +54,14 @@ export function ProgressSummaryCard({
   consistencyPercent = null,
 }: ProgressSummaryCardProps) {
   return (
-    <Card className="space-y-4 rounded-[28px] p-5">
+    <Card level="panel" className="space-y-4 p-5">
       <div className="flex items-start justify-between gap-3">
         <h2 className="text-base font-semibold text-ink">{PROGRESS_COPY.summary.titles[period]}</h2>
         <span className="shrink-0 rounded-full bg-canvas px-3 py-1 text-xs font-semibold text-ink-muted">
           {completedSessions} {completedSessions === 1 ? 'sesión' : 'sesiones'}
         </span>
       </div>
-      <div className="grid grid-cols-3 items-stretch gap-2">
+      <div className="grid grid-cols-2 items-stretch gap-2 min-[520px]:grid-cols-3">
         <SummaryStat
           label={PROGRESS_COPY.summary.sessions}
           metricLabel={PROGRESS_COPY.summary.completedSessionsLabel}
@@ -81,6 +83,7 @@ export function ProgressSummaryCard({
           hint={
             consistencyPercent === null ? PROGRESS_COPY.summary.consistencyUnavailableBody : undefined
           }
+          className="col-span-2 min-[520px]:col-span-1"
         />
       </div>
       {consistencyPercent === null ? null : (

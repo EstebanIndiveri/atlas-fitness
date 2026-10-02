@@ -90,4 +90,22 @@ describe('SegmentedControl', () => {
 
     expect(document.activeElement).toBe(screen.getByRole('radio', { name: '3 meses' }));
   });
+
+  it('jumps to the first and last option with Home and End', () => {
+    const onChange = jest.fn();
+    render(
+      <SegmentedControl
+        ariaLabel="Rango de progreso"
+        options={OPTIONS}
+        value="month"
+        onChange={onChange}
+      />,
+    );
+
+    fireEvent.keyDown(screen.getByRole('radio', { name: 'Mes' }), { key: 'Home' });
+    fireEvent.keyDown(screen.getByRole('radio', { name: 'Mes' }), { key: 'End' });
+
+    expect(onChange).toHaveBeenNthCalledWith(1, 'week');
+    expect(onChange).toHaveBeenNthCalledWith(2, 'quarter');
+  });
 });

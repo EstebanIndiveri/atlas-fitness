@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { MetricValue } from '@/components/ui/MetricValue';
 import { ErrorState } from '@/components/ui/states';
 import { cn } from '@/lib/ui/cn';
+import { MOTION_PROGRESS_CLASS } from '@/lib/ui/motion';
 import { metric } from '@/types/metric';
 import type { RoutineDetail } from '@/lib/api/routine-detail';
 
@@ -96,7 +97,7 @@ export function CompletionMeter({ completed, total, label, unit, doneLabel }: Co
         aria-label={label}
       >
         <div
-          className="h-full rounded-full bg-brand transition-[width] duration-500"
+          className={cn('h-full rounded-full bg-brand', MOTION_PROGRESS_CLASS)}
           style={{ width: `${(completed / total) * 100}%` }}
         />
       </div>

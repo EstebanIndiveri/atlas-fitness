@@ -9,6 +9,12 @@ describe('MetricValue', () => {
     expect(screen.getByText('82 kg')).not.toBeNull();
   });
 
+  it('renders values in the numeric (tabular) role', () => {
+    render(<MetricValue metric={metric('999,9 kg', 'user_input')} />);
+    const value = screen.getByText('999,9 kg');
+    expect(value.className).toContain('numeric');
+  });
+
   it('hides the provenance source by default', () => {
     render(<MetricValue metric={metric('91', 'atlas_computed')} />);
     expect(screen.queryByText('Calculado por Atlas')).toBeNull();

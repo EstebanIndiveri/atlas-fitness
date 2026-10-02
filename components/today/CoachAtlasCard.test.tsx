@@ -90,7 +90,7 @@ describe('CoachAtlasCard', () => {
   it('renders the Figma heading, honest provenance copy, three preset chips and free-text input row', () => {
     renderCoachCard({ routineId: 42 });
 
-    expect(screen.getByRole('heading', { name: '◎ Coach Atlas' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Coach Atlas' })).toBeTruthy();
     expect(screen.queryByText('Basado en datos biométricos')).toBeNull();
     expect(screen.getByText('Ajustes rápidos para tu sesión:')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Tengo 30 min' })).toBeTruthy();

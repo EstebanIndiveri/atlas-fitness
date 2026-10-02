@@ -2,6 +2,7 @@
 
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { AtlasIcon } from '@/components/ui/AtlasIcon';
 import { SESSION_COPY } from '@/lib/copy/session';
 
 type RestTimerProps = {
@@ -42,8 +43,8 @@ export function RestTimer({
     <Card className="rounded-2xl border border-line p-4">
       <div className="flex flex-col gap-3 min-[430px]:flex-row min-[430px]:items-center">
         <div className="flex items-center gap-3">
-          <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-brand-muted text-2xl" aria-hidden>
-            ⏳
+          <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-brand-muted text-brand" aria-hidden>
+            <AtlasIcon name="rest" size="lg" />
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-muted">

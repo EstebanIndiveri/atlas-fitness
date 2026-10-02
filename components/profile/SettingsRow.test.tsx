@@ -28,6 +28,12 @@ describe('SettingsRow', () => {
     expect(screen.queryByRole('button')).toBeNull();
   });
 
+  it('hides the decorative leading glyph from the accessibility tree', () => {
+    render(<SettingsRow icon="▣" title="Unidades de medida" description="Kilogramos (kg) · Métrico" />);
+
+    expect(screen.getByText('▣').closest('[aria-hidden="true"]')).not.toBeNull();
+  });
+
   it('renders destructive account actions in red without inventing a chevron', () => {
     render(<SettingsRow icon="↪" title="Cerrar sesión" tone="danger" trailing={<button>Cerrar sesión</button>} />);
 

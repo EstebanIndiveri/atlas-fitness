@@ -2,60 +2,24 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { AtlasIcon } from '@/components/ui/AtlasIcon';
+import type { AtlasIconName } from '@/components/ui/atlas-icons';
 import { UI_COPY, UI_COPY_TEST_IDS } from '@/lib/copy/ui';
 import { cn } from '@/lib/ui/cn';
 import { APP_NAV_LINKS, bottomNavTestId, isCurrentPath } from './nav-links';
 
 type TabId = (typeof APP_NAV_LINKS)[number]['tabId'];
 
-const TAB_ICON_PATHS: Record<TabId, readonly string[]> = {
-  today: [
-    'M7 3.5v3',
-    'M17 3.5v3',
-    'M4.75 8.5h14.5',
-    'M6 5.5h12a1.75 1.75 0 0 1 1.75 1.75V18A1.75 1.75 0 0 1 18 19.75H6A1.75 1.75 0 0 1 4.25 18V7.25A1.75 1.75 0 0 1 6 5.5z',
-    'M8 12.25h3',
-    'M8 15.75h6',
-  ],
-  session: [
-    'M7 17 17 7',
-    'M12.75 7H17v4.25',
-    'M17 17 7 7',
-    'M7 7v4.25',
-    'M7 7h4.25',
-  ],
-  progress: [
-    'M4.5 19.5V5',
-    'M4.5 19.5h15',
-    'M8 16v-3.5',
-    'M12 16v-7',
-    'M16 16v-5',
-    'M7.75 10.5 11 8l3 2.5 4.25-5',
-  ],
-  profile: [
-    'M12 12.25a4 4 0 1 0 0-8 4 4 0 0 0 0 8z',
-    'M5.25 20a6.75 6.75 0 0 1 13.5 0',
-  ],
+/** Explicit tab → governed icon mapping; keeps navigation semantics curated. */
+const TAB_ICON_NAME: Record<TabId, AtlasIconName> = {
+  today: 'today',
+  session: 'session',
+  progress: 'progress',
+  profile: 'profile',
 };
 
 function TabIcon({ tabId }: { tabId: TabId }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      data-testid={`${tabId}-tab-icon`}
-      className="size-5 shrink-0"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.9"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      {TAB_ICON_PATHS[tabId].map((path) => (
-        <path key={path} d={path} />
-      ))}
-    </svg>
-  );
+  return <AtlasIcon name={TAB_ICON_NAME[tabId]} data-testid={`${tabId}-tab-icon`} />;
 }
 
 export function AppBottomNav() {

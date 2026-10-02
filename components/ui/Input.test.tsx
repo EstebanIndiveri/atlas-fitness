@@ -5,7 +5,8 @@ import { Input, fieldClassName } from './Input';
 describe('fieldClassName', () => {
   it('uses token border and radius', () => {
     expect(fieldClassName()).toContain('border-line');
-    expect(fieldClassName()).toContain('rounded-md');
+    expect(fieldClassName()).toContain('rounded-control');
+    expect(fieldClassName()).toContain('focus-visible:outline-2');
     expect(fieldClassName(true)).toContain('border-danger');
   });
 });

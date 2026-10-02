@@ -4,7 +4,29 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Este
 
 ## [Unreleased]
 
-Sin cambios pendientes de publicar.
+## [0.13.0] - 2026-10-02
+
+> **Estado: release candidate preparado (2026-10-02), NO publicado.** La wave **v0.13.0 "Visual Identity, Motion & Progress Experience"** está integrada en `develop` desde `FINAL_DISCOVERY_SHA` `27d2df6a4e6e5ae607698d27e7aa21bfdceadf7a`, pasó la auditoría de diseño gobernada (`atlas-design-audit` v0.2) y sus gates de accesibilidad, responsive, performance y regresión. La rama `release/0.13.0` se cortó del head de `develop` (`V0_13_READY_SHA` `dbc9aed6084477cd698f6c945cb03165fb73aaed`) y su delta de preparación frente a ese SHA es solo `package.json`, `package-lock.json` y `CHANGELOG.md`. A la fecha de este candidato **todavía no** existe merge a `main`, ni tag `v0.13.0`, ni deployment/migración de producción; la versión publicada más reciente sigue siendo **v0.12.0**. Evidencia de calidad pre-release: [`docs/operations/2026-10-02-v0.13.0-pre-release-quality-evidence.md`](./docs/operations/2026-10-02-v0.13.0-pre-release-quality-evidence.md). Las entradas de abajo describen comportamiento verificable en el código integrado y sus tests.
+
+### Added
+
+- **Fundación visual v0.13 (A).** `app/globals.css` `@theme` y su espejo `lib/ui/tokens.ts` incorporan roles semánticos (acción, `verified`, neutral/historia, `unknown`, warning, danger) y roles de forma (control/panel/hero/pill) y tipografía (display/title/body/caption/numeric). `lib/ui/roles.ts` declara contratos de composición (`SURFACE_ROLE_CLASS`, `RADIUS_ROLE_CLASS`, `TYPE_ROLE_CLASS`, `FOCUS_RING_CLASS`). El progreso verificado obtiene un acento reservado (`--color-verified`) distinto del verde de acción de marca.
+- **Iconografía gobernada (B).** `components/ui/AtlasIcon.tsx` + `components/ui/atlas-icons.ts` definen un set SVG curado (navegación, acciones de sesión, signos de estado) sobre grid 24, stroke 1.9, `currentColor` y `aria-hidden` por defecto. Reemplazan glifos Unicode arbitrarios (`◎ ⇄ ≣ ↺`) en navegación, sesión y estados. Sin paquete de iconos nuevo; los emoji de ánimo quedan como excepción expresiva explícita.
+- **Motion CSS por propósito (C).** `lib/ui/motion.ts` espeja las primitivas de `app/globals.css` (`motion-orient`, `motion-confirm`, `motion-progress`, `motion-celebrate`) con duraciones dentro de los rangos aprobados y equivalente bajo `prefers-reduced-motion: reduce`. Sin librería Motion/Framer Motion; sin `transition: all`; sin bucle de atención perpetuo.
+- **Progresión verificada (D) y cierre con PR verificado (E).** `components/session/ExerciseProgressionPanel.tsx` presenta los estados del read model v0.12 (`baseline`/`new_pr`/`ties_best`/`below_best`/ausencia/unknown/error) con signos e iconos gobernados y fuente visible, sin deducir PR en el frontend. `components/session/VerifiedPrCelebration.tsx` es la **única** superficie que consume `motion-celebrate`, y solo tras una transición local real `abierto → cerrado` validada contra el read model (`readStatus=ready`, `comparison=new_pr`, workout/serie de la cohorte exacta), con guarda en `sessionStorage` para no repetir la animación al refrescar.
+- **`atlas-design-audit` v0.2.** Skill de auditoría de diseño gobernada con Phase 0 de seguridad de fuentes de datos, tiers de evidencia y routing condicional de especialistas.
+
+### Changed
+
+- **Adopción acotada de roles de superficie/forma en rutas prioritarias (PR #226, `fix/v0-13-release-gates`).** Paneles agrupados de Today/Progress/Habits/Settings pasan a `Card level="panel"` (superficie plana con borde sutil); los radios arbitrarios que igualaban un rol se reemplazan por `rounded-panel`/`rounded-hero`; las tarjetas de marca/hero conservan su acento.
+- **Accesibilidad del control de período de Progreso.** El `radiogroup` admite Arrow/Home/End con foco móvil (roving tabindex); `SegmentedControl` agrega Home/End y objetivo de 44 px. Controles frecuentes alcanzan el objetivo preferido de 44 px; glifos decorativos de Settings/Coach quedan `aria-hidden`; transiciones crudas quedan cubiertas por `prefers-reduced-motion`.
+- **200 % texto (PR #226 y #227, `fix/v0-13-habit-200`).** La identidad de Perfil y el contenido de hábitos envuelven en lugar de truncarse/colapsar; se elimina la lectura duplicada de consistencia y el nombre de ejercicio duplicado en sesión. El `success == brand` queda documentado como alias intencional de finalización genérica (distinto del rol `verified`).
+
+### Not shipped (no describir como parte de v0.13)
+
+- **Sin** Body Map productivo, Three.js, librería Motion/Framer Motion, ilustración decorativa/anatómica de producción, badges, ranks, quests/misiones, widgets, fuente nueva ni paquete de iconos nuevo.
+- **Sin** nuevas métricas de progresión ni claims de fuerza, recuperación, readiness, hipertrofia, riesgo de lesión, 1RM o mejora porcentual; **sin** ranking/score/leaderboard; **sin** anillo de PR sin denominador; **sin** confetti por set; **sin** celebración al montar el panel persistente ni replay del PR verificado al recargar.
+- Quedan **DEFER/BACKLOG**: refinamientos de routing de `atlas-design-audit` v0.3; migración de radios/superficies en detalle de rutinas y pantallas de session/workout; overflow horizontal de 8 px a 200 % en Progreso; clipping de 200 % en Session (deuda previa a v0.13); `cn()` sin `tailwind-merge`.
 
 ## [0.12.0] - 2026-09-30
 

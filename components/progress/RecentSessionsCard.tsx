@@ -23,7 +23,7 @@ interface RecentSessionsCardProps {
  */
 export function RecentSessionsCard({ sessions }: RecentSessionsCardProps) {
   return (
-    <Card className="space-y-4 rounded-[28px] p-5">
+    <Card level="panel" className="space-y-4 p-5">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-base font-semibold text-ink">{PROGRESS_COPY.sessions.title}</h2>
       </div>
@@ -45,9 +45,9 @@ export function RecentSessionsCard({ sessions }: RecentSessionsCardProps) {
                 href={`/dashboard/workout/${session.workoutId}`}
                 className="block rounded-2xl border border-line bg-canvas/60 p-3 transition hover:bg-canvas focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
               >
-                <div className="flex items-start justify-between gap-3">
+                <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
                   <div className="min-w-0">
-                    <p className="truncate font-semibold text-ink">
+                    <p className="break-words font-semibold text-ink">
                       {session.routineName ?? PROGRESS_COPY.sessions.freeWorkout}
                     </p>
                     <p className="mt-1 text-sm text-ink-muted">

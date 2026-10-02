@@ -106,7 +106,7 @@ export function HabitActivityHistory(): JSX.Element {
   const { activity, error } = useHabitActivity(period);
 
   return (
-    <Card className="min-w-0 space-y-4 rounded-[1.75rem] p-5">
+    <Card level="panel" className="min-w-0 space-y-4 p-5">
       <div className="min-w-0 space-y-1">
         <h2 className="font-serif text-xl font-semibold text-ink">{COPY.historyTitle}</h2>
         <p className="text-xs leading-relaxed text-ink-muted">{COPY.historyWeekdayLegend}</p>

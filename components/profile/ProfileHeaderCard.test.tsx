@@ -33,6 +33,23 @@ describe('ProfileHeaderCard', () => {
     expect(screen.getByText('Entreno finalizado o check-in')).toBeTruthy();
   });
 
+  it('lets identity text wrap instead of truncating at large text sizes', () => {
+    render(
+      <ProfileHeaderCard
+        user={{ id: 1, name: 'Esteban Indiveri', email: 'esteban@example.com', telegramUserId: null }}
+        statusLabel="Plan no configurado"
+        stats={honestStats}
+      />,
+    );
+
+    const name = screen.getByText('Esteban Indiveri');
+    const email = screen.getByText('esteban@example.com');
+    expect(name.className).toContain('break-words');
+    expect(name.className).not.toContain('truncate');
+    expect(email.className).toContain('break-words');
+    expect(email.className).not.toContain('truncate');
+  });
+
   it('does not render fabricated Figma sample metrics or verification badges', () => {
     render(
       <ProfileHeaderCard

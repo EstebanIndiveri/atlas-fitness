@@ -43,6 +43,36 @@ describe('SessionCloseScreen', () => {
     expect(screen.getAllByText(MetricSourceLabel.atlas_computed)).toHaveLength(2);
   });
 
+  it('tells the truth pre-close: routine completed, not a persisted close', () => {
+    render(<SessionCloseScreen {...baseProps} summary={summary} />);
+
+    const close = screen.getByTestId('session-close');
+    expect(close.getAttribute('data-closed')).toBe('false');
+    expect(close.textContent).toContain(SESSION_COPY.closeEyebrow);
+    expect(close.textContent).toContain(SESSION_COPY.closeTitle);
+    expect(close.textContent).not.toContain('Sesión guardada');
+    expect(screen.getByTestId('close-save').textContent).toBe(SESSION_COPY.saveAndClose);
+  });
+
+  it('uses saved language only after the workout is persisted as closed', () => {
+    render(<SessionCloseScreen {...baseProps} summary={summary} closed />);
+
+    const close = screen.getByTestId('session-close');
+    expect(close.getAttribute('data-closed')).toBe('true');
+    expect(close.textContent).toContain(SESSION_COPY.closeSavedEyebrow);
+    expect(close.textContent).toContain(SESSION_COPY.closeSavedTitle);
+    expect(close.textContent).not.toContain(SESSION_COPY.closeTitle);
+    expect(screen.getByTestId('close-save').textContent).toBe(SESSION_COPY.saveFeedback);
+  });
+
+  it('uses the governed completion sign, never the verified PR sign', () => {
+    render(<SessionCloseScreen {...baseProps} summary={summary} />);
+
+    expect(screen.getByTestId('close-complete-icon').tagName.toLowerCase()).toBe('svg');
+    expect(screen.queryByTestId('verified-pr-icon')).toBeNull();
+    expect(screen.getByTestId('session-close').textContent).not.toMatch(/récord verificado/i);
+  });
+
   it('never renders a mixed-mode volume or bare-weight improvement claim', () => {
     render(<SessionCloseScreen {...baseProps} summary={summary} />);
 

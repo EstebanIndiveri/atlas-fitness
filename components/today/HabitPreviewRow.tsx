@@ -38,7 +38,7 @@ export function HabitPreviewRow({ habit, done, onToggle, disabled = false, expec
         disabled={disabled}
         onClick={() => onToggle(habit.id)}
         className={cn(
-          'flex min-h-14 min-w-0 flex-1 items-center gap-3 rounded-2xl px-2 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
+          'flex min-h-14 min-w-0 flex-1 flex-wrap items-center gap-3 rounded-2xl px-2 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
           disabled ? 'cursor-not-allowed opacity-70' : 'hover:bg-canvas',
         )}
       >
@@ -58,36 +58,38 @@ export function HabitPreviewRow({ habit, done, onToggle, disabled = false, expec
             <path d={habit.icon} />
           </svg>
         </span>
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-medium text-ink">{habit.name}</span>
-          <span className="block truncate text-xs text-ink-muted">{habit.hint}</span>
+        <span className="min-w-20 flex-1">
+          <span className="block break-words text-sm font-medium text-ink">{habit.name}</span>
+          <span className="block break-words text-xs text-ink-muted">{habit.hint}</span>
           {expectedToday ? (
             <span className="mt-1 block">
               <HabitTargetTodayBadge habitKey={habit.id} />
             </span>
           ) : null}
         </span>
-        <span className="mr-1 shrink-0 text-right text-xs font-semibold text-ink-muted">
-          {done ? 'Registrado' : 'Registrar'}
-        </span>
-        <span
-          aria-hidden="true"
-          className={cn(
-            'grid size-7 shrink-0 place-items-center rounded-full border transition',
-            done ? 'border-brand bg-brand text-white' : 'border-line bg-surface text-transparent',
-          )}
-        >
-          <svg
-            viewBox="0 0 24 24"
-            className="h-4 w-4"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="3"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+        <span className="ml-auto flex shrink-0 items-center gap-2">
+          <span className="mr-1 text-right text-xs font-semibold text-ink-muted">
+            {done ? 'Registrado' : 'Registrar'}
+          </span>
+          <span
+            aria-hidden="true"
+            className={cn(
+              'grid size-7 shrink-0 place-items-center rounded-full border transition',
+              done ? 'border-brand bg-brand text-white' : 'border-line bg-surface text-transparent',
+            )}
           >
-            <path d="M5 12l4 4 10-10" />
-          </svg>
+            <svg
+              viewBox="0 0 24 24"
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M5 12l4 4 10-10" />
+            </svg>
+          </span>
         </span>
       </button>
     </li>

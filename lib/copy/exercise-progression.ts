@@ -1,5 +1,5 @@
+import type { AmountBasis, ProgressionComparison, Side } from '@/types/progression';
 import type { ProgressionReadStatus } from '@/types/progression-read';
-import type { ProgressionComparison } from '@/types/progression';
 import type { ProgressionUnsupportedReason } from '@/lib/session/progression-cohort';
 
 /**
@@ -18,6 +18,19 @@ export const PROGRESSION_COPY = {
   /** Exact metric explanation, shown with every result. */
   metricExplanation:
     'Mayor carga externa registrada para estas mismas repeticiones y condiciones registradas.',
+  /** Compact, readable restatement of the exact compared conditions (never enum names). */
+  cohortLabel: 'Estas condiciones',
+  amountBasisLabel: {
+    total: 'carga total',
+    per_side: 'por lado',
+  } satisfies Record<AmountBasis, string>,
+  sideLabel: {
+    bilateral: 'bilateral',
+    left: 'izquierda',
+    right: 'derecha',
+  } satisfies Record<Extract<Side, 'bilateral' | 'left' | 'right'>, string>,
+  cohortSummary: (reps: number, amountBasisLabel: string, sideLabel: string) =>
+    `${reps} reps · ${amountBasisLabel} · ${sideLabel}`,
   /** The surface describes closed history, not the current open set. */
   closedHistoryNote:
     'Solo historial de entrenamientos cerrados. La serie que estás cargando todavía no es un récord.',

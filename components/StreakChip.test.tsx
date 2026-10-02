@@ -33,14 +33,20 @@ describe('StreakChipView', () => {
     expect(screen.queryByText(STREAK_COPY.recordBadge)).toBeNull();
   });
 
-  it('celebrates a record streak without dropping test ids', () => {
-    render(<StreakChipView streak={stats({ currentStreak: 4, longestStreak: 4 })} />);
+  it('shows a record streak as a static state without replayable celebration motion', () => {
+    const { container } = render(
+      <StreakChipView streak={stats({ currentStreak: 4, longestStreak: 4 })} />,
+    );
 
     expect(screen.getByTestId('current-streak').textContent).toBe('4');
     expect(screen.getByTestId('longest-streak').textContent).toBe('4');
     expect(screen.getByText(STREAK_COPY.recordBadge)).toBeTruthy();
     expect(screen.getByText(STREAK_COPY.recordBody)).toBeTruthy();
     expect(screen.getByTestId('streak-chip').getAttribute('aria-label')).toContain('4 días');
+    // v0.13 (brief §19): streak continuation is NO CELEBRATION and must not
+    // replay a pop merely because a non-zero streak rendered.
+    expect(container.querySelector('.streak-pop')).toBeNull();
+    expect(container.querySelector('[class*="motion-"]')).toBeNull();
   });
 });
 

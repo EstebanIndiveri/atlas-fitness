@@ -11,7 +11,6 @@ import {
   streakDelightMessage,
   streakTone,
 } from '@/lib/streak/presentation';
-import { cn } from '@/lib/ui/cn';
 import type { StreakStats } from '@/types/streak';
 
 type StreakChipViewProps = {
@@ -33,10 +32,7 @@ export function StreakChipView({ streak }: StreakChipViewProps) {
     >
       <div className="flex items-start gap-3">
         <span
-          className={cn(
-            'flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-surface text-2xl',
-            tone !== 'zero' && 'streak-pop',
-          )}
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-surface text-2xl"
           aria-hidden
         >
           {mark}

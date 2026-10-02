@@ -187,6 +187,14 @@ describe('ExerciseProgressionPanel', () => {
     expect(links[1].getAttribute('href')).toBe('/dashboard/workout/6');
   });
 
+  it('allows the conclusion and provenance to wrap at large text sizes', async () => {
+    mockFetch(ready({ comparison: 'new_pr' }));
+    render(<ExerciseProgressionPanel exerciseId={3} support={SUPPORTED} />);
+
+    const conclusion = await screen.findByTestId('progression-conclusion');
+    expect(conclusion.querySelector('.flex-wrap')).toBeTruthy();
+  });
+
   it('never claims universal strength, 1RM, percentages or an open-set record', async () => {
     mockFetch(ready({ comparison: 'new_pr' }));
     const { container } = render(<ExerciseProgressionPanel exerciseId={3} support={SUPPORTED} />);
@@ -194,5 +202,120 @@ describe('ExerciseProgressionPanel', () => {
     await screen.findByTestId('progression-ready');
     const text = container.textContent ?? '';
     expect(text).not.toMatch(/más fuerte|fuerza subi|1RM|%|nivel|ahora sos/i);
+  });
+
+  it('renders baseline as a neutral reference and never calls it a PR', async () => {
+    mockFetch(ready({ comparison: 'baseline' }));
+    render(<ExerciseProgressionPanel exerciseId={3} support={SUPPORTED} />);
+
+    const conclusion = await screen.findByTestId('progression-conclusion');
+    expect(conclusion.getAttribute('data-state')).toBe('baseline');
+    expect(conclusion.getAttribute('data-icon')).toBe('progression');
+    expect(conclusion.className).toContain('bg-surface');
+    expect(conclusion.textContent).toContain(PROGRESSION_COPY.comparison.baseline);
+    expect(conclusion.textContent).not.toMatch(/récord verificado|new pr|nuevo récord/i);
+  });
+
+  it('gives new_pr the verified semantic treatment and governed verified icon', async () => {
+    mockFetch(ready({ comparison: 'new_pr' }));
+    render(<ExerciseProgressionPanel exerciseId={3} support={SUPPORTED} />);
+
+    const conclusion = await screen.findByTestId('progression-conclusion');
+    expect(conclusion.getAttribute('data-state')).toBe('new_pr');
+    expect(conclusion.getAttribute('data-icon')).toBe('verified');
+    expect(conclusion.className).toContain('bg-verified-muted');
+    expect(conclusion.className).toContain('ring-verified');
+    expect(conclusion.textContent).toContain(PROGRESSION_COPY.comparison.new_pr);
+
+    const icon = screen.getByTestId('progression-state-icon');
+    expect(icon.tagName.toLowerCase()).toBe('svg');
+    expect(icon.closest('[data-icon]')?.getAttribute('data-icon')).toBe('verified');
+  });
+
+  it('never plays celebration motion inside the persistent new_pr state', async () => {
+    mockFetch(ready({ comparison: 'new_pr' }));
+    const { container } = render(<ExerciseProgressionPanel exerciseId={3} support={SUPPORTED} />);
+
+    // Built at runtime so this guard-adjacent test does not embed the literal
+    // celebration class name that C's source-scan guard reserves for E.
+    const celebrationClass = ['motion', 'celebrate'].join('-');
+    await screen.findByTestId('progression-ready');
+    expect(container.querySelector(`.${celebrationClass}`)).toBeNull();
+    expect(container.querySelector('.motion-confirm')).toBeNull();
+  });
+
+  it('renders ties_best with the tie sign and never as a new PR', async () => {
+    mockFetch(ready({ comparison: 'ties_best' }));
+    render(<ExerciseProgressionPanel exerciseId={3} support={SUPPORTED} />);
+
+    const conclusion = await screen.findByTestId('progression-conclusion');
+    expect(conclusion.getAttribute('data-icon')).toBe('tie');
+    expect(conclusion.textContent).toContain(PROGRESSION_COPY.comparison.ties_best);
+    expect(conclusion.textContent).not.toContain(PROGRESSION_COPY.comparison.new_pr);
+  });
+
+  it('keeps below_best neutral history, never danger or failure framing', async () => {
+    mockFetch(ready({ comparison: 'below_best' }));
+    render(<ExerciseProgressionPanel exerciseId={3} support={SUPPORTED} />);
+
+    const conclusion = await screen.findByTestId('progression-conclusion');
+    expect(conclusion.getAttribute('data-icon')).toBe('history');
+    expect(conclusion.className).not.toContain('danger');
+    expect(conclusion.className).not.toContain('warning');
+    expect(conclusion.textContent).toContain(PROGRESSION_COPY.comparison.below_best);
+  });
+
+  it.each(['no_history', 'history_without_semantics', 'no_comparable_set'] as const)(
+    'renders %s with the unknown role, never an error or zero',
+    async (readStatus) => {
+      mockFetch(ready({ readStatus, comparison: null }));
+      render(<ExerciseProgressionPanel exerciseId={3} support={SUPPORTED} />);
+
+      const status = await screen.findByTestId('progression-status');
+      expect(status.getAttribute('data-state')).toBe(readStatus);
+      expect(status.getAttribute('data-icon')).toBe('unknown');
+      expect(status.className).toContain('bg-unknown-muted');
+      expect(status.textContent).not.toMatch(/\b0\b|error/i);
+    },
+  );
+
+  it('distinguishes technical errors from insufficient evidence', async () => {
+    global.fetch = jest.fn(async () => ({
+      ok: false,
+      status: 503,
+      text: async () => JSON.stringify({ code: 'SERVICE_UNAVAILABLE' }),
+    })) as unknown as typeof fetch;
+
+    render(<ExerciseProgressionPanel exerciseId={3} support={SUPPORTED} />);
+
+    const alert = await screen.findByTestId('progression-error');
+    expect(alert.getAttribute('data-icon')).toBe('error');
+    expect(alert.className).toContain('danger');
+    expect(alert.getAttribute('role')).toBe('alert');
+  });
+
+  it('states the exact compared cohort in readable es-AR without enum names', async () => {
+    mockFetch(ready());
+    render(<ExerciseProgressionPanel exerciseId={3} support={SUPPORTED} />);
+
+    const cohort = await screen.findByTestId('progression-cohort');
+    expect(cohort.textContent).toContain('8 reps');
+    expect(cohort.textContent).toContain('carga total');
+    expect(cohort.textContent).toContain('bilateral');
+    expect(cohort.textContent).not.toMatch(/same_reps_external_load|per_side|bilateral_/);
+  });
+
+  it('states the explicit unsupported reason with the unknown role', () => {
+    global.fetch = jest.fn() as unknown as typeof fetch;
+    render(
+      <ExerciseProgressionPanel
+        exerciseId={3}
+        support={{ status: 'unsupported', reason: 'warmup' }}
+      />,
+    );
+
+    const unsupported = screen.getByTestId('progression-unsupported');
+    expect(unsupported.getAttribute('data-icon')).toBe('unknown');
+    expect(unsupported.textContent).toBe(PROGRESSION_COPY.unsupported.warmup);
   });
 });

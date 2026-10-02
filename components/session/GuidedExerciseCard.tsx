@@ -3,6 +3,8 @@
 import { useState } from 'react';
 
 import { ExerciseMedia } from '@/components/exercises/ExerciseMedia';
+import { AtlasIcon } from '@/components/ui/AtlasIcon';
+import type { AtlasIconName } from '@/components/ui/atlas-icons';
 import { Card } from '@/components/ui/Card';
 import { MetricValue } from '@/components/ui/MetricValue';
 import { ExerciseNotePanel } from '@/components/session/ExerciseNotePanel';
@@ -56,11 +58,13 @@ type SecondaryPanel = 'technique' | 'replace' | 'notes' | 'last' | 'progression'
 
 function ActionChip({
   children,
+  icon,
   ariaLabel,
   active,
   onClick,
 }: {
   children: string;
+  icon: AtlasIconName;
   ariaLabel: string;
   active: boolean;
   onClick: () => void;
@@ -69,14 +73,15 @@ function ActionChip({
     <button
       type="button"
       className={cn(
-        'rounded-lg px-3 py-2 text-xs font-medium transition',
+        'inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium transition',
         active ? 'bg-brand text-brand-foreground shadow-card' : 'bg-canvas text-ink-muted',
       )}
       aria-label={ariaLabel}
       aria-pressed={active}
       onClick={onClick}
     >
-      {children}
+      <AtlasIcon name={icon} size="sm" />
+      <span>{children}</span>
     </button>
   );
 }
@@ -146,37 +151,41 @@ export function GuidedExerciseCard({
           <h2 className="mt-3 font-serif text-4xl font-semibold leading-none tracking-[-0.06em] text-brand" data-testid="guided-exercise-name">
             {exercise.exerciseName}
           </h2>
-          <p className="mt-2 text-sm text-ink-muted">{exercise.exerciseName}</p>
           <div className="mt-4 flex flex-wrap gap-2">
             <ActionChip
+              icon="technique"
               ariaLabel={SESSION_COPY.showTechnique}
               active={panel === 'technique'}
               onClick={() => togglePanel('technique')}
             >
-              ◎ Técnica ▸
+              Técnica
             </ActionChip>
             <ActionChip
+              icon="replace"
               ariaLabel={SESSION_COPY.showReplace}
               active={panel === 'replace'}
               onClick={() => togglePanel('replace')}
             >
-              ⇄ Reemplazar
+              Reemplazar
             </ActionChip>
             <ActionChip
+              icon="notes"
               ariaLabel={SESSION_COPY.showNotes}
               active={panel === 'notes'}
               onClick={() => togglePanel('notes')}
             >
-              ≣ Notas
+              Notas
             </ActionChip>
             <ActionChip
+              icon="history"
               ariaLabel={SESSION_COPY.showLastTime}
               active={panel === 'last'}
               onClick={() => togglePanel('last')}
             >
-              {`↺ ${SESSION_COPY.lastTimeChip}`}
+              {SESSION_COPY.lastTimeChip}
             </ActionChip>
             <ActionChip
+              icon="progression"
               ariaLabel={PROGRESSION_COPY.showAria}
               active={panel === 'progression'}
               onClick={() => togglePanel('progression')}

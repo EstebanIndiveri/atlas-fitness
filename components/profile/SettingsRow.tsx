@@ -28,15 +28,25 @@ function RowContent({
     <>
       <span className="flex min-w-0 items-center gap-3">
         {icon ? (
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-brand-muted text-sm text-ink">
+          <span
+            aria-hidden="true"
+            className="flex size-9 shrink-0 items-center justify-center rounded-md bg-brand-muted text-sm text-ink"
+          >
             {icon}
           </span>
         ) : null}
         <span className="min-w-0">
-          <span className={cn('block text-sm font-medium', tone === 'danger' ? 'text-danger' : 'text-ink')}>
+          <span
+            className={cn(
+              'block break-words text-sm font-medium',
+              tone === 'danger' ? 'text-danger' : 'text-ink',
+            )}
+          >
             {title}
           </span>
-          {description ? <span className="mt-1 block text-sm text-ink-muted">{description}</span> : null}
+          {description ? (
+            <span className="mt-1 block break-words text-sm text-ink-muted">{description}</span>
+          ) : null}
         </span>
       </span>
       <span className="flex shrink-0 items-center gap-2 text-sm text-ink-muted">

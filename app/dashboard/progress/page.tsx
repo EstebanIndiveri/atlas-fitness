@@ -1,5 +1,7 @@
 'use client';
 
+import { useRef } from 'react';
+
 import { AtlasInterpretationCard } from '@/components/progress/AtlasInterpretationCard';
 import { HabitActivityCard } from '@/components/progress/HabitActivityCard';
 import { HabitTargetAdherenceCard } from '@/components/progress/HabitTargetAdherenceCard';
@@ -35,6 +37,26 @@ interface PeriodTabsProps {
 }
 
 function PeriodTabs({ period, onChange }: PeriodTabsProps) {
+  const buttonRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const selectedIndex = Math.max(
+    0,
+    PERIOD_OPTIONS.findIndex((option) => option.value === period),
+  );
+
+  const selectAt = (index: number): void => {
+    const next = PERIOD_OPTIONS[index];
+    if (!next) {
+      return;
+    }
+    onChange(next.value);
+    buttonRefs.current[index]?.focus();
+  };
+
+  const moveSelection = (direction: 1 | -1): void => {
+    const nextIndex = (selectedIndex + direction + PERIOD_OPTIONS.length) % PERIOD_OPTIONS.length;
+    selectAt(nextIndex);
+  };
+
   return (
     <div
       role="radiogroup"
@@ -42,18 +64,36 @@ function PeriodTabs({ period, onChange }: PeriodTabsProps) {
       className="grid rounded-full bg-surface p-1 shadow-card ring-1 ring-line"
       style={{ gridTemplateColumns: `repeat(${PERIOD_OPTIONS.length}, minmax(0, 1fr))` }}
     >
-      {PERIOD_OPTIONS.map((option) => {
+      {PERIOD_OPTIONS.map((option, index) => {
         const selected = option.value === period;
         return (
           <button
             key={option.value}
+            ref={(node) => {
+              buttonRefs.current[index] = node;
+            }}
             type="button"
             role="radio"
             aria-checked={selected}
             tabIndex={selected ? 0 : -1}
             onClick={() => onChange(option.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+                event.preventDefault();
+                moveSelection(1);
+              } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+                event.preventDefault();
+                moveSelection(-1);
+              } else if (event.key === 'Home') {
+                event.preventDefault();
+                selectAt(0);
+              } else if (event.key === 'End') {
+                event.preventDefault();
+                selectAt(PERIOD_OPTIONS.length - 1);
+              }
+            }}
             className={cn(
-              'rounded-full px-3 py-2 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
+              'min-h-11 rounded-full px-3 py-2 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
               selected ? 'bg-ink text-surface shadow-sm' : 'text-ink-muted hover:bg-canvas hover:text-ink',
             )}
           >
