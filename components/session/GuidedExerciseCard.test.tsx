@@ -235,6 +235,8 @@ describe('GuidedExerciseCard', () => {
     const bar = screen.getByTestId('complete-set-bar');
     expect(complete.textContent).toContain('COMPLETAR SERIE 1');
     expect(screen.getByTestId('complete-set-icon').tagName).toBe('svg');
+    expect(screen.getByTestId('complete-set-icon').getAttribute('viewBox')).toBe('0 0 24 24');
+    expect(screen.getByTestId('complete-set-icon').getAttribute('aria-hidden')).toBe('true');
     expect(complete.className).toContain('bg-brand');
     expect(complete.getAttribute('aria-label')).toBe('Completar serie 1');
     expect(bar.className).toContain('fixed');
@@ -253,6 +255,29 @@ describe('GuidedExerciseCard', () => {
     );
 
     expect(screen.queryByTestId('complete-set-bar')).toBeNull();
+  });
+
+  it('migrates session action glyphs to governed decorative icons without losing labels', () => {
+    render(<GuidedExerciseCard exercise={exercise()} {...cardProps} />);
+
+    const labels = [
+      'Mostrar técnica',
+      'Mostrar reemplazo',
+      'Mostrar notas',
+      SESSION_COPY.showLastTime,
+      PROGRESSION_COPY.showAria,
+    ];
+
+    for (const label of labels) {
+      const chip = screen.getByRole('button', { name: label });
+      const icon = chip.querySelector('svg');
+      expect(icon).not.toBeNull();
+      expect(icon?.getAttribute('viewBox')).toBe('0 0 24 24');
+      expect(icon?.getAttribute('aria-hidden')).toBe('true');
+      expect(chip.textContent ?? '').not.toMatch(/[◎⇄≣↺▸]/);
+      expect(chip.getAttribute('aria-label')).toBe(label);
+      expect(chip.getAttribute('aria-pressed')).toBe('false');
+    }
   });
 
   describe('comparable progression', () => {

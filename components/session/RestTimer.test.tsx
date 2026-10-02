@@ -27,4 +27,16 @@ describe('RestTimer', () => {
     screen.getByRole('button', { name: 'Saltar descanso' }).click();
     expect(onSkip).toHaveBeenCalled();
   });
+
+  it('uses a governed decorative rest icon instead of the hourglass glyph', () => {
+    const { container } = render(
+      <RestTimer remaining={60} motivator="Respirá" onSkip={jest.fn()} />,
+    );
+
+    expect(container.textContent).not.toContain('⏳');
+    const icon = container.querySelector('svg');
+    expect(icon).not.toBeNull();
+    expect(icon?.getAttribute('viewBox')).toBe('0 0 24 24');
+    expect(icon?.getAttribute('aria-hidden')).toBe('true');
+  });
 });
