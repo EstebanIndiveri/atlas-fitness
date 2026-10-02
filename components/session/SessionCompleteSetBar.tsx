@@ -1,6 +1,7 @@
 'use client';
 
 import { Button } from '@/components/ui/Button';
+import { AtlasIcon } from '@/components/ui/AtlasIcon';
 import { isValidWeightKg } from '@/lib/format/weight';
 
 type SessionCompleteSetBarProps = {
@@ -57,18 +58,7 @@ export function SessionCompleteSetBar({
         data-testid="complete-set-button"
         aria-label={completeAriaLabel}
       >
-        <svg
-          className="mr-2 size-5 shrink-0"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          aria-hidden
-          data-testid="complete-set-icon"
-        >
-          <circle cx="12" cy="12" r="8.5" />
-          <path d="m8.5 12 2.25 2.25L15.75 9" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
+        <AtlasIcon name="complete" className="mr-2" data-testid="complete-set-icon" />
         {completeLabel}
       </Button>
       {nextExerciseName ? (
