@@ -4,7 +4,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Este
 
 ## [Unreleased]
 
-> **Estado: implementado y verificado en `develop`, NO publicado.** La wave **v0.13.0 "Visual Identity, Motion & Progress Experience"** está integrada en `develop` desde `FINAL_DISCOVERY_SHA` `27d2df6a4e6e5ae607698d27e7aa21bfdceadf7a`, pasó la auditoría de diseño gobernada (`atlas-design-audit` v0.2) y sus gates de accesibilidad, responsive, performance y regresión. **No** se creó branch `release/0.13.0`, ni tag `v0.13.0`, ni deployment/migración de producción: `package.json`/`package-lock.json` siguen en **0.12.0** y la versión publicada más reciente es **v0.12.0**. Evidencia: [`docs/operations/2026-10-02-v0.13.0-pre-release-quality-evidence.md`](./docs/operations/2026-10-02-v0.13.0-pre-release-quality-evidence.md). Las entradas de abajo describen comportamiento verificable en el código integrado y sus tests; **no** describen un release.
+## [0.13.0] - 2026-10-02
+
+> **Estado: release candidate preparado (2026-10-02), NO publicado.** La wave **v0.13.0 "Visual Identity, Motion & Progress Experience"** está integrada en `develop` desde `FINAL_DISCOVERY_SHA` `27d2df6a4e6e5ae607698d27e7aa21bfdceadf7a`, pasó la auditoría de diseño gobernada (`atlas-design-audit` v0.2) y sus gates de accesibilidad, responsive, performance y regresión. La rama `release/0.13.0` se cortó del head de `develop` (`V0_13_READY_SHA` `dbc9aed6084477cd698f6c945cb03165fb73aaed`) y su delta de preparación frente a ese SHA es solo `package.json`, `package-lock.json` y `CHANGELOG.md`. A la fecha de este candidato **todavía no** existe merge a `main`, ni tag `v0.13.0`, ni deployment/migración de producción; la versión publicada más reciente sigue siendo **v0.12.0**. Evidencia de calidad pre-release: [`docs/operations/2026-10-02-v0.13.0-pre-release-quality-evidence.md`](./docs/operations/2026-10-02-v0.13.0-pre-release-quality-evidence.md). Las entradas de abajo describen comportamiento verificable en el código integrado y sus tests.
 
 ### Added
 
