@@ -2,15 +2,21 @@
 
 import Link from 'next/link';
 
+import { AtlasIcon } from '@/components/ui/AtlasIcon';
+import type { AtlasIconName } from '@/components/ui/atlas-icons';
 import { MetricValue } from '@/components/ui/MetricValue';
 import { PROGRESSION_COPY } from '@/lib/copy/exercise-progression';
 import { describeRecordedAmount } from '@/lib/format/amount';
 import { useExerciseProgression } from '@/hooks/useExerciseProgression';
 import { cordobaDisplayDate } from '@/lib/time/cordoba';
+import { MOTION_ORIENTATION_CLASS } from '@/lib/ui/motion';
+import { cn } from '@/lib/ui/cn';
 import { metric } from '@/types/metric';
 import type { ProgressionSupport } from '@/lib/session/progression-cohort';
+import type { ProgressionComparison } from '@/types/progression';
 import type {
   ExerciseProgression,
+  ProgressionReadStatus,
   ProgressionSourceSet,
 } from '@/types/progression-read';
 
@@ -18,6 +24,41 @@ export interface ExerciseProgressionPanelProps {
   exerciseId: number;
   support: ProgressionSupport;
 }
+
+/**
+ * State visual grammar (brief §18). Each conclusion maps to one governed icon
+ * and one semantic surface, so the state never depends on color alone:
+ * baseline/below-best stay neutral history, `new_pr` is the reserved verified
+ * accent (never brand/action green), `ties_best` a restrained verified sign.
+ */
+interface ComparisonVisual {
+  icon: AtlasIconName;
+  containerClassName: string;
+  iconClassName: string;
+}
+
+const COMPARISON_VISUAL: Record<ProgressionComparison, ComparisonVisual> = {
+  baseline: {
+    icon: 'progression',
+    containerClassName: 'bg-surface ring-1 ring-line',
+    iconClassName: 'text-ink-muted',
+  },
+  new_pr: {
+    icon: 'verified',
+    containerClassName: 'bg-verified-muted ring-1 ring-verified',
+    iconClassName: 'text-verified',
+  },
+  ties_best: {
+    icon: 'tie',
+    containerClassName: 'bg-surface ring-1 ring-line',
+    iconClassName: 'text-verified',
+  },
+  below_best: {
+    icon: 'history',
+    containerClassName: 'bg-surface ring-1 ring-line',
+    iconClassName: 'text-ink-muted',
+  },
+};
 
 function sourceSetLabel(set: ProgressionSourceSet): string {
   return describeRecordedAmount(
@@ -54,31 +95,76 @@ function SourceSetRow({ label, set }: { label: string; set: ProgressionSourceSet
   );
 }
 
-function ReadyBody({ data }: { data: ExerciseProgression }) {
-  if (data.readStatus !== 'ready') {
-    const message = PROGRESSION_COPY.status[data.readStatus];
-    return (
-      <p className="text-sm text-ink-muted" data-testid="progression-status">
-        {message}
-      </p>
-    );
-  }
-
-  const conclusion = data.comparison
-    ? PROGRESSION_COPY.comparison[data.comparison]
-    : PROGRESSION_COPY.comparison.baseline;
+function ConclusionBlock({ comparison }: { comparison: ProgressionComparison | null }) {
+  const effective = comparison ?? 'baseline';
+  const visual = COMPARISON_VISUAL[effective];
+  const label = PROGRESSION_COPY.comparison[effective];
 
   return (
-    <div className="space-y-3" data-testid="progression-ready">
-      <p
-        className="flex flex-wrap items-baseline gap-2 rounded-xl bg-brand-muted/60 px-3 py-2 text-sm text-ink"
-        data-testid="progression-conclusion"
-      >
-        <span className="text-xs font-semibold uppercase tracking-[0.1em] text-ink-muted">
+    <div
+      data-testid="progression-conclusion"
+      data-state={effective}
+      data-icon={visual.icon}
+      className={cn(
+        'flex items-start gap-3 rounded-xl px-3 py-3',
+        visual.containerClassName,
+      )}
+    >
+      <span className={cn('mt-0.5', visual.iconClassName)}>
+        <AtlasIcon name={visual.icon} size="md" data-testid="progression-state-icon" />
+      </span>
+      <div className="min-w-0 space-y-1">
+        <p className="text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-ink-muted">
           {PROGRESSION_COPY.conclusionLabel}
-        </span>
-        <MetricValue metric={metric(conclusion, 'atlas_computed')} showSource />
-      </p>
+        </p>
+        <MetricValue metric={metric(label, 'atlas_computed')} showSource />
+      </div>
+    </div>
+  );
+}
+
+function CohortLine({ data }: { data: ExerciseProgression }) {
+  const { reps, amountBasis, side } = data.cohort;
+  return (
+    <p className="text-xs leading-relaxed text-ink-muted" data-testid="progression-cohort">
+      {PROGRESSION_COPY.cohortLabel}:{' '}
+      {PROGRESSION_COPY.cohortSummary(
+        reps,
+        PROGRESSION_COPY.amountBasisLabel[amountBasis],
+        PROGRESSION_COPY.sideLabel[side],
+      )}
+    </p>
+  );
+}
+
+function AbsenceBody({ readStatus }: { readStatus: Exclude<ProgressionReadStatus, 'ready'> }) {
+  return (
+    <div
+      data-testid="progression-status"
+      data-state={readStatus}
+      data-icon="unknown"
+      className="flex items-start gap-2 rounded-xl bg-unknown-muted px-3 py-2"
+    >
+      <span className="mt-0.5 shrink-0 text-unknown">
+        <AtlasIcon name="unknown" size="sm" />
+      </span>
+      <p className="text-sm text-ink">{PROGRESSION_COPY.status[readStatus]}</p>
+    </div>
+  );
+}
+
+function ReadyBody({ data }: { data: ExerciseProgression }) {
+  if (data.readStatus !== 'ready') {
+    return <AbsenceBody readStatus={data.readStatus} />;
+  }
+
+  return (
+    <div
+      className={cn('space-y-3', MOTION_ORIENTATION_CLASS)}
+      data-testid="progression-ready"
+    >
+      <ConclusionBlock comparison={data.comparison} />
+      <CohortLine data={data} />
       <ul className="space-y-2">
         {data.currentRepresentative ? (
           <SourceSetRow label={PROGRESSION_COPY.sourceLabel} set={data.currentRepresentative} />
@@ -103,7 +189,9 @@ function ReadyBody({ data }: { data: ExerciseProgression }) {
  * It complements “Última vez” (raw last completed session) with the versioned
  * comparable read model for exactly one external cohort. It never requests a
  * cohort the current visible semantics do not support, never treats the open set
- * as a record, and shows only closed-history results.
+ * as a record, and shows only closed-history results. Presentation is a
+ * persistent, non-celebratory state: the verified accent marks a fact, not an
+ * event replay.
  *
  * @param props Exact exercise id plus the resolved cohort support.
  * @returns The comparable progression card, or a truthful non-comparable state.
@@ -132,9 +220,16 @@ export function ExerciseProgressionPanel({ exerciseId, support }: ExerciseProgre
       </p>
 
       {support.status === 'unsupported' ? (
-        <p className="mt-2 text-sm text-ink-muted" data-testid="progression-unsupported">
-          {PROGRESSION_COPY.unsupported[support.reason]}
-        </p>
+        <div
+          data-testid="progression-unsupported"
+          data-icon="unknown"
+          className="mt-2 flex items-start gap-2 rounded-xl bg-unknown-muted px-3 py-2"
+        >
+          <span className="mt-0.5 shrink-0 text-unknown">
+            <AtlasIcon name="unknown" size="sm" />
+          </span>
+          <p className="text-sm text-ink">{PROGRESSION_COPY.unsupported[support.reason]}</p>
+        </div>
       ) : null}
 
       {loading ? (
@@ -151,9 +246,16 @@ export function ExerciseProgressionPanel({ exerciseId, support }: ExerciseProgre
       {support.status === 'supported' && state.status === 'error' ? (
         <div
           role="alert"
+          data-testid="progression-error"
+          data-icon="error"
           className="mt-2 space-y-2 rounded-xl bg-danger-muted p-3 text-sm text-danger"
         >
-          <p>{state.message}</p>
+          <p className="flex items-start gap-2">
+            <span className="mt-0.5 shrink-0">
+              <AtlasIcon name="error" size="sm" />
+            </span>
+            <span>{state.message}</span>
+          </p>
           <button
             type="button"
             onClick={reload}
