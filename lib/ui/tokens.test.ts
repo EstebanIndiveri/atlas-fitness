@@ -100,7 +100,9 @@ describe('globals.css @theme', () => {
     expect(globalsCss).toContain('--font-sans:');
     expect(globalsCss).toContain('@utility pt-safe');
     expect(globalsCss).toContain('prefers-reduced-motion: reduce');
-    expect(globalsCss).toContain('.streak-pop');
+    // v0.13 workstream C retired the replayable streak pop in favour of the
+    // purpose-driven motion grammar asserted in lib/ui/motion.test.ts.
+    expect(globalsCss).not.toContain('.streak-pop');
   });
 
   it('mirrors every color primitive so the two sources cannot drift', () => {
