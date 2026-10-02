@@ -187,6 +187,14 @@ describe('ExerciseProgressionPanel', () => {
     expect(links[1].getAttribute('href')).toBe('/dashboard/workout/6');
   });
 
+  it('allows the conclusion and provenance to wrap at large text sizes', async () => {
+    mockFetch(ready({ comparison: 'new_pr' }));
+    render(<ExerciseProgressionPanel exerciseId={3} support={SUPPORTED} />);
+
+    const conclusion = await screen.findByTestId('progression-conclusion');
+    expect(conclusion.querySelector('.flex-wrap')).toBeTruthy();
+  });
+
   it('never claims universal strength, 1RM, percentages or an open-set record', async () => {
     mockFetch(ready({ comparison: 'new_pr' }));
     const { container } = render(<ExerciseProgressionPanel exerciseId={3} support={SUPPORTED} />);

@@ -117,7 +117,11 @@ function ConclusionBlock({ comparison }: { comparison: ProgressionComparison | n
         <p className="text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-ink-muted">
           {PROGRESSION_COPY.conclusionLabel}
         </p>
-        <MetricValue metric={metric(label, 'atlas_computed')} showSource />
+        <MetricValue
+          metric={metric(label, 'atlas_computed')}
+          showSource
+          className="flex-wrap"
+        />
       </div>
     </div>
   );
