@@ -202,8 +202,9 @@ describe('TodayWorkoutHero', () => {
     expect(bar.className).toContain('bg-canvas');
     expect(bar.className).toContain('ring-1');
     expect(bar.className).toContain('ring-line');
-    expect(bar.firstElementChild?.className).toContain('transition-[width]');
-    expect(bar.firstElementChild?.className).toContain('duration-500');
+    expect(bar.firstElementChild?.className).toContain('motion-progress');
+    expect(bar.firstElementChild?.className).not.toContain('duration-500');
+    expect(bar.firstElementChild?.className).not.toContain('transition-[width]');
     expect(bar.getAttribute('aria-valuenow')).toBe('0');
     expect(bar.getAttribute('aria-valuemin')).toBe('0');
     expect(bar.getAttribute('aria-valuemax')).toBe('3');
