@@ -19,7 +19,7 @@ export async function logout(): Promise<void> {
 
 export function LogoutButton() {
   return (
-    <Button variant="ghost" size="sm" onClick={() => void logout()}>
+    <Button variant="ghost" size="sm" className="min-h-11" onClick={() => void logout()}>
       {UI_COPY.logout}
     </Button>
   );

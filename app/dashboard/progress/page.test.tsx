@@ -338,4 +338,29 @@ describe('ProgressPage', () => {
 
     expect(setPeriod).toHaveBeenCalledWith('quarter');
   });
+
+  it('changes the period with arrow keys and moves focus', () => {
+    useProgress.mockReturnValue({ summary: null, week: null, loading: true, error: null, period: 'month', setPeriod });
+
+    render(<ProgressPage />);
+    const month = screen.getByRole('radio', { name: 'Mes' });
+    month.focus();
+
+    fireEvent.keyDown(month, { key: 'ArrowRight' });
+    expect(setPeriod).toHaveBeenCalledWith('quarter');
+    expect(document.activeElement).toBe(screen.getByRole('radio', { name: '3 meses' }));
+  });
+
+  it('supports Home and End on the period radiogroup', () => {
+    useProgress.mockReturnValue({ summary: null, week: null, loading: true, error: null, period: 'month', setPeriod });
+
+    render(<ProgressPage />);
+    const month = screen.getByRole('radio', { name: 'Mes' });
+
+    fireEvent.keyDown(month, { key: 'Home' });
+    fireEvent.keyDown(month, { key: 'End' });
+
+    expect(setPeriod).toHaveBeenNthCalledWith(1, 'week');
+    expect(setPeriod).toHaveBeenNthCalledWith(2, 'quarter');
+  });
 });

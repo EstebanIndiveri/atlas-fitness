@@ -59,8 +59,8 @@ export function HabitPreviewRow({ habit, done, onToggle, disabled = false, expec
           </svg>
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-medium text-ink">{habit.name}</span>
-          <span className="block truncate text-xs text-ink-muted">{habit.hint}</span>
+          <span className="block break-words text-sm font-medium text-ink">{habit.name}</span>
+          <span className="block break-words text-xs text-ink-muted">{habit.hint}</span>
           {expectedToday ? (
             <span className="mt-1 block">
               <HabitTargetTodayBadge habitKey={habit.id} />

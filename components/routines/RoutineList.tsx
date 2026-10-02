@@ -57,7 +57,11 @@ export function RoutineList({ routines, onDelete, deletingId = null }: RoutineLi
                 <div className="flex flex-wrap gap-2">
                   <Link
                     href={`/dashboard/routines/${routine.id}/edit`}
-                    className={buttonClassName({ variant: 'secondary', size: 'sm' })}
+                    className={buttonClassName({
+                      variant: 'secondary',
+                      size: 'sm',
+                      className: 'min-h-11 min-w-11',
+                    })}
                   >
                     {mutate ? ROUTINE_COPY.editCta : ROUTINE_COPY.viewCta}
                   </Link>

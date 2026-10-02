@@ -131,7 +131,7 @@ export function HabitActivityCard({
       : null;
 
   return (
-    <Card className="space-y-4 overflow-hidden rounded-[28px] p-5">
+    <Card level="panel" className="space-y-4 overflow-hidden p-5">
       <div className="min-w-0">
         <h2 className="break-words text-base font-semibold text-ink">
           {PROGRESS_COPY.habitActivity.title}

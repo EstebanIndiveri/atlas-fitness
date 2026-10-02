@@ -35,13 +35,21 @@ export function SegmentedControl({
   const selectedIndex = Math.max(0, options.findIndex((option) => option.value === value));
   const buttonRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
+  const selectAt = (index: number): void => {
+    const next = options[index];
+    if (!next) {
+      return;
+    }
+    onChange(next.value);
+    buttonRefs.current[index]?.focus();
+  };
+
   const moveSelection = (direction: 1 | -1): void => {
     if (options.length === 0) {
       return;
     }
     const nextIndex = (selectedIndex + direction + options.length) % options.length;
-    onChange(options[nextIndex].value);
-    buttonRefs.current[nextIndex]?.focus();
+    selectAt(nextIndex);
   };
 
   return (
@@ -73,9 +81,17 @@ export function SegmentedControl({
                 event.preventDefault();
                 moveSelection(-1);
               }
+              if (event.key === 'Home') {
+                event.preventDefault();
+                selectAt(0);
+              }
+              if (event.key === 'End') {
+                event.preventDefault();
+                selectAt(options.length - 1);
+              }
             }}
             className={cn(
-              'rounded-md px-3 py-2 text-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
+              'min-h-11 rounded-md px-3 py-2 text-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
               selected
                 ? 'bg-surface font-semibold text-ink shadow-sm ring-1 ring-line'
                 : 'font-medium text-ink-muted hover:bg-surface/70 hover:text-ink',

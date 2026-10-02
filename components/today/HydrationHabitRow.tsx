@@ -81,8 +81,8 @@ export function HydrationHabitRow({
       </span>
 
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-medium text-ink">{habit.name}</span>
-        <span className="block truncate text-xs text-ink-muted">
+        <span className="block break-words text-sm font-medium text-ink">{habit.name}</span>
+        <span className="block break-words text-xs text-ink-muted">
           {hasAmount ? COPY.registered : COPY.empty}
         </span>
         {expectedToday ? (

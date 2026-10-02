@@ -42,7 +42,7 @@ function formatEnergyLabel(energy: string | null): string {
  */
 export function WellbeingCard({ checkin, loading, error }: WellbeingCardProps) {
   return (
-    <Card className="space-y-4 rounded-[28px] p-5">
+    <Card level="panel" className="space-y-4 p-5">
       <div>
         <h2 className="text-base font-semibold text-ink">{PROGRESS_COPY.wellbeing.title}</h2>
         <p className="mt-1 text-sm text-ink-muted">{PROGRESS_COPY.wellbeing.windowLabel}</p>

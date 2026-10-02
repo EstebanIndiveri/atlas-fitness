@@ -33,7 +33,7 @@ export function TodayHabitsCard(): JSX.Element {
   const completedCount = countCompletedHabits(doneByKey);
 
   return (
-    <Card className="space-y-3 rounded-[1.75rem] p-5">
+    <Card level="panel" className="space-y-3 p-5">
       <div className="flex min-w-0 items-start justify-between gap-4">
         <h2 className="min-w-0 font-serif text-xl font-semibold text-ink">{COPY.heading}</h2>
         <p className="shrink-0 text-right text-sm font-semibold text-ink-muted">

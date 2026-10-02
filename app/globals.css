@@ -18,6 +18,8 @@
   --color-danger: #B42318;
   --color-danger-muted: #FCEBEA;
   --color-danger-foreground: #FFFFFF;
+  /* Generic completion only; intentionally aliases brand. Verified progression
+     uses --color-verified so action != verified != generic success (brief §9–12). */
   --color-success: #1F6B4A;
   --color-success-foreground: #FFFFFF;
   --color-warning: #9A3412;
@@ -188,5 +190,18 @@ body {
   .motion-confirm,
   .motion-celebrate {
     animation: none;
+  }
+
+  /* Raw Tailwind `transition`/`transition-colors` utilities are not covered by
+     the governed primitives above. Neutralize every remaining transition and
+     animation under reduce so future transform/scale additions cannot escape
+     the policy. Color state changes remain instant and fully information-preserving. */
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
   }
 }

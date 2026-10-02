@@ -110,9 +110,11 @@ export function CoachAtlasCard({
   };
 
   return (
-    <Card className="rounded-[1.75rem] p-5" data-testid="coach-atlas-card" aria-busy={busy}>
+    <Card level="panel" className="p-5" data-testid="coach-atlas-card" aria-busy={busy}>
       <div className="flex items-start justify-between gap-3">
-        <h2 className="text-base font-semibold text-ink">◎ Coach Atlas</h2>
+        <h2 className="text-base font-semibold text-ink">
+          <span aria-hidden="true">◎</span> Coach Atlas
+        </h2>
         <p className="text-right text-xs text-ink-muted">{COPY.eyebrow}</p>
       </div>
 
@@ -184,11 +186,11 @@ export function CoachAtlasCard({
           />
           <button
             type="submit"
-            className="ml-2 rounded-md px-2 py-1 text-lg text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-50"
+            className="ml-2 grid size-11 shrink-0 place-items-center rounded-md text-lg text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-50"
             disabled={!canAdapt || busy || freeText.trim().length === 0}
             aria-label={COPY.submitAria}
           >
-            →
+            <span aria-hidden="true">→</span>
           </button>
         </div>
       </form>

@@ -37,7 +37,7 @@ export function HabitsScreen(): JSX.Element {
 
   if (loading) {
     return (
-      <Card className="rounded-[1.75rem] p-5">
+      <Card level="panel" className="p-5">
         <LoadingState />
       </Card>
     );
@@ -45,7 +45,7 @@ export function HabitsScreen(): JSX.Element {
 
   if (error) {
     return (
-      <Card className="space-y-4 rounded-[1.75rem] p-5">
+      <Card level="panel" className="space-y-4 p-5">
         <ErrorState message={error} compact={false} />
         <button
           type="button"
@@ -62,7 +62,7 @@ export function HabitsScreen(): JSX.Element {
 
   return (
     <>
-      <Card className="space-y-3 rounded-[1.75rem] p-5">
+      <Card level="panel" className="space-y-3 p-5">
         <div className="flex min-w-0 items-start justify-between gap-4">
           <h2 className="min-w-0 font-serif text-xl font-semibold text-ink">Hábitos Diarios</h2>
           <p className="shrink-0 text-right text-sm font-semibold text-ink-muted">

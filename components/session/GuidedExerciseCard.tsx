@@ -151,7 +151,6 @@ export function GuidedExerciseCard({
           <h2 className="mt-3 font-serif text-4xl font-semibold leading-none tracking-[-0.06em] text-brand" data-testid="guided-exercise-name">
             {exercise.exerciseName}
           </h2>
-          <p className="mt-2 text-sm text-ink-muted">{exercise.exerciseName}</p>
           <div className="mt-4 flex flex-wrap gap-2">
             <ActionChip
               icon="technique"
